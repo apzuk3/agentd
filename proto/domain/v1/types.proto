@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package domain.v1;
+
+option go_package = "github.com/syss-io/executor/gen/proto/go/domain/v1;domainv1";
+
+import "options/gorm.proto";
+
+message SessionLog {
+    option (gorm.opts) = {
+        ormable: true,
+    };
+    string id = 1;
+    string session_id = 2 [(gorm.field).tag = {index: "idx_session_id"}];
+    string timestamp = 3;
+    string event_type = 4 [(gorm.field).tag = {index: "idx_event_type"}];
+    string event_data = 5; // JSON encoded data
+}
