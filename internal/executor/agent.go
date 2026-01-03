@@ -1,4 +1,4 @@
-package agent
+package executor
 
 import (
 	"context"
@@ -15,7 +15,8 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/google/uuid"
-	agentv1 "github.com/syss-io/executor/gen/proto/go/agent/v1"
+	domainv1 "github.com/syss-io/executor/gen/proto/go/domain/v1"
+	executorv1 "github.com/syss-io/executor/gen/proto/go/executor/v1"
 	"github.com/syss-io/executor/internal/llmprovider"
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/agent/llmagent"
@@ -29,31 +30,21 @@ import (
 	"google.golang.org/adk/tool"
 	"google.golang.org/adk/tool/functiontool"
 	"google.golang.org/genai"
-	"gorm.io/gorm"
 )
-
-type ExecutionLogger interface {
-	LogEvent(ctx context.Context, sessionID string, eventType string, eventData any) error
-}
-
-type ServiceImpl struct {
-	Logger ExecutionLogger
-	DB     *gorm.DB
-}
 
 type agentSessionState struct {
 	mu         sync.Mutex
-	toolsQueue map[string]chan *agentv1.StartSessionRequest_ToolCallResponse
+	toolsQueue map[string]chan *executorv1.StartSessionRequest_ToolCallResponse
 	sessionID  string
-	model      agentv1.Model
-	usageLog   []*agentv1.StartSessionResponse_UsageEntry
+	model      domainv1.Model
+	usageLog   []*executorv1.StartSessionResponse_UsageEntry
 	budget     float64 // Session budget in USD (0 = unlimited)
 }
 
-func (s *ServiceImpl) NewAgentSession(ctx context.Context, stream *connect.BidiStream[agentv1.StartSessionRequest, agentv1.StartSessionResponse]) error {
+func (s *ServiceImpl) AgentSession(ctx context.Context, stream *connect.BidiStream[executorv1.StartSessionRequest, executorv1.StartSessionResponse]) error {
 	state := &agentSessionState{
-		toolsQueue: make(map[string]chan *agentv1.StartSessionRequest_ToolCallResponse),
-		model:      agentv1.Model_MODEL_GEMINI_2_5_PRO, // default, will be updated from request
+		toolsQueue: make(map[string]chan *executorv1.StartSessionRequest_ToolCallResponse),
+		model:      domainv1.Model_MODEL_GEMINI_2_5_PRO, // default, will be updated from request
 		sessionID:  uuid.New().String(),
 	}
 
@@ -123,7 +114,7 @@ func (s *ServiceImpl) NewAgentSession(ctx context.Context, stream *connect.BidiS
 			}
 
 			switch msg.Message.(type) {
-			case *agentv1.StartSessionRequest_ToolCallResponse_:
+			case *executorv1.StartSessionRequest_ToolCallResponse_:
 				toolResp := msg.GetToolCallResponse()
 				if toolResp == nil {
 					continue
@@ -140,7 +131,7 @@ func (s *ServiceImpl) NewAgentSession(ctx context.Context, stream *connect.BidiS
 					slog.Warn("RunBrain: received response for unknown tool call", "request_id", toolResp.GetRequestId())
 				}
 
-			case *agentv1.StartSessionRequest_SessionEnd_:
+			case *executorv1.StartSessionRequest_SessionEnd_:
 				slog.Info("RunBrain: session end requested by client", "reason", msg.GetSessionEnd().GetReason())
 				// We don't necessarily terminate here if we are still processing,
 				// but we could signal cancellation if needed.
@@ -151,7 +142,7 @@ func (s *ServiceImpl) NewAgentSession(ctx context.Context, stream *connect.BidiS
 	// 5. Create Root Agent
 	var rootAgent agent.Agent
 	switch runReq.GetWorkflow() {
-	case agentv1.StartSessionRequest_RunRequest_WORKFLOW_SEQUENTIAL:
+	case executorv1.StartSessionRequest_RunRequest_WORKFLOW_SEQUENTIAL:
 		rootAgent, err = sequentialagent.New(sequentialagent.Config{
 			AgentConfig: agent.Config{
 				Name:        "root_agent",
@@ -159,7 +150,7 @@ func (s *ServiceImpl) NewAgentSession(ctx context.Context, stream *connect.BidiS
 				SubAgents:   subAgents,
 			},
 		})
-	case agentv1.StartSessionRequest_RunRequest_WORKFLOW_LOOP:
+	case executorv1.StartSessionRequest_RunRequest_WORKFLOW_LOOP:
 		rootAgent, err = loopagent.New(loopagent.Config{
 			AgentConfig: agent.Config{
 				Name:        "root_agent",
@@ -168,7 +159,7 @@ func (s *ServiceImpl) NewAgentSession(ctx context.Context, stream *connect.BidiS
 			},
 			MaxIterations: uint(runReq.GetMaxIterations()),
 		})
-	case agentv1.StartSessionRequest_RunRequest_WORKFLOW_PARALLEL:
+	case executorv1.StartSessionRequest_RunRequest_WORKFLOW_PARALLEL:
 		rootAgent, err = parallelagent.New(parallelagent.Config{
 			AgentConfig: agent.Config{
 				Name:        "root_agent",
@@ -282,7 +273,7 @@ func (s *ServiceImpl) NewAgentSession(ctx context.Context, stream *connect.BidiS
 			eventInputCost, eventOutputCost := llmprovider.CalculateCostBreakdown(currentModel, inTokens, outTokens)
 
 			// Create usage entry for this event
-			usageEntry := &agentv1.StartSessionResponse_UsageEntry{
+			usageEntry := &executorv1.StartSessionResponse_UsageEntry{
 				AgentName:    event.Author,
 				Model:        llmprovider.GetModelID(currentModel),
 				InputTokens:  inTokens,
@@ -313,10 +304,10 @@ func (s *ServiceImpl) NewAgentSession(ctx context.Context, stream *connect.BidiS
 					"session_id", state.sessionID)
 
 				// Send SessionEnd with REASON_BUDGET
-				if err := stream.Send(&agentv1.StartSessionResponse{
-					Message: &agentv1.StartSessionResponse_SessionEnd_{
-						SessionEnd: &agentv1.StartSessionResponse_SessionEnd{
-							Reason:  agentv1.StartSessionResponse_SessionEnd_REASON_BUDGET,
+				if err := stream.Send(&executorv1.StartSessionResponse{
+					Message: &executorv1.StartSessionResponse_SessionEnd_{
+						SessionEnd: &executorv1.StartSessionResponse_SessionEnd{
+							Reason:  executorv1.StartSessionResponse_SessionEnd_REASON_BUDGET,
 							Message: fmt.Sprintf("Budget exceeded: $%.4f > $%.4f", totalCost, budgetLimit),
 						},
 					},
@@ -339,7 +330,7 @@ func (s *ServiceImpl) NewAgentSession(ctx context.Context, stream *connect.BidiS
 			if text != "" {
 				state.mu.Lock()
 				// Copy usage log and compute totals
-				usageLogCopy := make([]*agentv1.StartSessionResponse_UsageEntry, len(state.usageLog))
+				usageLogCopy := make([]*executorv1.StartSessionResponse_UsageEntry, len(state.usageLog))
 				copy(usageLogCopy, state.usageLog)
 				state.mu.Unlock()
 
@@ -353,9 +344,9 @@ func (s *ServiceImpl) NewAgentSession(ctx context.Context, stream *connect.BidiS
 					outCost += entry.OutputCost
 				}
 
-				if err := stream.Send(&agentv1.StartSessionResponse{
-					Message: &agentv1.StartSessionResponse_RunResponse_{
-						RunResponse: &agentv1.StartSessionResponse_RunResponse{
+				if err := stream.Send(&executorv1.StartSessionResponse{
+					Message: &executorv1.StartSessionResponse_RunResponse_{
+						RunResponse: &executorv1.StartSessionResponse_RunResponse{
 							Content:          text,
 							InputTokenCount:  inTokens,
 							OutputTokenCount: outTokens,
@@ -373,9 +364,9 @@ func (s *ServiceImpl) NewAgentSession(ctx context.Context, stream *connect.BidiS
 	}
 
 	// 9. Send SessionEndAck
-	if err := stream.Send(&agentv1.StartSessionResponse{
-		Message: &agentv1.StartSessionResponse_SessionEndAck_{
-			SessionEndAck: &agentv1.StartSessionResponse_SessionEndAck{
+	if err := stream.Send(&executorv1.StartSessionResponse{
+		Message: &executorv1.StartSessionResponse_SessionEndAck_{
+			SessionEndAck: &executorv1.StartSessionResponse_SessionEndAck{
 				Acknowledged: true,
 			},
 		},
@@ -386,9 +377,9 @@ func (s *ServiceImpl) NewAgentSession(ctx context.Context, stream *connect.BidiS
 	return nil
 }
 
-func (s *ServiceImpl) setupAgent(ctx context.Context, llm model.LLM, a *agentv1.StartSessionRequest_Agent, stream *connect.BidiStream[agentv1.StartSessionRequest, agentv1.StartSessionResponse], state *agentSessionState) (agent.Agent, error) {
+func (s *ServiceImpl) setupAgent(ctx context.Context, llm model.LLM, a *executorv1.StartSessionRequest_Agent, stream *connect.BidiStream[executorv1.StartSessionRequest, executorv1.StartSessionResponse], state *agentSessionState) (agent.Agent, error) {
 	agentLLM := llm
-	if a.GetModel() != agentv1.Model_MODEL_UNSPECIFIED {
+	if a.GetModel() != domainv1.Model_MODEL_UNSPECIFIED {
 		var err error
 		agentLLM, err = s.initModel(ctx, a.GetModel())
 		if err != nil {
@@ -421,7 +412,7 @@ func (s *ServiceImpl) setupAgent(ctx context.Context, llm model.LLM, a *agentv1.
 	return llmagent.New(cfg)
 }
 
-func (s *ServiceImpl) createTool(t *agentv1.StartSessionRequest_Agent_Tool, stream *connect.BidiStream[agentv1.StartSessionRequest, agentv1.StartSessionResponse], state *agentSessionState) (tool.Tool, error) {
+func (s *ServiceImpl) createTool(t *executorv1.StartSessionRequest_Agent_Tool, stream *connect.BidiStream[executorv1.StartSessionRequest, executorv1.StartSessionResponse], state *agentSessionState) (tool.Tool, error) {
 	cfg := functiontool.Config{
 		Name:        t.GetName(),
 		Description: t.GetDescription(),
@@ -457,7 +448,7 @@ func (s *ServiceImpl) createTool(t *agentv1.StartSessionRequest_Agent_Tool, stre
 		}
 
 		requestID := uuid.New().String()
-		respCh := make(chan *agentv1.StartSessionRequest_ToolCallResponse, 1)
+		respCh := make(chan *executorv1.StartSessionRequest_ToolCallResponse, 1)
 
 		state.mu.Lock()
 		state.toolsQueue[requestID] = respCh
@@ -470,9 +461,9 @@ func (s *ServiceImpl) createTool(t *agentv1.StartSessionRequest_Agent_Tool, stre
 		}()
 
 		// Send ToolCallRequest to client
-		if err := stream.Send(&agentv1.StartSessionResponse{
-			Message: &agentv1.StartSessionResponse_ToolCallRequest_{
-				ToolCallRequest: &agentv1.StartSessionResponse_ToolCallRequest{
+		if err := stream.Send(&executorv1.StartSessionResponse{
+			Message: &executorv1.StartSessionResponse_ToolCallRequest_{
+				ToolCallRequest: &executorv1.StartSessionResponse_ToolCallRequest{
 					RequestId: requestID,
 					ToolName:  t.GetName(),
 					Input:     string(inputJSON),
@@ -484,7 +475,7 @@ func (s *ServiceImpl) createTool(t *agentv1.StartSessionRequest_Agent_Tool, stre
 
 		select {
 		case response := <-respCh:
-			if response.GetStatus() != agentv1.StartSessionRequest_ToolCallResponse_STATUS_SUCCESS {
+			if response.GetStatus() != executorv1.StartSessionRequest_ToolCallResponse_STATUS_SUCCESS {
 				return nil, fmt.Errorf("tool execution failed on client: %s", response.GetError())
 			}
 
@@ -502,7 +493,7 @@ func (s *ServiceImpl) createTool(t *agentv1.StartSessionRequest_Agent_Tool, stre
 	})
 }
 
-func (s *ServiceImpl) initModel(ctx context.Context, m agentv1.Model) (model.LLM, error) {
+func (s *ServiceImpl) initModel(ctx context.Context, m domainv1.Model) (model.LLM, error) {
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
 		slog.Error("initModel: GEMINI_API_KEY not set")
@@ -520,17 +511,17 @@ func (s *ServiceImpl) initModel(ctx context.Context, m agentv1.Model) (model.LLM
 	return llm, nil
 }
 
-func getModelName(m agentv1.Model) string {
+func getModelName(m domainv1.Model) string {
 	switch m {
-	case agentv1.Model_MODEL_GEMINI_2_5_PRO:
+	case domainv1.Model_MODEL_GEMINI_2_5_PRO:
 		return "gemini-2.5-pro"
-	case agentv1.Model_MODEL_GEMINI_2_5_FLASH:
+	case domainv1.Model_MODEL_GEMINI_2_5_FLASH:
 		return "gemini-2.5-flash"
-	case agentv1.Model_MODEL_GEMINI_2_5_FLASH_LITE:
+	case domainv1.Model_MODEL_GEMINI_2_5_FLASH_LITE:
 		return "gemini-2.5-flash-lite"
-	case agentv1.Model_MODEL_GEMINI_3_PRO:
+	case domainv1.Model_MODEL_GEMINI_3_PRO:
 		return "gemini-3.0-pro-preview"
-	case agentv1.Model_MODEL_GEMINI_3_FLASH:
+	case domainv1.Model_MODEL_GEMINI_3_FLASH:
 		return "gemini-3-flash-preview"
 	default:
 		return "gemini-2.5-pro"

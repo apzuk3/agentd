@@ -1,6 +1,8 @@
 package llmprovider
 
-import agentv1 "github.com/syss-io/executor/gen/proto/go/agent/v1"
+import (
+	domainv1 "github.com/syss-io/executor/gen/proto/go/domain/v1"
+)
 
 // Model represents an LLM model with its capabilities and pricing
 type Model struct {
@@ -18,8 +20,8 @@ type Model struct {
 }
 
 // ModelTable maps model enum to model configuration
-var ModelTable = map[agentv1.Model]Model{
-	agentv1.Model_MODEL_GEMINI_3_PRO: {
+var ModelTable = map[domainv1.Model]Model{
+	domainv1.Model_MODEL_GEMINI_3_PRO: {
 		ID:                    "gemini-3-pro-preview",
 		Name:                  "Gemini 3 Pro (Preview)",
 		CostPer1MInput:        2.0,
@@ -32,7 +34,7 @@ var ModelTable = map[agentv1.Model]Model{
 		HasReasoningEfforts:   false,
 		SupportsAttachments:   true,
 	},
-	agentv1.Model_MODEL_GEMINI_3_FLASH: {
+	domainv1.Model_MODEL_GEMINI_3_FLASH: {
 		ID:                    "gemini-3-flash-preview",
 		Name:                  "Gemini 3 Flash (Preview)",
 		CostPer1MInput:        0.5,
@@ -45,7 +47,7 @@ var ModelTable = map[agentv1.Model]Model{
 		HasReasoningEfforts:   false,
 		SupportsAttachments:   true,
 	},
-	agentv1.Model_MODEL_GEMINI_2_5_PRO: {
+	domainv1.Model_MODEL_GEMINI_2_5_PRO: {
 		ID:                    "gemini-2.5-pro",
 		Name:                  "Gemini 2.5 Pro",
 		CostPer1MInput:        1.25,
@@ -58,7 +60,7 @@ var ModelTable = map[agentv1.Model]Model{
 		HasReasoningEfforts:   false,
 		SupportsAttachments:   true,
 	},
-	agentv1.Model_MODEL_GEMINI_2_5_FLASH: {
+	domainv1.Model_MODEL_GEMINI_2_5_FLASH: {
 		ID:                    "gemini-2.5-flash",
 		Name:                  "Gemini 2.5 Flash",
 		CostPer1MInput:        0.3,
@@ -71,7 +73,7 @@ var ModelTable = map[agentv1.Model]Model{
 		HasReasoningEfforts:   false,
 		SupportsAttachments:   true,
 	},
-	agentv1.Model_MODEL_GEMINI_2_5_FLASH_LITE: {
+	domainv1.Model_MODEL_GEMINI_2_5_FLASH_LITE: {
 		ID:                    "gemini-2.5-flash-lite",
 		Name:                  "Gemini 2.5 Flash Lite",
 		CostPer1MInput:        0.15,
@@ -87,10 +89,10 @@ var ModelTable = map[agentv1.Model]Model{
 }
 
 // CalculateCost returns the cost in USD for given token counts
-func CalculateCost(model agentv1.Model, inputTokens, outputTokens int32) float64 {
+func CalculateCost(model domainv1.Model, inputTokens, outputTokens int32) float64 {
 	m, ok := ModelTable[model]
 	if !ok {
-		m = ModelTable[agentv1.Model_MODEL_GEMINI_2_5_PRO]
+		m = ModelTable[domainv1.Model_MODEL_GEMINI_2_5_PRO]
 	}
 
 	inputCost := (float64(inputTokens) / 1_000_000) * m.CostPer1MInput
@@ -100,10 +102,10 @@ func CalculateCost(model agentv1.Model, inputTokens, outputTokens int32) float64
 }
 
 // CalculateCostBreakdown returns separate input and output costs in USD
-func CalculateCostBreakdown(model agentv1.Model, inputTokens, outputTokens int32) (inputCost, outputCost float64) {
+func CalculateCostBreakdown(model domainv1.Model, inputTokens, outputTokens int32) (inputCost, outputCost float64) {
 	m, ok := ModelTable[model]
 	if !ok {
-		m = ModelTable[agentv1.Model_MODEL_GEMINI_2_5_PRO]
+		m = ModelTable[domainv1.Model_MODEL_GEMINI_2_5_PRO]
 	}
 
 	inputCost = (float64(inputTokens) / 1_000_000) * m.CostPer1MInput
@@ -112,13 +114,13 @@ func CalculateCostBreakdown(model agentv1.Model, inputTokens, outputTokens int32
 }
 
 // GetModel returns the model configuration for a specific model enum
-func GetModel(model agentv1.Model) (Model, bool) {
+func GetModel(model domainv1.Model) (Model, bool) {
 	m, ok := ModelTable[model]
 	return m, ok
 }
 
 // GetModelID returns the API model ID string for a model enum
-func GetModelID(model agentv1.Model) string {
+func GetModelID(model domainv1.Model) string {
 	m, ok := ModelTable[model]
 	if !ok {
 		return "gemini-2.5-flash"

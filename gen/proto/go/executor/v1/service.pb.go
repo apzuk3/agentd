@@ -2,11 +2,12 @@
 // versions:
 // 	protoc-gen-go v1.36.10
 // 	protoc        (unknown)
-// source: agent/v1/service.proto
+// source: executor/v1/service.proto
 
-package agentv1
+package executorv1
 
 import (
+	v1 "github.com/syss-io/executor/gen/proto/go/domain/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/known/emptypb"
@@ -21,64 +22,6 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
-
-type Model int32
-
-const (
-	Model_MODEL_UNSPECIFIED           Model = 0
-	Model_MODEL_GEMINI_2_5_PRO        Model = 1
-	Model_MODEL_GEMINI_2_5_FLASH      Model = 2
-	Model_MODEL_GEMINI_2_5_FLASH_LITE Model = 3
-	Model_MODEL_GEMINI_3_PRO          Model = 4
-	Model_MODEL_GEMINI_3_FLASH        Model = 5
-)
-
-// Enum value maps for Model.
-var (
-	Model_name = map[int32]string{
-		0: "MODEL_UNSPECIFIED",
-		1: "MODEL_GEMINI_2_5_PRO",
-		2: "MODEL_GEMINI_2_5_FLASH",
-		3: "MODEL_GEMINI_2_5_FLASH_LITE",
-		4: "MODEL_GEMINI_3_PRO",
-		5: "MODEL_GEMINI_3_FLASH",
-	}
-	Model_value = map[string]int32{
-		"MODEL_UNSPECIFIED":           0,
-		"MODEL_GEMINI_2_5_PRO":        1,
-		"MODEL_GEMINI_2_5_FLASH":      2,
-		"MODEL_GEMINI_2_5_FLASH_LITE": 3,
-		"MODEL_GEMINI_3_PRO":          4,
-		"MODEL_GEMINI_3_FLASH":        5,
-	}
-)
-
-func (x Model) Enum() *Model {
-	p := new(Model)
-	*p = x
-	return p
-}
-
-func (x Model) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (Model) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_v1_service_proto_enumTypes[0].Descriptor()
-}
-
-func (Model) Type() protoreflect.EnumType {
-	return &file_agent_v1_service_proto_enumTypes[0]
-}
-
-func (x Model) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use Model.Descriptor instead.
-func (Model) EnumDescriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{0}
-}
 
 type StartSessionRequest_RunRequest_Workflow int32
 
@@ -116,11 +59,11 @@ func (x StartSessionRequest_RunRequest_Workflow) String() string {
 }
 
 func (StartSessionRequest_RunRequest_Workflow) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_v1_service_proto_enumTypes[1].Descriptor()
+	return file_executor_v1_service_proto_enumTypes[0].Descriptor()
 }
 
 func (StartSessionRequest_RunRequest_Workflow) Type() protoreflect.EnumType {
-	return &file_agent_v1_service_proto_enumTypes[1]
+	return &file_executor_v1_service_proto_enumTypes[0]
 }
 
 func (x StartSessionRequest_RunRequest_Workflow) Number() protoreflect.EnumNumber {
@@ -129,7 +72,7 @@ func (x StartSessionRequest_RunRequest_Workflow) Number() protoreflect.EnumNumbe
 
 // Deprecated: Use StartSessionRequest_RunRequest_Workflow.Descriptor instead.
 func (StartSessionRequest_RunRequest_Workflow) EnumDescriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{0, 1, 0}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{2, 1, 0}
 }
 
 type StartSessionRequest_ToolCallResponse_Status int32
@@ -168,11 +111,11 @@ func (x StartSessionRequest_ToolCallResponse_Status) String() string {
 }
 
 func (StartSessionRequest_ToolCallResponse_Status) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_v1_service_proto_enumTypes[2].Descriptor()
+	return file_executor_v1_service_proto_enumTypes[1].Descriptor()
 }
 
 func (StartSessionRequest_ToolCallResponse_Status) Type() protoreflect.EnumType {
-	return &file_agent_v1_service_proto_enumTypes[2]
+	return &file_executor_v1_service_proto_enumTypes[1]
 }
 
 func (x StartSessionRequest_ToolCallResponse_Status) Number() protoreflect.EnumNumber {
@@ -181,7 +124,7 @@ func (x StartSessionRequest_ToolCallResponse_Status) Number() protoreflect.EnumN
 
 // Deprecated: Use StartSessionRequest_ToolCallResponse_Status.Descriptor instead.
 func (StartSessionRequest_ToolCallResponse_Status) EnumDescriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{0, 2, 0}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{2, 2, 0}
 }
 
 type StartSessionResponse_SessionEnd_Reason int32
@@ -217,11 +160,11 @@ func (x StartSessionResponse_SessionEnd_Reason) String() string {
 }
 
 func (StartSessionResponse_SessionEnd_Reason) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_v1_service_proto_enumTypes[3].Descriptor()
+	return file_executor_v1_service_proto_enumTypes[2].Descriptor()
 }
 
 func (StartSessionResponse_SessionEnd_Reason) Type() protoreflect.EnumType {
-	return &file_agent_v1_service_proto_enumTypes[3]
+	return &file_executor_v1_service_proto_enumTypes[2]
 }
 
 func (x StartSessionResponse_SessionEnd_Reason) Number() protoreflect.EnumNumber {
@@ -230,7 +173,152 @@ func (x StartSessionResponse_SessionEnd_Reason) Number() protoreflect.EnumNumber
 
 // Deprecated: Use StartSessionResponse_SessionEnd_Reason.Descriptor instead.
 func (StartSessionResponse_SessionEnd_Reason) EnumDescriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{1, 3, 0}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{3, 3, 0}
+}
+
+type PromptSessionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserMessage   string                 `protobuf:"bytes,1,opt,name=user_message,json=userMessage,proto3" json:"user_message,omitempty"`
+	Model         v1.Model               `protobuf:"varint,2,opt,name=model,proto3,enum=domain.v1.Model" json:"model,omitempty"`
+	Budget        float64                `protobuf:"fixed64,3,opt,name=budget,proto3" json:"budget,omitempty"` // Maximum allowed session cost in USD (0 = unlimited)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PromptSessionRequest) Reset() {
+	*x = PromptSessionRequest{}
+	mi := &file_executor_v1_service_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PromptSessionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PromptSessionRequest) ProtoMessage() {}
+
+func (x *PromptSessionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_executor_v1_service_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PromptSessionRequest.ProtoReflect.Descriptor instead.
+func (*PromptSessionRequest) Descriptor() ([]byte, []int) {
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *PromptSessionRequest) GetUserMessage() string {
+	if x != nil {
+		return x.UserMessage
+	}
+	return ""
+}
+
+func (x *PromptSessionRequest) GetModel() v1.Model {
+	if x != nil {
+		return x.Model
+	}
+	return v1.Model(0)
+}
+
+func (x *PromptSessionRequest) GetBudget() float64 {
+	if x != nil {
+		return x.Budget
+	}
+	return 0
+}
+
+type PromptSessionResponse struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Content string                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
+	// Cumulative totals
+	InputTokenCount  int32   `protobuf:"varint,2,opt,name=input_token_count,json=inputTokenCount,proto3" json:"input_token_count,omitempty"`
+	OutputTokenCount int32   `protobuf:"varint,3,opt,name=output_token_count,json=outputTokenCount,proto3" json:"output_token_count,omitempty"`
+	InputCost        float64 `protobuf:"fixed64,4,opt,name=input_cost,json=inputCost,proto3" json:"input_cost,omitempty"`
+	OutputCost       float64 `protobuf:"fixed64,5,opt,name=output_cost,json=outputCost,proto3" json:"output_cost,omitempty"`
+	TotalCost        float64 `protobuf:"fixed64,6,opt,name=total_cost,json=totalCost,proto3" json:"total_cost,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *PromptSessionResponse) Reset() {
+	*x = PromptSessionResponse{}
+	mi := &file_executor_v1_service_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PromptSessionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PromptSessionResponse) ProtoMessage() {}
+
+func (x *PromptSessionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_executor_v1_service_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PromptSessionResponse.ProtoReflect.Descriptor instead.
+func (*PromptSessionResponse) Descriptor() ([]byte, []int) {
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *PromptSessionResponse) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *PromptSessionResponse) GetInputTokenCount() int32 {
+	if x != nil {
+		return x.InputTokenCount
+	}
+	return 0
+}
+
+func (x *PromptSessionResponse) GetOutputTokenCount() int32 {
+	if x != nil {
+		return x.OutputTokenCount
+	}
+	return 0
+}
+
+func (x *PromptSessionResponse) GetInputCost() float64 {
+	if x != nil {
+		return x.InputCost
+	}
+	return 0
+}
+
+func (x *PromptSessionResponse) GetOutputCost() float64 {
+	if x != nil {
+		return x.OutputCost
+	}
+	return 0
+}
+
+func (x *PromptSessionResponse) GetTotalCost() float64 {
+	if x != nil {
+		return x.TotalCost
+	}
+	return 0
 }
 
 type StartSessionRequest struct {
@@ -248,7 +336,7 @@ type StartSessionRequest struct {
 
 func (x *StartSessionRequest) Reset() {
 	*x = StartSessionRequest{}
-	mi := &file_agent_v1_service_proto_msgTypes[0]
+	mi := &file_executor_v1_service_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -260,7 +348,7 @@ func (x *StartSessionRequest) String() string {
 func (*StartSessionRequest) ProtoMessage() {}
 
 func (x *StartSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_v1_service_proto_msgTypes[0]
+	mi := &file_executor_v1_service_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -273,7 +361,7 @@ func (x *StartSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSessionRequest.ProtoReflect.Descriptor instead.
 func (*StartSessionRequest) Descriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{0}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *StartSessionRequest) GetMessage() isStartSessionRequest_Message {
@@ -364,7 +452,7 @@ type StartSessionResponse struct {
 
 func (x *StartSessionResponse) Reset() {
 	*x = StartSessionResponse{}
-	mi := &file_agent_v1_service_proto_msgTypes[1]
+	mi := &file_executor_v1_service_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -376,7 +464,7 @@ func (x *StartSessionResponse) String() string {
 func (*StartSessionResponse) ProtoMessage() {}
 
 func (x *StartSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_v1_service_proto_msgTypes[1]
+	mi := &file_executor_v1_service_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -389,7 +477,7 @@ func (x *StartSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSessionResponse.ProtoReflect.Descriptor instead.
 func (*StartSessionResponse) Descriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{1}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *StartSessionResponse) GetMessage() isStartSessionResponse_Message {
@@ -500,7 +588,7 @@ type StartSessionRequest_Agent struct {
 	Description   string                            `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
 	Instruction   string                            `protobuf:"bytes,3,opt,name=instruction,proto3" json:"instruction,omitempty"`
 	Tools         []*StartSessionRequest_Agent_Tool `protobuf:"bytes,4,rep,name=tools,proto3" json:"tools,omitempty"`
-	Model         Model                             `protobuf:"varint,5,opt,name=model,proto3,enum=agent.v1.Model" json:"model,omitempty"`
+	Model         v1.Model                          `protobuf:"varint,5,opt,name=model,proto3,enum=domain.v1.Model" json:"model,omitempty"`
 	SubAgents     []*StartSessionRequest_Agent      `protobuf:"bytes,6,rep,name=sub_agents,json=subAgents,proto3" json:"sub_agents,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -508,7 +596,7 @@ type StartSessionRequest_Agent struct {
 
 func (x *StartSessionRequest_Agent) Reset() {
 	*x = StartSessionRequest_Agent{}
-	mi := &file_agent_v1_service_proto_msgTypes[2]
+	mi := &file_executor_v1_service_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -520,7 +608,7 @@ func (x *StartSessionRequest_Agent) String() string {
 func (*StartSessionRequest_Agent) ProtoMessage() {}
 
 func (x *StartSessionRequest_Agent) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_v1_service_proto_msgTypes[2]
+	mi := &file_executor_v1_service_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -533,7 +621,7 @@ func (x *StartSessionRequest_Agent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSessionRequest_Agent.ProtoReflect.Descriptor instead.
 func (*StartSessionRequest_Agent) Descriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{0, 0}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{2, 0}
 }
 
 func (x *StartSessionRequest_Agent) GetName() string {
@@ -564,11 +652,11 @@ func (x *StartSessionRequest_Agent) GetTools() []*StartSessionRequest_Agent_Tool
 	return nil
 }
 
-func (x *StartSessionRequest_Agent) GetModel() Model {
+func (x *StartSessionRequest_Agent) GetModel() v1.Model {
 	if x != nil {
 		return x.Model
 	}
-	return Model_MODEL_UNSPECIFIED
+	return v1.Model(0)
 }
 
 func (x *StartSessionRequest_Agent) GetSubAgents() []*StartSessionRequest_Agent {
@@ -580,11 +668,11 @@ func (x *StartSessionRequest_Agent) GetSubAgents() []*StartSessionRequest_Agent 
 
 type StartSessionRequest_RunRequest struct {
 	state         protoimpl.MessageState                  `protogen:"open.v1"`
-	Workflow      StartSessionRequest_RunRequest_Workflow `protobuf:"varint,1,opt,name=workflow,proto3,enum=agent.v1.StartSessionRequest_RunRequest_Workflow" json:"workflow,omitempty"`
+	Workflow      StartSessionRequest_RunRequest_Workflow `protobuf:"varint,1,opt,name=workflow,proto3,enum=executor.v1.StartSessionRequest_RunRequest_Workflow" json:"workflow,omitempty"`
 	Instruction   string                                  `protobuf:"bytes,2,opt,name=instruction,proto3" json:"instruction,omitempty"`
 	Agents        []*StartSessionRequest_Agent            `protobuf:"bytes,3,rep,name=agents,proto3" json:"agents,omitempty"`
 	UserMessage   string                                  `protobuf:"bytes,4,opt,name=user_message,json=userMessage,proto3" json:"user_message,omitempty"`
-	Model         Model                                   `protobuf:"varint,5,opt,name=model,proto3,enum=agent.v1.Model" json:"model,omitempty"`
+	Model         v1.Model                                `protobuf:"varint,5,opt,name=model,proto3,enum=domain.v1.Model" json:"model,omitempty"`
 	MaxIterations int32                                   `protobuf:"varint,6,opt,name=max_iterations,json=maxIterations,proto3" json:"max_iterations,omitempty"`
 	Budget        float64                                 `protobuf:"fixed64,7,opt,name=budget,proto3" json:"budget,omitempty"` // Maximum allowed session cost in USD (0 = unlimited)
 	unknownFields protoimpl.UnknownFields
@@ -593,7 +681,7 @@ type StartSessionRequest_RunRequest struct {
 
 func (x *StartSessionRequest_RunRequest) Reset() {
 	*x = StartSessionRequest_RunRequest{}
-	mi := &file_agent_v1_service_proto_msgTypes[3]
+	mi := &file_executor_v1_service_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -605,7 +693,7 @@ func (x *StartSessionRequest_RunRequest) String() string {
 func (*StartSessionRequest_RunRequest) ProtoMessage() {}
 
 func (x *StartSessionRequest_RunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_v1_service_proto_msgTypes[3]
+	mi := &file_executor_v1_service_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -618,7 +706,7 @@ func (x *StartSessionRequest_RunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSessionRequest_RunRequest.ProtoReflect.Descriptor instead.
 func (*StartSessionRequest_RunRequest) Descriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{0, 1}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{2, 1}
 }
 
 func (x *StartSessionRequest_RunRequest) GetWorkflow() StartSessionRequest_RunRequest_Workflow {
@@ -649,11 +737,11 @@ func (x *StartSessionRequest_RunRequest) GetUserMessage() string {
 	return ""
 }
 
-func (x *StartSessionRequest_RunRequest) GetModel() Model {
+func (x *StartSessionRequest_RunRequest) GetModel() v1.Model {
 	if x != nil {
 		return x.Model
 	}
-	return Model_MODEL_UNSPECIFIED
+	return v1.Model(0)
 }
 
 func (x *StartSessionRequest_RunRequest) GetMaxIterations() int32 {
@@ -674,7 +762,7 @@ func (x *StartSessionRequest_RunRequest) GetBudget() float64 {
 type StartSessionRequest_ToolCallResponse struct {
 	state     protoimpl.MessageState                      `protogen:"open.v1"`
 	RequestId string                                      `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"` // Correlates to AgentSessionResponse.ToolCallRequest.request_id
-	Status    StartSessionRequest_ToolCallResponse_Status `protobuf:"varint,2,opt,name=status,proto3,enum=agent.v1.StartSessionRequest_ToolCallResponse_Status" json:"status,omitempty"`
+	Status    StartSessionRequest_ToolCallResponse_Status `protobuf:"varint,2,opt,name=status,proto3,enum=executor.v1.StartSessionRequest_ToolCallResponse_Status" json:"status,omitempty"`
 	// JSON-encoded output matching tool's output_schema (populated on success)
 	Output string `protobuf:"bytes,3,opt,name=output,proto3" json:"output,omitempty"`
 	// Error message (populated on failure)
@@ -687,7 +775,7 @@ type StartSessionRequest_ToolCallResponse struct {
 
 func (x *StartSessionRequest_ToolCallResponse) Reset() {
 	*x = StartSessionRequest_ToolCallResponse{}
-	mi := &file_agent_v1_service_proto_msgTypes[4]
+	mi := &file_executor_v1_service_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -699,7 +787,7 @@ func (x *StartSessionRequest_ToolCallResponse) String() string {
 func (*StartSessionRequest_ToolCallResponse) ProtoMessage() {}
 
 func (x *StartSessionRequest_ToolCallResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_v1_service_proto_msgTypes[4]
+	mi := &file_executor_v1_service_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -712,7 +800,7 @@ func (x *StartSessionRequest_ToolCallResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use StartSessionRequest_ToolCallResponse.ProtoReflect.Descriptor instead.
 func (*StartSessionRequest_ToolCallResponse) Descriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{0, 2}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{2, 2}
 }
 
 func (x *StartSessionRequest_ToolCallResponse) GetRequestId() string {
@@ -760,7 +848,7 @@ type StartSessionRequest_Heartbeat struct {
 
 func (x *StartSessionRequest_Heartbeat) Reset() {
 	*x = StartSessionRequest_Heartbeat{}
-	mi := &file_agent_v1_service_proto_msgTypes[5]
+	mi := &file_executor_v1_service_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -772,7 +860,7 @@ func (x *StartSessionRequest_Heartbeat) String() string {
 func (*StartSessionRequest_Heartbeat) ProtoMessage() {}
 
 func (x *StartSessionRequest_Heartbeat) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_v1_service_proto_msgTypes[5]
+	mi := &file_executor_v1_service_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -785,7 +873,7 @@ func (x *StartSessionRequest_Heartbeat) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSessionRequest_Heartbeat.ProtoReflect.Descriptor instead.
 func (*StartSessionRequest_Heartbeat) Descriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{0, 3}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{2, 3}
 }
 
 func (x *StartSessionRequest_Heartbeat) GetTimestamp() int64 {
@@ -805,7 +893,7 @@ type StartSessionRequest_SessionEnd struct {
 
 func (x *StartSessionRequest_SessionEnd) Reset() {
 	*x = StartSessionRequest_SessionEnd{}
-	mi := &file_agent_v1_service_proto_msgTypes[6]
+	mi := &file_executor_v1_service_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -817,7 +905,7 @@ func (x *StartSessionRequest_SessionEnd) String() string {
 func (*StartSessionRequest_SessionEnd) ProtoMessage() {}
 
 func (x *StartSessionRequest_SessionEnd) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_v1_service_proto_msgTypes[6]
+	mi := &file_executor_v1_service_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -830,7 +918,7 @@ func (x *StartSessionRequest_SessionEnd) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSessionRequest_SessionEnd.ProtoReflect.Descriptor instead.
 func (*StartSessionRequest_SessionEnd) Descriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{0, 4}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{2, 4}
 }
 
 func (x *StartSessionRequest_SessionEnd) GetReason() string {
@@ -854,7 +942,7 @@ type StartSessionRequest_Agent_Tool struct {
 
 func (x *StartSessionRequest_Agent_Tool) Reset() {
 	*x = StartSessionRequest_Agent_Tool{}
-	mi := &file_agent_v1_service_proto_msgTypes[7]
+	mi := &file_executor_v1_service_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -866,7 +954,7 @@ func (x *StartSessionRequest_Agent_Tool) String() string {
 func (*StartSessionRequest_Agent_Tool) ProtoMessage() {}
 
 func (x *StartSessionRequest_Agent_Tool) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_v1_service_proto_msgTypes[7]
+	mi := &file_executor_v1_service_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -879,7 +967,7 @@ func (x *StartSessionRequest_Agent_Tool) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSessionRequest_Agent_Tool.ProtoReflect.Descriptor instead.
 func (*StartSessionRequest_Agent_Tool) Descriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{0, 0, 0}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{2, 0, 0}
 }
 
 func (x *StartSessionRequest_Agent_Tool) GetName() string {
@@ -929,7 +1017,7 @@ type StartSessionResponse_Error struct {
 
 func (x *StartSessionResponse_Error) Reset() {
 	*x = StartSessionResponse_Error{}
-	mi := &file_agent_v1_service_proto_msgTypes[8]
+	mi := &file_executor_v1_service_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -941,7 +1029,7 @@ func (x *StartSessionResponse_Error) String() string {
 func (*StartSessionResponse_Error) ProtoMessage() {}
 
 func (x *StartSessionResponse_Error) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_v1_service_proto_msgTypes[8]
+	mi := &file_executor_v1_service_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -954,7 +1042,7 @@ func (x *StartSessionResponse_Error) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSessionResponse_Error.ProtoReflect.Descriptor instead.
 func (*StartSessionResponse_Error) Descriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{1, 0}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{3, 0}
 }
 
 func (x *StartSessionResponse_Error) GetCode() string {
@@ -988,7 +1076,7 @@ type StartSessionResponse_HeartbeatAck struct {
 
 func (x *StartSessionResponse_HeartbeatAck) Reset() {
 	*x = StartSessionResponse_HeartbeatAck{}
-	mi := &file_agent_v1_service_proto_msgTypes[9]
+	mi := &file_executor_v1_service_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1000,7 +1088,7 @@ func (x *StartSessionResponse_HeartbeatAck) String() string {
 func (*StartSessionResponse_HeartbeatAck) ProtoMessage() {}
 
 func (x *StartSessionResponse_HeartbeatAck) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_v1_service_proto_msgTypes[9]
+	mi := &file_executor_v1_service_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1013,7 +1101,7 @@ func (x *StartSessionResponse_HeartbeatAck) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use StartSessionResponse_HeartbeatAck.ProtoReflect.Descriptor instead.
 func (*StartSessionResponse_HeartbeatAck) Descriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{1, 1}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{3, 1}
 }
 
 func (x *StartSessionResponse_HeartbeatAck) GetTimestamp() int64 {
@@ -1033,7 +1121,7 @@ type StartSessionResponse_SessionEndAck struct {
 
 func (x *StartSessionResponse_SessionEndAck) Reset() {
 	*x = StartSessionResponse_SessionEndAck{}
-	mi := &file_agent_v1_service_proto_msgTypes[10]
+	mi := &file_executor_v1_service_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1045,7 +1133,7 @@ func (x *StartSessionResponse_SessionEndAck) String() string {
 func (*StartSessionResponse_SessionEndAck) ProtoMessage() {}
 
 func (x *StartSessionResponse_SessionEndAck) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_v1_service_proto_msgTypes[10]
+	mi := &file_executor_v1_service_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1058,7 +1146,7 @@ func (x *StartSessionResponse_SessionEndAck) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use StartSessionResponse_SessionEndAck.ProtoReflect.Descriptor instead.
 func (*StartSessionResponse_SessionEndAck) Descriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{1, 2}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{3, 2}
 }
 
 func (x *StartSessionResponse_SessionEndAck) GetAcknowledged() bool {
@@ -1070,7 +1158,7 @@ func (x *StartSessionResponse_SessionEndAck) GetAcknowledged() bool {
 
 type StartSessionResponse_SessionEnd struct {
 	state         protoimpl.MessageState                 `protogen:"open.v1"`
-	Reason        StartSessionResponse_SessionEnd_Reason `protobuf:"varint,1,opt,name=reason,proto3,enum=agent.v1.StartSessionResponse_SessionEnd_Reason" json:"reason,omitempty"`
+	Reason        StartSessionResponse_SessionEnd_Reason `protobuf:"varint,1,opt,name=reason,proto3,enum=executor.v1.StartSessionResponse_SessionEnd_Reason" json:"reason,omitempty"`
 	Message       string                                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"` // Human-readable message (e.g., "Budget exceeded: $0.05 > $0.04")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1078,7 +1166,7 @@ type StartSessionResponse_SessionEnd struct {
 
 func (x *StartSessionResponse_SessionEnd) Reset() {
 	*x = StartSessionResponse_SessionEnd{}
-	mi := &file_agent_v1_service_proto_msgTypes[11]
+	mi := &file_executor_v1_service_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1090,7 +1178,7 @@ func (x *StartSessionResponse_SessionEnd) String() string {
 func (*StartSessionResponse_SessionEnd) ProtoMessage() {}
 
 func (x *StartSessionResponse_SessionEnd) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_v1_service_proto_msgTypes[11]
+	mi := &file_executor_v1_service_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1103,7 +1191,7 @@ func (x *StartSessionResponse_SessionEnd) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSessionResponse_SessionEnd.ProtoReflect.Descriptor instead.
 func (*StartSessionResponse_SessionEnd) Descriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{1, 3}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{3, 3}
 }
 
 func (x *StartSessionResponse_SessionEnd) GetReason() StartSessionResponse_SessionEnd_Reason {
@@ -1132,7 +1220,7 @@ type StartSessionResponse_ToolCallRequest struct {
 
 func (x *StartSessionResponse_ToolCallRequest) Reset() {
 	*x = StartSessionResponse_ToolCallRequest{}
-	mi := &file_agent_v1_service_proto_msgTypes[12]
+	mi := &file_executor_v1_service_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1144,7 +1232,7 @@ func (x *StartSessionResponse_ToolCallRequest) String() string {
 func (*StartSessionResponse_ToolCallRequest) ProtoMessage() {}
 
 func (x *StartSessionResponse_ToolCallRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_v1_service_proto_msgTypes[12]
+	mi := &file_executor_v1_service_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1157,7 +1245,7 @@ func (x *StartSessionResponse_ToolCallRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use StartSessionResponse_ToolCallRequest.ProtoReflect.Descriptor instead.
 func (*StartSessionResponse_ToolCallRequest) Descriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{1, 4}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{3, 4}
 }
 
 func (x *StartSessionResponse_ToolCallRequest) GetRequestId() string {
@@ -1204,7 +1292,7 @@ type StartSessionResponse_UsageEntry struct {
 
 func (x *StartSessionResponse_UsageEntry) Reset() {
 	*x = StartSessionResponse_UsageEntry{}
-	mi := &file_agent_v1_service_proto_msgTypes[13]
+	mi := &file_executor_v1_service_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1216,7 +1304,7 @@ func (x *StartSessionResponse_UsageEntry) String() string {
 func (*StartSessionResponse_UsageEntry) ProtoMessage() {}
 
 func (x *StartSessionResponse_UsageEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_v1_service_proto_msgTypes[13]
+	mi := &file_executor_v1_service_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1229,7 +1317,7 @@ func (x *StartSessionResponse_UsageEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSessionResponse_UsageEntry.ProtoReflect.Descriptor instead.
 func (*StartSessionResponse_UsageEntry) Descriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{1, 5}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{3, 5}
 }
 
 func (x *StartSessionResponse_UsageEntry) GetAgentName() string {
@@ -1297,7 +1385,7 @@ type StartSessionResponse_RunResponse struct {
 
 func (x *StartSessionResponse_RunResponse) Reset() {
 	*x = StartSessionResponse_RunResponse{}
-	mi := &file_agent_v1_service_proto_msgTypes[14]
+	mi := &file_executor_v1_service_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1309,7 +1397,7 @@ func (x *StartSessionResponse_RunResponse) String() string {
 func (*StartSessionResponse_RunResponse) ProtoMessage() {}
 
 func (x *StartSessionResponse_RunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_v1_service_proto_msgTypes[14]
+	mi := &file_executor_v1_service_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1322,7 +1410,7 @@ func (x *StartSessionResponse_RunResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSessionResponse_RunResponse.ProtoReflect.Descriptor instead.
 func (*StartSessionResponse_RunResponse) Descriptor() ([]byte, []int) {
-	return file_agent_v1_service_proto_rawDescGZIP(), []int{1, 6}
+	return file_executor_v1_service_proto_rawDescGZIP(), []int{3, 6}
 }
 
 func (x *StartSessionResponse_RunResponse) GetContent() string {
@@ -1367,51 +1455,65 @@ func (x *StartSessionResponse_RunResponse) GetTotalCost() float64 {
 	return 0
 }
 
-var File_agent_v1_service_proto protoreflect.FileDescriptor
+var File_executor_v1_service_proto protoreflect.FileDescriptor
 
-const file_agent_v1_service_proto_rawDesc = "" +
+const file_executor_v1_service_proto_rawDesc = "" +
 	"\n" +
-	"\x16agent/v1/service.proto\x12\bagent.v1\x1a\x1bgoogle/protobuf/empty.proto\"\xcf\f\n" +
-	"\x13StartSessionRequest\x12K\n" +
-	"\vrun_request\x18\x01 \x01(\v2(.agent.v1.StartSessionRequest.RunRequestH\x00R\n" +
-	"runRequest\x12^\n" +
-	"\x12tool_call_response\x18\x02 \x01(\v2..agent.v1.StartSessionRequest.ToolCallResponseH\x00R\x10toolCallResponse\x12G\n" +
-	"\theartbeat\x18\x03 \x01(\v2'.agent.v1.StartSessionRequest.HeartbeatH\x00R\theartbeat\x12K\n" +
-	"\vsession_end\x18\x04 \x01(\v2(.agent.v1.StartSessionRequest.SessionEndH\x00R\n" +
-	"sessionEnd\x1a\xb0\x03\n" +
+	"\x19executor/v1/service.proto\x12\vexecutor.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a\x15domain/v1/types.proto\"y\n" +
+	"\x14PromptSessionRequest\x12!\n" +
+	"\fuser_message\x18\x01 \x01(\tR\vuserMessage\x12&\n" +
+	"\x05model\x18\x02 \x01(\x0e2\x10.domain.v1.ModelR\x05model\x12\x16\n" +
+	"\x06budget\x18\x03 \x01(\x01R\x06budget\"\xea\x01\n" +
+	"\x15PromptSessionResponse\x12\x18\n" +
+	"\acontent\x18\x01 \x01(\tR\acontent\x12*\n" +
+	"\x11input_token_count\x18\x02 \x01(\x05R\x0finputTokenCount\x12,\n" +
+	"\x12output_token_count\x18\x03 \x01(\x05R\x10outputTokenCount\x12\x1d\n" +
+	"\n" +
+	"input_cost\x18\x04 \x01(\x01R\tinputCost\x12\x1f\n" +
+	"\voutput_cost\x18\x05 \x01(\x01R\n" +
+	"outputCost\x12\x1d\n" +
+	"\n" +
+	"total_cost\x18\x06 \x01(\x01R\ttotalCost\"\xec\f\n" +
+	"\x13StartSessionRequest\x12N\n" +
+	"\vrun_request\x18\x01 \x01(\v2+.executor.v1.StartSessionRequest.RunRequestH\x00R\n" +
+	"runRequest\x12a\n" +
+	"\x12tool_call_response\x18\x02 \x01(\v21.executor.v1.StartSessionRequest.ToolCallResponseH\x00R\x10toolCallResponse\x12J\n" +
+	"\theartbeat\x18\x03 \x01(\v2*.executor.v1.StartSessionRequest.HeartbeatH\x00R\theartbeat\x12N\n" +
+	"\vsession_end\x18\x04 \x01(\v2+.executor.v1.StartSessionRequest.SessionEndH\x00R\n" +
+	"sessionEnd\x1a\xb7\x03\n" +
 	"\x05Agent\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12 \n" +
-	"\vinstruction\x18\x03 \x01(\tR\vinstruction\x12>\n" +
-	"\x05tools\x18\x04 \x03(\v2(.agent.v1.StartSessionRequest.Agent.ToolR\x05tools\x12%\n" +
-	"\x05model\x18\x05 \x01(\x0e2\x0f.agent.v1.ModelR\x05model\x12B\n" +
+	"\vinstruction\x18\x03 \x01(\tR\vinstruction\x12A\n" +
+	"\x05tools\x18\x04 \x03(\v2+.executor.v1.StartSessionRequest.Agent.ToolR\x05tools\x12&\n" +
+	"\x05model\x18\x05 \x01(\x0e2\x10.domain.v1.ModelR\x05model\x12E\n" +
 	"\n" +
-	"sub_agents\x18\x06 \x03(\v2#.agent.v1.StartSessionRequest.AgentR\tsubAgents\x1a\xa3\x01\n" +
+	"sub_agents\x18\x06 \x03(\v2&.executor.v1.StartSessionRequest.AgentR\tsubAgents\x1a\xa3\x01\n" +
 	"\x04Tool\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12!\n" +
 	"\finput_schema\x18\x03 \x01(\tR\vinputSchema\x12#\n" +
 	"\routput_schema\x18\x04 \x01(\tR\foutputSchema\x12\x1d\n" +
 	"\n" +
-	"timeout_ms\x18\x05 \x01(\x05R\ttimeoutMs\x1a\xac\x03\n" +
+	"timeout_ms\x18\x05 \x01(\x05R\ttimeoutMs\x1a\xb3\x03\n" +
 	"\n" +
-	"RunRequest\x12M\n" +
-	"\bworkflow\x18\x01 \x01(\x0e21.agent.v1.StartSessionRequest.RunRequest.WorkflowR\bworkflow\x12 \n" +
-	"\vinstruction\x18\x02 \x01(\tR\vinstruction\x12;\n" +
-	"\x06agents\x18\x03 \x03(\v2#.agent.v1.StartSessionRequest.AgentR\x06agents\x12!\n" +
-	"\fuser_message\x18\x04 \x01(\tR\vuserMessage\x12%\n" +
-	"\x05model\x18\x05 \x01(\x0e2\x0f.agent.v1.ModelR\x05model\x12%\n" +
+	"RunRequest\x12P\n" +
+	"\bworkflow\x18\x01 \x01(\x0e24.executor.v1.StartSessionRequest.RunRequest.WorkflowR\bworkflow\x12 \n" +
+	"\vinstruction\x18\x02 \x01(\tR\vinstruction\x12>\n" +
+	"\x06agents\x18\x03 \x03(\v2&.executor.v1.StartSessionRequest.AgentR\x06agents\x12!\n" +
+	"\fuser_message\x18\x04 \x01(\tR\vuserMessage\x12&\n" +
+	"\x05model\x18\x05 \x01(\x0e2\x10.domain.v1.ModelR\x05model\x12%\n" +
 	"\x0emax_iterations\x18\x06 \x01(\x05R\rmaxIterations\x12\x16\n" +
 	"\x06budget\x18\a \x01(\x01R\x06budget\"g\n" +
 	"\bWorkflow\x12\x18\n" +
 	"\x14WORKFLOW_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13WORKFLOW_SEQUENTIAL\x10\x01\x12\x11\n" +
 	"\rWORKFLOW_LOOP\x10\x02\x12\x15\n" +
-	"\x11WORKFLOW_PARALLEL\x10\x03\x1a\xb6\x02\n" +
+	"\x11WORKFLOW_PARALLEL\x10\x03\x1a\xb9\x02\n" +
 	"\x10ToolCallResponse\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\x12M\n" +
-	"\x06status\x18\x02 \x01(\x0e25.agent.v1.StartSessionRequest.ToolCallResponse.StatusR\x06status\x12\x16\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12P\n" +
+	"\x06status\x18\x02 \x01(\x0e28.executor.v1.StartSessionRequest.ToolCallResponse.StatusR\x06status\x12\x16\n" +
 	"\x06output\x18\x03 \x01(\tR\x06output\x12\x14\n" +
 	"\x05error\x18\x04 \x01(\tR\x05error\x12*\n" +
 	"\x11execution_time_ms\x18\x05 \x01(\x03R\x0fexecutionTimeMs\"Z\n" +
@@ -1425,29 +1527,29 @@ const file_agent_v1_service_proto_rawDesc = "" +
 	"\n" +
 	"SessionEnd\x12\x16\n" +
 	"\x06reason\x18\x01 \x01(\tR\x06reasonB\t\n" +
-	"\amessage\"\xbf\f\n" +
-	"\x14StartSessionResponse\x12O\n" +
-	"\frun_response\x18\x01 \x01(\v2*.agent.v1.StartSessionResponse.RunResponseH\x00R\vrunResponse\x12\\\n" +
-	"\x11tool_call_request\x18\x02 \x01(\v2..agent.v1.StartSessionResponse.ToolCallRequestH\x00R\x0ftoolCallRequest\x12<\n" +
-	"\x05error\x18\x03 \x01(\v2$.agent.v1.StartSessionResponse.ErrorH\x00R\x05error\x12R\n" +
-	"\rheartbeat_ack\x18\x04 \x01(\v2+.agent.v1.StartSessionResponse.HeartbeatAckH\x00R\fheartbeatAck\x12V\n" +
-	"\x0fsession_end_ack\x18\x05 \x01(\v2,.agent.v1.StartSessionResponse.SessionEndAckH\x00R\rsessionEndAck\x12L\n" +
-	"\vsession_end\x18\x06 \x01(\v2).agent.v1.StartSessionResponse.SessionEndH\x00R\n" +
-	"sessionEnd\x1a\xbe\x01\n" +
+	"\amessage\"\xd7\f\n" +
+	"\x14StartSessionResponse\x12R\n" +
+	"\frun_response\x18\x01 \x01(\v2-.executor.v1.StartSessionResponse.RunResponseH\x00R\vrunResponse\x12_\n" +
+	"\x11tool_call_request\x18\x02 \x01(\v21.executor.v1.StartSessionResponse.ToolCallRequestH\x00R\x0ftoolCallRequest\x12?\n" +
+	"\x05error\x18\x03 \x01(\v2'.executor.v1.StartSessionResponse.ErrorH\x00R\x05error\x12U\n" +
+	"\rheartbeat_ack\x18\x04 \x01(\v2..executor.v1.StartSessionResponse.HeartbeatAckH\x00R\fheartbeatAck\x12Y\n" +
+	"\x0fsession_end_ack\x18\x05 \x01(\v2/.executor.v1.StartSessionResponse.SessionEndAckH\x00R\rsessionEndAck\x12O\n" +
+	"\vsession_end\x18\x06 \x01(\v2,.executor.v1.StartSessionResponse.SessionEndH\x00R\n" +
+	"sessionEnd\x1a\xc1\x01\n" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\x12K\n" +
-	"\adetails\x18\x03 \x03(\v21.agent.v1.StartSessionResponse.Error.DetailsEntryR\adetails\x1a:\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12N\n" +
+	"\adetails\x18\x03 \x03(\v24.executor.v1.StartSessionResponse.Error.DetailsEntryR\adetails\x1a:\n" +
 	"\fDetailsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a,\n" +
 	"\fHeartbeatAck\x12\x1c\n" +
 	"\ttimestamp\x18\x01 \x01(\x03R\ttimestamp\x1a3\n" +
 	"\rSessionEndAck\x12\"\n" +
-	"\facknowledged\x18\x01 \x01(\bR\facknowledged\x1a\xb9\x01\n" +
+	"\facknowledged\x18\x01 \x01(\bR\facknowledged\x1a\xbc\x01\n" +
 	"\n" +
-	"SessionEnd\x12H\n" +
-	"\x06reason\x18\x01 \x01(\x0e20.agent.v1.StartSessionResponse.SessionEnd.ReasonR\x06reason\x12\x18\n" +
+	"SessionEnd\x12K\n" +
+	"\x06reason\x18\x01 \x01(\x0e23.executor.v1.StartSessionResponse.SessionEnd.ReasonR\x06reason\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"G\n" +
 	"\x06Reason\x12\x16\n" +
 	"\x12REASON_UNSPECIFIED\x10\x00\x12\x11\n" +
@@ -1482,94 +1584,93 @@ const file_agent_v1_service_proto_rawDesc = "" +
 	"outputCost\x12\x1d\n" +
 	"\n" +
 	"total_cost\x18\x06 \x01(\x01R\ttotalCostB\t\n" +
-	"\amessage*\xa7\x01\n" +
-	"\x05Model\x12\x15\n" +
-	"\x11MODEL_UNSPECIFIED\x10\x00\x12\x18\n" +
-	"\x14MODEL_GEMINI_2_5_PRO\x10\x01\x12\x1a\n" +
-	"\x16MODEL_GEMINI_2_5_FLASH\x10\x02\x12\x1f\n" +
-	"\x1bMODEL_GEMINI_2_5_FLASH_LITE\x10\x03\x12\x16\n" +
-	"\x12MODEL_GEMINI_3_PRO\x10\x04\x12\x18\n" +
-	"\x14MODEL_GEMINI_3_FLASH\x10\x052`\n" +
-	"\bExecutor\x12T\n" +
-	"\x0fNewAgentSession\x12\x1d.agent.v1.StartSessionRequest\x1a\x1e.agent.v1.StartSessionResponse(\x010\x01B;Z9github.com/syss-io/executor/gen/proto/go/agent/v1;agentv1b\x06proto3"
+	"\amessage2\xbf\x01\n" +
+	"\bExecutor\x12W\n" +
+	"\fAgentSession\x12 .executor.v1.StartSessionRequest\x1a!.executor.v1.StartSessionResponse(\x010\x01\x12Z\n" +
+	"\rPromptSession\x12!.executor.v1.PromptSessionRequest\x1a\".executor.v1.PromptSessionResponse(\x010\x01BAZ?github.com/syss-io/executor/gen/proto/go/executor/v1;executorv1b\x06proto3"
 
 var (
-	file_agent_v1_service_proto_rawDescOnce sync.Once
-	file_agent_v1_service_proto_rawDescData []byte
+	file_executor_v1_service_proto_rawDescOnce sync.Once
+	file_executor_v1_service_proto_rawDescData []byte
 )
 
-func file_agent_v1_service_proto_rawDescGZIP() []byte {
-	file_agent_v1_service_proto_rawDescOnce.Do(func() {
-		file_agent_v1_service_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_agent_v1_service_proto_rawDesc), len(file_agent_v1_service_proto_rawDesc)))
+func file_executor_v1_service_proto_rawDescGZIP() []byte {
+	file_executor_v1_service_proto_rawDescOnce.Do(func() {
+		file_executor_v1_service_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_executor_v1_service_proto_rawDesc), len(file_executor_v1_service_proto_rawDesc)))
 	})
-	return file_agent_v1_service_proto_rawDescData
+	return file_executor_v1_service_proto_rawDescData
 }
 
-var file_agent_v1_service_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_agent_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
-var file_agent_v1_service_proto_goTypes = []any{
-	(Model)(0), // 0: agent.v1.Model
-	(StartSessionRequest_RunRequest_Workflow)(0),     // 1: agent.v1.StartSessionRequest.RunRequest.Workflow
-	(StartSessionRequest_ToolCallResponse_Status)(0), // 2: agent.v1.StartSessionRequest.ToolCallResponse.Status
-	(StartSessionResponse_SessionEnd_Reason)(0),      // 3: agent.v1.StartSessionResponse.SessionEnd.Reason
-	(*StartSessionRequest)(nil),                      // 4: agent.v1.StartSessionRequest
-	(*StartSessionResponse)(nil),                     // 5: agent.v1.StartSessionResponse
-	(*StartSessionRequest_Agent)(nil),                // 6: agent.v1.StartSessionRequest.Agent
-	(*StartSessionRequest_RunRequest)(nil),           // 7: agent.v1.StartSessionRequest.RunRequest
-	(*StartSessionRequest_ToolCallResponse)(nil),     // 8: agent.v1.StartSessionRequest.ToolCallResponse
-	(*StartSessionRequest_Heartbeat)(nil),            // 9: agent.v1.StartSessionRequest.Heartbeat
-	(*StartSessionRequest_SessionEnd)(nil),           // 10: agent.v1.StartSessionRequest.SessionEnd
-	(*StartSessionRequest_Agent_Tool)(nil),           // 11: agent.v1.StartSessionRequest.Agent.Tool
-	(*StartSessionResponse_Error)(nil),               // 12: agent.v1.StartSessionResponse.Error
-	(*StartSessionResponse_HeartbeatAck)(nil),        // 13: agent.v1.StartSessionResponse.HeartbeatAck
-	(*StartSessionResponse_SessionEndAck)(nil),       // 14: agent.v1.StartSessionResponse.SessionEndAck
-	(*StartSessionResponse_SessionEnd)(nil),          // 15: agent.v1.StartSessionResponse.SessionEnd
-	(*StartSessionResponse_ToolCallRequest)(nil),     // 16: agent.v1.StartSessionResponse.ToolCallRequest
-	(*StartSessionResponse_UsageEntry)(nil),          // 17: agent.v1.StartSessionResponse.UsageEntry
-	(*StartSessionResponse_RunResponse)(nil),         // 18: agent.v1.StartSessionResponse.RunResponse
-	nil,                                              // 19: agent.v1.StartSessionResponse.Error.DetailsEntry
+var file_executor_v1_service_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_executor_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_executor_v1_service_proto_goTypes = []any{
+	(StartSessionRequest_RunRequest_Workflow)(0),     // 0: executor.v1.StartSessionRequest.RunRequest.Workflow
+	(StartSessionRequest_ToolCallResponse_Status)(0), // 1: executor.v1.StartSessionRequest.ToolCallResponse.Status
+	(StartSessionResponse_SessionEnd_Reason)(0),      // 2: executor.v1.StartSessionResponse.SessionEnd.Reason
+	(*PromptSessionRequest)(nil),                     // 3: executor.v1.PromptSessionRequest
+	(*PromptSessionResponse)(nil),                    // 4: executor.v1.PromptSessionResponse
+	(*StartSessionRequest)(nil),                      // 5: executor.v1.StartSessionRequest
+	(*StartSessionResponse)(nil),                     // 6: executor.v1.StartSessionResponse
+	(*StartSessionRequest_Agent)(nil),                // 7: executor.v1.StartSessionRequest.Agent
+	(*StartSessionRequest_RunRequest)(nil),           // 8: executor.v1.StartSessionRequest.RunRequest
+	(*StartSessionRequest_ToolCallResponse)(nil),     // 9: executor.v1.StartSessionRequest.ToolCallResponse
+	(*StartSessionRequest_Heartbeat)(nil),            // 10: executor.v1.StartSessionRequest.Heartbeat
+	(*StartSessionRequest_SessionEnd)(nil),           // 11: executor.v1.StartSessionRequest.SessionEnd
+	(*StartSessionRequest_Agent_Tool)(nil),           // 12: executor.v1.StartSessionRequest.Agent.Tool
+	(*StartSessionResponse_Error)(nil),               // 13: executor.v1.StartSessionResponse.Error
+	(*StartSessionResponse_HeartbeatAck)(nil),        // 14: executor.v1.StartSessionResponse.HeartbeatAck
+	(*StartSessionResponse_SessionEndAck)(nil),       // 15: executor.v1.StartSessionResponse.SessionEndAck
+	(*StartSessionResponse_SessionEnd)(nil),          // 16: executor.v1.StartSessionResponse.SessionEnd
+	(*StartSessionResponse_ToolCallRequest)(nil),     // 17: executor.v1.StartSessionResponse.ToolCallRequest
+	(*StartSessionResponse_UsageEntry)(nil),          // 18: executor.v1.StartSessionResponse.UsageEntry
+	(*StartSessionResponse_RunResponse)(nil),         // 19: executor.v1.StartSessionResponse.RunResponse
+	nil,                                              // 20: executor.v1.StartSessionResponse.Error.DetailsEntry
+	(v1.Model)(0),                                    // 21: domain.v1.Model
 }
-var file_agent_v1_service_proto_depIdxs = []int32{
-	7,  // 0: agent.v1.StartSessionRequest.run_request:type_name -> agent.v1.StartSessionRequest.RunRequest
-	8,  // 1: agent.v1.StartSessionRequest.tool_call_response:type_name -> agent.v1.StartSessionRequest.ToolCallResponse
-	9,  // 2: agent.v1.StartSessionRequest.heartbeat:type_name -> agent.v1.StartSessionRequest.Heartbeat
-	10, // 3: agent.v1.StartSessionRequest.session_end:type_name -> agent.v1.StartSessionRequest.SessionEnd
-	18, // 4: agent.v1.StartSessionResponse.run_response:type_name -> agent.v1.StartSessionResponse.RunResponse
-	16, // 5: agent.v1.StartSessionResponse.tool_call_request:type_name -> agent.v1.StartSessionResponse.ToolCallRequest
-	12, // 6: agent.v1.StartSessionResponse.error:type_name -> agent.v1.StartSessionResponse.Error
-	13, // 7: agent.v1.StartSessionResponse.heartbeat_ack:type_name -> agent.v1.StartSessionResponse.HeartbeatAck
-	14, // 8: agent.v1.StartSessionResponse.session_end_ack:type_name -> agent.v1.StartSessionResponse.SessionEndAck
-	15, // 9: agent.v1.StartSessionResponse.session_end:type_name -> agent.v1.StartSessionResponse.SessionEnd
-	11, // 10: agent.v1.StartSessionRequest.Agent.tools:type_name -> agent.v1.StartSessionRequest.Agent.Tool
-	0,  // 11: agent.v1.StartSessionRequest.Agent.model:type_name -> agent.v1.Model
-	6,  // 12: agent.v1.StartSessionRequest.Agent.sub_agents:type_name -> agent.v1.StartSessionRequest.Agent
-	1,  // 13: agent.v1.StartSessionRequest.RunRequest.workflow:type_name -> agent.v1.StartSessionRequest.RunRequest.Workflow
-	6,  // 14: agent.v1.StartSessionRequest.RunRequest.agents:type_name -> agent.v1.StartSessionRequest.Agent
-	0,  // 15: agent.v1.StartSessionRequest.RunRequest.model:type_name -> agent.v1.Model
-	2,  // 16: agent.v1.StartSessionRequest.ToolCallResponse.status:type_name -> agent.v1.StartSessionRequest.ToolCallResponse.Status
-	19, // 17: agent.v1.StartSessionResponse.Error.details:type_name -> agent.v1.StartSessionResponse.Error.DetailsEntry
-	3,  // 18: agent.v1.StartSessionResponse.SessionEnd.reason:type_name -> agent.v1.StartSessionResponse.SessionEnd.Reason
-	4,  // 19: agent.v1.Executor.NewAgentSession:input_type -> agent.v1.StartSessionRequest
-	5,  // 20: agent.v1.Executor.NewAgentSession:output_type -> agent.v1.StartSessionResponse
-	20, // [20:21] is the sub-list for method output_type
-	19, // [19:20] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+var file_executor_v1_service_proto_depIdxs = []int32{
+	21, // 0: executor.v1.PromptSessionRequest.model:type_name -> domain.v1.Model
+	8,  // 1: executor.v1.StartSessionRequest.run_request:type_name -> executor.v1.StartSessionRequest.RunRequest
+	9,  // 2: executor.v1.StartSessionRequest.tool_call_response:type_name -> executor.v1.StartSessionRequest.ToolCallResponse
+	10, // 3: executor.v1.StartSessionRequest.heartbeat:type_name -> executor.v1.StartSessionRequest.Heartbeat
+	11, // 4: executor.v1.StartSessionRequest.session_end:type_name -> executor.v1.StartSessionRequest.SessionEnd
+	19, // 5: executor.v1.StartSessionResponse.run_response:type_name -> executor.v1.StartSessionResponse.RunResponse
+	17, // 6: executor.v1.StartSessionResponse.tool_call_request:type_name -> executor.v1.StartSessionResponse.ToolCallRequest
+	13, // 7: executor.v1.StartSessionResponse.error:type_name -> executor.v1.StartSessionResponse.Error
+	14, // 8: executor.v1.StartSessionResponse.heartbeat_ack:type_name -> executor.v1.StartSessionResponse.HeartbeatAck
+	15, // 9: executor.v1.StartSessionResponse.session_end_ack:type_name -> executor.v1.StartSessionResponse.SessionEndAck
+	16, // 10: executor.v1.StartSessionResponse.session_end:type_name -> executor.v1.StartSessionResponse.SessionEnd
+	12, // 11: executor.v1.StartSessionRequest.Agent.tools:type_name -> executor.v1.StartSessionRequest.Agent.Tool
+	21, // 12: executor.v1.StartSessionRequest.Agent.model:type_name -> domain.v1.Model
+	7,  // 13: executor.v1.StartSessionRequest.Agent.sub_agents:type_name -> executor.v1.StartSessionRequest.Agent
+	0,  // 14: executor.v1.StartSessionRequest.RunRequest.workflow:type_name -> executor.v1.StartSessionRequest.RunRequest.Workflow
+	7,  // 15: executor.v1.StartSessionRequest.RunRequest.agents:type_name -> executor.v1.StartSessionRequest.Agent
+	21, // 16: executor.v1.StartSessionRequest.RunRequest.model:type_name -> domain.v1.Model
+	1,  // 17: executor.v1.StartSessionRequest.ToolCallResponse.status:type_name -> executor.v1.StartSessionRequest.ToolCallResponse.Status
+	20, // 18: executor.v1.StartSessionResponse.Error.details:type_name -> executor.v1.StartSessionResponse.Error.DetailsEntry
+	2,  // 19: executor.v1.StartSessionResponse.SessionEnd.reason:type_name -> executor.v1.StartSessionResponse.SessionEnd.Reason
+	5,  // 20: executor.v1.Executor.AgentSession:input_type -> executor.v1.StartSessionRequest
+	3,  // 21: executor.v1.Executor.PromptSession:input_type -> executor.v1.PromptSessionRequest
+	6,  // 22: executor.v1.Executor.AgentSession:output_type -> executor.v1.StartSessionResponse
+	4,  // 23: executor.v1.Executor.PromptSession:output_type -> executor.v1.PromptSessionResponse
+	22, // [22:24] is the sub-list for method output_type
+	20, // [20:22] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
-func init() { file_agent_v1_service_proto_init() }
-func file_agent_v1_service_proto_init() {
-	if File_agent_v1_service_proto != nil {
+func init() { file_executor_v1_service_proto_init() }
+func file_executor_v1_service_proto_init() {
+	if File_executor_v1_service_proto != nil {
 		return
 	}
-	file_agent_v1_service_proto_msgTypes[0].OneofWrappers = []any{
+	file_executor_v1_service_proto_msgTypes[2].OneofWrappers = []any{
 		(*StartSessionRequest_RunRequest_)(nil),
 		(*StartSessionRequest_ToolCallResponse_)(nil),
 		(*StartSessionRequest_Heartbeat_)(nil),
 		(*StartSessionRequest_SessionEnd_)(nil),
 	}
-	file_agent_v1_service_proto_msgTypes[1].OneofWrappers = []any{
+	file_executor_v1_service_proto_msgTypes[3].OneofWrappers = []any{
 		(*StartSessionResponse_RunResponse_)(nil),
 		(*StartSessionResponse_ToolCallRequest_)(nil),
 		(*StartSessionResponse_Error_)(nil),
@@ -1581,18 +1682,18 @@ func file_agent_v1_service_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_v1_service_proto_rawDesc), len(file_agent_v1_service_proto_rawDesc)),
-			NumEnums:      4,
-			NumMessages:   16,
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_executor_v1_service_proto_rawDesc), len(file_executor_v1_service_proto_rawDesc)),
+			NumEnums:      3,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_agent_v1_service_proto_goTypes,
-		DependencyIndexes: file_agent_v1_service_proto_depIdxs,
-		EnumInfos:         file_agent_v1_service_proto_enumTypes,
-		MessageInfos:      file_agent_v1_service_proto_msgTypes,
+		GoTypes:           file_executor_v1_service_proto_goTypes,
+		DependencyIndexes: file_executor_v1_service_proto_depIdxs,
+		EnumInfos:         file_executor_v1_service_proto_enumTypes,
+		MessageInfos:      file_executor_v1_service_proto_msgTypes,
 	}.Build()
-	File_agent_v1_service_proto = out.File
-	file_agent_v1_service_proto_goTypes = nil
-	file_agent_v1_service_proto_depIdxs = nil
+	File_executor_v1_service_proto = out.File
+	file_executor_v1_service_proto_goTypes = nil
+	file_executor_v1_service_proto_depIdxs = nil
 }

@@ -6,6 +6,15 @@ option go_package = "github.com/syss-io/executor/gen/proto/go/domain/v1;domainv1
 
 import "options/gorm.proto";
 
+enum Model {
+    MODEL_UNSPECIFIED = 0;
+    MODEL_GEMINI_2_5_PRO = 1;
+    MODEL_GEMINI_2_5_FLASH = 2;
+    MODEL_GEMINI_2_5_FLASH_LITE = 3;
+    MODEL_GEMINI_3_PRO = 4;
+    MODEL_GEMINI_3_FLASH = 5;
+}
+
 message SessionLog {
     option (gorm.opts) = {
         ormable: true,

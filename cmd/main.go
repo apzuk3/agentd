@@ -18,9 +18,9 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/syss-io/executor/client"
-	"github.com/syss-io/executor/gen/proto/go/agent/v1/agentv1connect"
 	domainv1 "github.com/syss-io/executor/gen/proto/go/domain/v1"
-	"github.com/syss-io/executor/internal/agent"
+	"github.com/syss-io/executor/gen/proto/go/executor/v1/executorv1connect"
+	"github.com/syss-io/executor/internal/executor"
 	"github.com/syss-io/executor/internal/logger"
 )
 
@@ -82,11 +82,11 @@ func main() {
 						return fmt.Errorf("failed to auto migrate: %w", err)
 					}
 
-					service := &agent.ServiceImpl{
+					service := &executor.ServiceImpl{
 						Logger: logger.NewSQLiteLogger(gormDB),
 						DB:     gormDB,
 					}
-					path, handler := agentv1connect.NewExecutorHandler(service)
+					path, handler := executorv1connect.NewExecutorHandler(service)
 
 					mux := http.NewServeMux()
 					mux.Handle(path, handler)

@@ -1,22 +1,32 @@
 syntax = "proto3";
 
-package agent.v1;
+package executor.v1;
 
-option go_package = "github.com/syss-io/executor/gen/proto/go/agent/v1;agentv1";
+option go_package = "github.com/syss-io/executor/gen/proto/go/executor/v1;executorv1";
 
 import "google/protobuf/empty.proto";
+import "domain/v1/types.proto";
 
 service Executor {
-    rpc NewAgentSession (stream StartSessionRequest) returns (stream StartSessionResponse);
+    rpc AgentSession (stream StartSessionRequest) returns (stream StartSessionResponse);
+    rpc PromptSession (stream PromptSessionRequest) returns (stream PromptSessionResponse);
+    // rpc ScriptSession (stream ScriptSessionRequest) returns (stream ScriptSessionResponse);
 }
 
-enum Model {
-    MODEL_UNSPECIFIED = 0;
-    MODEL_GEMINI_2_5_PRO = 1;
-    MODEL_GEMINI_2_5_FLASH = 2;
-    MODEL_GEMINI_2_5_FLASH_LITE = 3;
-    MODEL_GEMINI_3_PRO = 4;
-    MODEL_GEMINI_3_FLASH = 5;
+message PromptSessionRequest {
+    string user_message = 1;
+    domain.v1.Model model = 2;
+    double budget = 3;  // Maximum allowed session cost in USD (0 = unlimited)
+}
+
+message PromptSessionResponse {
+    string content = 1;
+    // Cumulative totals
+    int32 input_token_count = 2;
+    int32 output_token_count = 3;
+    double input_cost = 4;
+    double output_cost = 5;
+    double total_cost = 6;
 }
 
 message StartSessionRequest {
@@ -35,7 +45,7 @@ message StartSessionRequest {
         string description = 2;
         string instruction = 3;
         repeated Tool tools = 4;
-        Model model = 5;
+        domain.v1.Model model = 5;
         repeated Agent sub_agents = 6;
     }
 
@@ -51,7 +61,7 @@ message StartSessionRequest {
         string instruction = 2;
         repeated Agent agents = 3;
         string user_message = 4;
-        Model model = 5;
+        domain.v1.Model model = 5;
         int32 max_iterations = 6;
         double budget = 7;  // Maximum allowed session cost in USD (0 = unlimited)
     }

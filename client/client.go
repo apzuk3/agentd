@@ -12,8 +12,9 @@ import (
 	"strings"
 	"time"
 
-	agentv1 "github.com/syss-io/executor/gen/proto/go/agent/v1"
-	"github.com/syss-io/executor/gen/proto/go/agent/v1/agentv1connect"
+	domainv1 "github.com/syss-io/executor/gen/proto/go/domain/v1"
+	executorv1 "github.com/syss-io/executor/gen/proto/go/executor/v1"
+	"github.com/syss-io/executor/gen/proto/go/executor/v1/executorv1connect"
 	"golang.org/x/net/http2"
 )
 
@@ -26,17 +27,17 @@ func RunClient(ctx context.Context, url string) error {
 			},
 		},
 	}
-	client := agentv1connect.NewExecutorClient(httpClient, url)
-	stream := client.NewAgentSession(ctx)
+	client := executorv1connect.NewExecutorClient(httpClient, url)
+	stream := client.AgentSession(ctx)
 
 	// Handshake: Send RunRequest with agents and tools
-	agents := []*agentv1.StartSessionRequest_Agent{
+	agents := []*executorv1.StartSessionRequest_Agent{
 		{
 			Name:        "ArithmeticAgent",
 			Description: "An agent that can perform basic arithmetic operations",
 			Instruction: "You are an arithmetic expert. Use your tools to solve math problems.",
-			Model:       agentv1.Model_MODEL_GEMINI_2_5_FLASH,
-			Tools: []*agentv1.StartSessionRequest_Agent_Tool{
+			Model:       domainv1.Model_MODEL_GEMINI_2_5_FLASH,
+			Tools: []*executorv1.StartSessionRequest_Agent_Tool{
 				{
 					Name:        "add",
 					Description: "Adds two numbers",
@@ -58,8 +59,8 @@ func RunClient(ctx context.Context, url string) error {
 			Name:        "StringAgent",
 			Description: "An agent that can manipulate strings",
 			Instruction: "You are a string manipulation expert. Use your tools to process text.",
-			Model:       agentv1.Model_MODEL_GEMINI_2_5_FLASH,
-			Tools: []*agentv1.StartSessionRequest_Agent_Tool{
+			Model:       domainv1.Model_MODEL_GEMINI_2_5_FLASH,
+			Tools: []*executorv1.StartSessionRequest_Agent_Tool{
 				{
 					Name:        "upper_case",
 					Description: "Converts a string to uppercase",
@@ -79,14 +80,14 @@ func RunClient(ctx context.Context, url string) error {
 		},
 	}
 
-	runReq := &agentv1.StartSessionRequest{
-		Message: &agentv1.StartSessionRequest_RunRequest_{
-			RunRequest: &agentv1.StartSessionRequest_RunRequest{
-				Workflow:    agentv1.StartSessionRequest_RunRequest_WORKFLOW_SEQUENTIAL,
+	runReq := &executorv1.StartSessionRequest{
+		Message: &executorv1.StartSessionRequest_RunRequest_{
+			RunRequest: &executorv1.StartSessionRequest_RunRequest{
+				Workflow:    executorv1.StartSessionRequest_RunRequest_WORKFLOW_SEQUENTIAL,
 				Instruction: "You are a coordinator that uses special agents to solve problems. First use ArithmeticAgent for math, then use StringAgent for text.",
 				Agents:      agents,
 				UserMessage: "Calculate 15 + 27, then multiply the result by 2. After that, take the word 'Hello' and reverse it. Finally, give me the word count of 'This is a test message'.",
-				Model:       agentv1.Model_MODEL_GEMINI_2_5_FLASH,
+				Model:       domainv1.Model_MODEL_GEMINI_2_5_FLASH,
 			},
 		},
 	}
@@ -108,25 +109,25 @@ func RunClient(ctx context.Context, url string) error {
 		}
 
 		switch m := resp.Message.(type) {
-		case *agentv1.StartSessionResponse_RunResponse_:
+		case *executorv1.StartSessionResponse_RunResponse_:
 			fmt.Printf("\n[AGENT RESPONSE]: %s\n", m.RunResponse.Content)
 			fmt.Printf("[TOKEN USAGE]: Input: %d, Output: %d\n\n", m.RunResponse.InputTokenCount, m.RunResponse.OutputTokenCount)
-		case *agentv1.StartSessionResponse_ToolCallRequest_:
+		case *executorv1.StartSessionResponse_ToolCallRequest_:
 			req := m.ToolCallRequest
 			slog.Info("Received ToolCallRequest", "agent", req.AgentName, "tool", req.ToolName, "input", req.Input)
 
 			output, toolErr := handleToolCall(req.ToolName, req.Input)
 
-			status := agentv1.StartSessionRequest_ToolCallResponse_STATUS_SUCCESS
+			status := executorv1.StartSessionRequest_ToolCallResponse_STATUS_SUCCESS
 			errMsg := ""
 			if toolErr != nil {
-				status = agentv1.StartSessionRequest_ToolCallResponse_STATUS_ERROR
+				status = executorv1.StartSessionRequest_ToolCallResponse_STATUS_ERROR
 				errMsg = toolErr.Error()
 			}
 
-			toolResp := &agentv1.StartSessionRequest{
-				Message: &agentv1.StartSessionRequest_ToolCallResponse_{
-					ToolCallResponse: &agentv1.StartSessionRequest_ToolCallResponse{
+			toolResp := &executorv1.StartSessionRequest{
+				Message: &executorv1.StartSessionRequest_ToolCallResponse_{
+					ToolCallResponse: &executorv1.StartSessionRequest_ToolCallResponse{
 						RequestId:       req.RequestId,
 						Status:          status,
 						Output:          output,
@@ -141,11 +142,11 @@ func RunClient(ctx context.Context, url string) error {
 			}
 			slog.Info("Sent ToolCallResponse", "request_id", req.RequestId)
 
-		case *agentv1.StartSessionResponse_Error_:
+		case *executorv1.StartSessionResponse_Error_:
 			slog.Error("Received error from server", "code", m.Error.Code, "message", m.Error.Message)
-		case *agentv1.StartSessionResponse_HeartbeatAck_:
+		case *executorv1.StartSessionResponse_HeartbeatAck_:
 			slog.Debug("Received HeartbeatAck")
-		case *agentv1.StartSessionResponse_SessionEndAck_:
+		case *executorv1.StartSessionResponse_SessionEndAck_:
 			slog.Info("Session ended by server")
 			return nil
 		}
