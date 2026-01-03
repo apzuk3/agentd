@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/syss-io/executor/gen/proto/go/api/v1"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -35,14 +36,28 @@ const (
 const (
 	// APICreateAPIKeyProcedure is the fully-qualified name of the API's CreateAPIKey RPC.
 	APICreateAPIKeyProcedure = "/api.v1.API/CreateAPIKey"
+	// APIRevokeAPIKeyProcedure is the fully-qualified name of the API's RevokeAPIKey RPC.
+	APIRevokeAPIKeyProcedure = "/api.v1.API/RevokeAPIKey"
+	// APIListAPIKeysProcedure is the fully-qualified name of the API's ListAPIKeys RPC.
+	APIListAPIKeysProcedure = "/api.v1.API/ListAPIKeys"
 	// APIMintTokenProcedure is the fully-qualified name of the API's MintToken RPC.
 	APIMintTokenProcedure = "/api.v1.API/MintToken"
+	// APIRevokeTokenProcedure is the fully-qualified name of the API's RevokeToken RPC.
+	APIRevokeTokenProcedure = "/api.v1.API/RevokeToken"
 )
 
 // APIClient is a client for the api.v1.API service.
 type APIClient interface {
+	// Create a new API key (plaintext returned only once)
 	CreateAPIKey(context.Context, *connect.Request[v1.CreateAPIKeyRequest]) (*connect.Response[v1.CreateAPIKeyResponse], error)
+	// Revoke/deactivate an API key
+	RevokeAPIKey(context.Context, *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[emptypb.Empty], error)
+	// List API keys for the authenticated owner
+	ListAPIKeys(context.Context, *connect.Request[v1.ListAPIKeysRequest]) (*connect.Response[v1.ListAPIKeysResponse], error)
+	// Mint a short-lived PASETO token with specified permissions
 	MintToken(context.Context, *connect.Request[v1.MintTokenRequest]) (*connect.Response[v1.MintTokenResponse], error)
+	// Revoke a minted token by its jti
+	RevokeToken(context.Context, *connect.Request[v1.RevokeTokenRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewAPIClient constructs a client for the api.v1.API service. By default, it uses the Connect
@@ -62,10 +77,28 @@ func NewAPIClient(httpClient connect.HTTPClient, baseURL string, opts ...connect
 			connect.WithSchema(aPIMethods.ByName("CreateAPIKey")),
 			connect.WithClientOptions(opts...),
 		),
+		revokeAPIKey: connect.NewClient[v1.RevokeAPIKeyRequest, emptypb.Empty](
+			httpClient,
+			baseURL+APIRevokeAPIKeyProcedure,
+			connect.WithSchema(aPIMethods.ByName("RevokeAPIKey")),
+			connect.WithClientOptions(opts...),
+		),
+		listAPIKeys: connect.NewClient[v1.ListAPIKeysRequest, v1.ListAPIKeysResponse](
+			httpClient,
+			baseURL+APIListAPIKeysProcedure,
+			connect.WithSchema(aPIMethods.ByName("ListAPIKeys")),
+			connect.WithClientOptions(opts...),
+		),
 		mintToken: connect.NewClient[v1.MintTokenRequest, v1.MintTokenResponse](
 			httpClient,
 			baseURL+APIMintTokenProcedure,
 			connect.WithSchema(aPIMethods.ByName("MintToken")),
+			connect.WithClientOptions(opts...),
+		),
+		revokeToken: connect.NewClient[v1.RevokeTokenRequest, emptypb.Empty](
+			httpClient,
+			baseURL+APIRevokeTokenProcedure,
+			connect.WithSchema(aPIMethods.ByName("RevokeToken")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -74,7 +107,10 @@ func NewAPIClient(httpClient connect.HTTPClient, baseURL string, opts ...connect
 // aPIClient implements APIClient.
 type aPIClient struct {
 	createAPIKey *connect.Client[v1.CreateAPIKeyRequest, v1.CreateAPIKeyResponse]
+	revokeAPIKey *connect.Client[v1.RevokeAPIKeyRequest, emptypb.Empty]
+	listAPIKeys  *connect.Client[v1.ListAPIKeysRequest, v1.ListAPIKeysResponse]
 	mintToken    *connect.Client[v1.MintTokenRequest, v1.MintTokenResponse]
+	revokeToken  *connect.Client[v1.RevokeTokenRequest, emptypb.Empty]
 }
 
 // CreateAPIKey calls api.v1.API.CreateAPIKey.
@@ -82,15 +118,38 @@ func (c *aPIClient) CreateAPIKey(ctx context.Context, req *connect.Request[v1.Cr
 	return c.createAPIKey.CallUnary(ctx, req)
 }
 
+// RevokeAPIKey calls api.v1.API.RevokeAPIKey.
+func (c *aPIClient) RevokeAPIKey(ctx context.Context, req *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[emptypb.Empty], error) {
+	return c.revokeAPIKey.CallUnary(ctx, req)
+}
+
+// ListAPIKeys calls api.v1.API.ListAPIKeys.
+func (c *aPIClient) ListAPIKeys(ctx context.Context, req *connect.Request[v1.ListAPIKeysRequest]) (*connect.Response[v1.ListAPIKeysResponse], error) {
+	return c.listAPIKeys.CallUnary(ctx, req)
+}
+
 // MintToken calls api.v1.API.MintToken.
 func (c *aPIClient) MintToken(ctx context.Context, req *connect.Request[v1.MintTokenRequest]) (*connect.Response[v1.MintTokenResponse], error) {
 	return c.mintToken.CallUnary(ctx, req)
 }
 
+// RevokeToken calls api.v1.API.RevokeToken.
+func (c *aPIClient) RevokeToken(ctx context.Context, req *connect.Request[v1.RevokeTokenRequest]) (*connect.Response[emptypb.Empty], error) {
+	return c.revokeToken.CallUnary(ctx, req)
+}
+
 // APIHandler is an implementation of the api.v1.API service.
 type APIHandler interface {
+	// Create a new API key (plaintext returned only once)
 	CreateAPIKey(context.Context, *connect.Request[v1.CreateAPIKeyRequest]) (*connect.Response[v1.CreateAPIKeyResponse], error)
+	// Revoke/deactivate an API key
+	RevokeAPIKey(context.Context, *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[emptypb.Empty], error)
+	// List API keys for the authenticated owner
+	ListAPIKeys(context.Context, *connect.Request[v1.ListAPIKeysRequest]) (*connect.Response[v1.ListAPIKeysResponse], error)
+	// Mint a short-lived PASETO token with specified permissions
 	MintToken(context.Context, *connect.Request[v1.MintTokenRequest]) (*connect.Response[v1.MintTokenResponse], error)
+	// Revoke a minted token by its jti
+	RevokeToken(context.Context, *connect.Request[v1.RevokeTokenRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewAPIHandler builds an HTTP handler from the service implementation. It returns the path on
@@ -106,18 +165,42 @@ func NewAPIHandler(svc APIHandler, opts ...connect.HandlerOption) (string, http.
 		connect.WithSchema(aPIMethods.ByName("CreateAPIKey")),
 		connect.WithHandlerOptions(opts...),
 	)
+	aPIRevokeAPIKeyHandler := connect.NewUnaryHandler(
+		APIRevokeAPIKeyProcedure,
+		svc.RevokeAPIKey,
+		connect.WithSchema(aPIMethods.ByName("RevokeAPIKey")),
+		connect.WithHandlerOptions(opts...),
+	)
+	aPIListAPIKeysHandler := connect.NewUnaryHandler(
+		APIListAPIKeysProcedure,
+		svc.ListAPIKeys,
+		connect.WithSchema(aPIMethods.ByName("ListAPIKeys")),
+		connect.WithHandlerOptions(opts...),
+	)
 	aPIMintTokenHandler := connect.NewUnaryHandler(
 		APIMintTokenProcedure,
 		svc.MintToken,
 		connect.WithSchema(aPIMethods.ByName("MintToken")),
 		connect.WithHandlerOptions(opts...),
 	)
+	aPIRevokeTokenHandler := connect.NewUnaryHandler(
+		APIRevokeTokenProcedure,
+		svc.RevokeToken,
+		connect.WithSchema(aPIMethods.ByName("RevokeToken")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/api.v1.API/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case APICreateAPIKeyProcedure:
 			aPICreateAPIKeyHandler.ServeHTTP(w, r)
+		case APIRevokeAPIKeyProcedure:
+			aPIRevokeAPIKeyHandler.ServeHTTP(w, r)
+		case APIListAPIKeysProcedure:
+			aPIListAPIKeysHandler.ServeHTTP(w, r)
 		case APIMintTokenProcedure:
 			aPIMintTokenHandler.ServeHTTP(w, r)
+		case APIRevokeTokenProcedure:
+			aPIRevokeTokenHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -131,6 +214,18 @@ func (UnimplementedAPIHandler) CreateAPIKey(context.Context, *connect.Request[v1
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.API.CreateAPIKey is not implemented"))
 }
 
+func (UnimplementedAPIHandler) RevokeAPIKey(context.Context, *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.API.RevokeAPIKey is not implemented"))
+}
+
+func (UnimplementedAPIHandler) ListAPIKeys(context.Context, *connect.Request[v1.ListAPIKeysRequest]) (*connect.Response[v1.ListAPIKeysResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.API.ListAPIKeys is not implemented"))
+}
+
 func (UnimplementedAPIHandler) MintToken(context.Context, *connect.Request[v1.MintTokenRequest]) (*connect.Response[v1.MintTokenResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.API.MintToken is not implemented"))
+}
+
+func (UnimplementedAPIHandler) RevokeToken(context.Context, *connect.Request[v1.RevokeTokenRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.API.RevokeToken is not implemented"))
 }

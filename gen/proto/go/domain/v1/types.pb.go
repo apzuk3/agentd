@@ -158,7 +158,14 @@ func (x *SessionLog) GetEventData() string {
 
 type APIKey struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ApiKey        string                 `protobuf:"bytes,1,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                // UUID
+	KeyPrefix     string                 `protobuf:"bytes,2,opt,name=key_prefix,json=keyPrefix,proto3" json:"key_prefix,omitempty"` // First 8 chars, for O(1) lookup
+	KeyHash       string                 `protobuf:"bytes,3,opt,name=key_hash,json=keyHash,proto3" json:"key_hash,omitempty"`       // bcrypt hash of the full key
+	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`                            // Human-readable name
+	OwnerId       string                 `protobuf:"bytes,5,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	IsActive      bool                   `protobuf:"varint,6,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	LastUsedAt    int64                  `protobuf:"varint,8,opt,name=last_used_at,json=lastUsedAt,proto3" json:"last_used_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -193,11 +200,214 @@ func (*APIKey) Descriptor() ([]byte, []int) {
 	return file_domain_v1_types_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *APIKey) GetApiKey() string {
+func (x *APIKey) GetId() string {
 	if x != nil {
-		return x.ApiKey
+		return x.Id
 	}
 	return ""
+}
+
+func (x *APIKey) GetKeyPrefix() string {
+	if x != nil {
+		return x.KeyPrefix
+	}
+	return ""
+}
+
+func (x *APIKey) GetKeyHash() string {
+	if x != nil {
+		return x.KeyHash
+	}
+	return ""
+}
+
+func (x *APIKey) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *APIKey) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
+}
+
+func (x *APIKey) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+func (x *APIKey) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *APIKey) GetLastUsedAt() int64 {
+	if x != nil {
+		return x.LastUsedAt
+	}
+	return 0
+}
+
+// Permissions embedded in PASETO tokens
+type TokenPermissions struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AllowedModels []Model                `protobuf:"varint,1,rep,packed,name=allowed_models,json=allowedModels,proto3,enum=domain.v1.Model" json:"allowed_models,omitempty"` // Which models can be used
+	MaxBudget     float64                `protobuf:"fixed64,2,opt,name=max_budget,json=maxBudget,proto3" json:"max_budget,omitempty"`                                        // Max USD per session (0 = unlimited)
+	MaxTimeoutMs  int32                  `protobuf:"varint,3,opt,name=max_timeout_ms,json=maxTimeoutMs,proto3" json:"max_timeout_ms,omitempty"`                              // Max session timeout
+	MaxTools      int32                  `protobuf:"varint,4,opt,name=max_tools,json=maxTools,proto3" json:"max_tools,omitempty"`                                            // Max tools per agent
+	MaxAgents     int32                  `protobuf:"varint,5,opt,name=max_agents,json=maxAgents,proto3" json:"max_agents,omitempty"`                                         // Max agents per session
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TokenPermissions) Reset() {
+	*x = TokenPermissions{}
+	mi := &file_domain_v1_types_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TokenPermissions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TokenPermissions) ProtoMessage() {}
+
+func (x *TokenPermissions) ProtoReflect() protoreflect.Message {
+	mi := &file_domain_v1_types_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TokenPermissions.ProtoReflect.Descriptor instead.
+func (*TokenPermissions) Descriptor() ([]byte, []int) {
+	return file_domain_v1_types_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *TokenPermissions) GetAllowedModels() []Model {
+	if x != nil {
+		return x.AllowedModels
+	}
+	return nil
+}
+
+func (x *TokenPermissions) GetMaxBudget() float64 {
+	if x != nil {
+		return x.MaxBudget
+	}
+	return 0
+}
+
+func (x *TokenPermissions) GetMaxTimeoutMs() int32 {
+	if x != nil {
+		return x.MaxTimeoutMs
+	}
+	return 0
+}
+
+func (x *TokenPermissions) GetMaxTools() int32 {
+	if x != nil {
+		return x.MaxTools
+	}
+	return 0
+}
+
+func (x *TokenPermissions) GetMaxAgents() int32 {
+	if x != nil {
+		return x.MaxAgents
+	}
+	return 0
+}
+
+// Audit trail: logged at mint time, links jti to API key
+type MintedToken struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Jti           string                 `protobuf:"bytes,1,opt,name=jti,proto3" json:"jti,omitempty"` // Token ID
+	ApiKeyId      string                 `protobuf:"bytes,2,opt,name=api_key_id,json=apiKeyId,proto3" json:"api_key_id,omitempty"`
+	MintedAt      int64                  `protobuf:"varint,3,opt,name=minted_at,json=mintedAt,proto3" json:"minted_at,omitempty"`
+	ExpiresAt     int64                  `protobuf:"varint,4,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	Revoked       bool                   `protobuf:"varint,5,opt,name=revoked,proto3" json:"revoked,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MintedToken) Reset() {
+	*x = MintedToken{}
+	mi := &file_domain_v1_types_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MintedToken) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MintedToken) ProtoMessage() {}
+
+func (x *MintedToken) ProtoReflect() protoreflect.Message {
+	mi := &file_domain_v1_types_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MintedToken.ProtoReflect.Descriptor instead.
+func (*MintedToken) Descriptor() ([]byte, []int) {
+	return file_domain_v1_types_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *MintedToken) GetJti() string {
+	if x != nil {
+		return x.Jti
+	}
+	return ""
+}
+
+func (x *MintedToken) GetApiKeyId() string {
+	if x != nil {
+		return x.ApiKeyId
+	}
+	return ""
+}
+
+func (x *MintedToken) GetMintedAt() int64 {
+	if x != nil {
+		return x.MintedAt
+	}
+	return 0
+}
+
+func (x *MintedToken) GetExpiresAt() int64 {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return 0
+}
+
+func (x *MintedToken) GetRevoked() bool {
+	if x != nil {
+		return x.Revoked
+	}
+	return false
 }
 
 var File_domain_v1_types_proto protoreflect.FileDescriptor
@@ -217,10 +427,40 @@ const file_domain_v1_types_proto_rawDesc = "" +
 	"event_type\x18\x04 \x01(\tB\x16\xba\xb9\x19\x12\n" +
 	"\x10R\x0eidx_event_typeR\teventType\x12\x1d\n" +
 	"\n" +
-	"event_data\x18\x05 \x01(\tR\teventData:\x06\xba\xb9\x19\x02\b\x01\"3\n" +
-	"\x06APIKey\x12!\n" +
-	"\aapi_key\x18\x01 \x01(\tB\b\xba\xb9\x19\x04\n" +
-	"\x02(\x01R\x06apiKey:\x06\xba\xb9\x19\x02\b\x01*\xa7\x01\n" +
+	"event_data\x18\x05 \x01(\tR\teventData:\x06\xba\xb9\x19\x02\b\x01\"\x9f\x02\n" +
+	"\x06APIKey\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xba\xb9\x19\x04\n" +
+	"\x02(\x01R\x02id\x125\n" +
+	"\n" +
+	"key_prefix\x18\x02 \x01(\tB\x16\xba\xb9\x19\x12\n" +
+	"\x10Z\x0eidx_key_prefixR\tkeyPrefix\x12\x19\n" +
+	"\bkey_hash\x18\x03 \x01(\tR\akeyHash\x12\x12\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\x12/\n" +
+	"\bowner_id\x18\x05 \x01(\tB\x14\xba\xb9\x19\x10\n" +
+	"\x0eR\fidx_owner_idR\aownerId\x12\x1b\n" +
+	"\tis_active\x18\x06 \x01(\bR\bisActive\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\a \x01(\x03R\tcreatedAt\x12 \n" +
+	"\flast_used_at\x18\b \x01(\x03R\n" +
+	"lastUsedAt:\x06\xba\xb9\x19\x02\b\x01\"\xcc\x01\n" +
+	"\x10TokenPermissions\x127\n" +
+	"\x0eallowed_models\x18\x01 \x03(\x0e2\x10.domain.v1.ModelR\rallowedModels\x12\x1d\n" +
+	"\n" +
+	"max_budget\x18\x02 \x01(\x01R\tmaxBudget\x12$\n" +
+	"\x0emax_timeout_ms\x18\x03 \x01(\x05R\fmaxTimeoutMs\x12\x1b\n" +
+	"\tmax_tools\x18\x04 \x01(\x05R\bmaxTools\x12\x1d\n" +
+	"\n" +
+	"max_agents\x18\x05 \x01(\x05R\tmaxAgents\"\xbd\x01\n" +
+	"\vMintedToken\x12\x1a\n" +
+	"\x03jti\x18\x01 \x01(\tB\b\xba\xb9\x19\x04\n" +
+	"\x02(\x01R\x03jti\x124\n" +
+	"\n" +
+	"api_key_id\x18\x02 \x01(\tB\x16\xba\xb9\x19\x12\n" +
+	"\x10R\x0eidx_api_key_idR\bapiKeyId\x12\x1b\n" +
+	"\tminted_at\x18\x03 \x01(\x03R\bmintedAt\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x04 \x01(\x03R\texpiresAt\x12\x18\n" +
+	"\arevoked\x18\x05 \x01(\bR\arevoked:\x06\xba\xb9\x19\x02\b\x01*\xa7\x01\n" +
 	"\x05Model\x12\x15\n" +
 	"\x11MODEL_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14MODEL_GEMINI_2_5_PRO\x10\x01\x12\x1a\n" +
@@ -242,18 +482,21 @@ func file_domain_v1_types_proto_rawDescGZIP() []byte {
 }
 
 var file_domain_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_domain_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_domain_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_domain_v1_types_proto_goTypes = []any{
-	(Model)(0),         // 0: domain.v1.Model
-	(*SessionLog)(nil), // 1: domain.v1.SessionLog
-	(*APIKey)(nil),     // 2: domain.v1.APIKey
+	(Model)(0),               // 0: domain.v1.Model
+	(*SessionLog)(nil),       // 1: domain.v1.SessionLog
+	(*APIKey)(nil),           // 2: domain.v1.APIKey
+	(*TokenPermissions)(nil), // 3: domain.v1.TokenPermissions
+	(*MintedToken)(nil),      // 4: domain.v1.MintedToken
 }
 var file_domain_v1_types_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0, // 0: domain.v1.TokenPermissions.allowed_models:type_name -> domain.v1.Model
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_domain_v1_types_proto_init() }
@@ -267,7 +510,7 @@ func file_domain_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_domain_v1_types_proto_rawDesc), len(file_domain_v1_types_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

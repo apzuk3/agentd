@@ -10,7 +10,7 @@ import (
 	v1 "github.com/syss-io/executor/gen/proto/go/domain/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	_ "google.golang.org/protobuf/types/known/emptypb"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -23,8 +23,10 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// CreateAPIKey
 type CreateAPIKeyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // Human-readable name for the key
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -59,9 +61,19 @@ func (*CreateAPIKeyRequest) Descriptor() ([]byte, []int) {
 	return file_api_v1_service_proto_rawDescGZIP(), []int{0}
 }
 
+func (x *CreateAPIKeyRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
 type CreateAPIKeyResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ApiKey        string                 `protobuf:"bytes,1,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                       // Key ID (for future reference)
+	ApiKey        string                 `protobuf:"bytes,2,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"` // Plaintext key (shown only once!)
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -96,6 +108,13 @@ func (*CreateAPIKeyResponse) Descriptor() ([]byte, []int) {
 	return file_api_v1_service_proto_rawDescGZIP(), []int{1}
 }
 
+func (x *CreateAPIKeyResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
 func (x *CreateAPIKeyResponse) GetApiKey() string {
 	if x != nil {
 		return x.ApiKey
@@ -103,19 +122,158 @@ func (x *CreateAPIKeyResponse) GetApiKey() string {
 	return ""
 }
 
+func (x *CreateAPIKeyResponse) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateAPIKeyResponse) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+// RevokeAPIKey
+type RevokeAPIKeyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // Key ID to revoke
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeAPIKeyRequest) Reset() {
+	*x = RevokeAPIKeyRequest{}
+	mi := &file_api_v1_service_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeAPIKeyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeAPIKeyRequest) ProtoMessage() {}
+
+func (x *RevokeAPIKeyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_service_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeAPIKeyRequest.ProtoReflect.Descriptor instead.
+func (*RevokeAPIKeyRequest) Descriptor() ([]byte, []int) {
+	return file_api_v1_service_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *RevokeAPIKeyRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+// ListAPIKeys
+type ListAPIKeysRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAPIKeysRequest) Reset() {
+	*x = ListAPIKeysRequest{}
+	mi := &file_api_v1_service_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAPIKeysRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAPIKeysRequest) ProtoMessage() {}
+
+func (x *ListAPIKeysRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_service_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAPIKeysRequest.ProtoReflect.Descriptor instead.
+func (*ListAPIKeysRequest) Descriptor() ([]byte, []int) {
+	return file_api_v1_service_proto_rawDescGZIP(), []int{3}
+}
+
+type ListAPIKeysResponse struct {
+	state         protoimpl.MessageState            `protogen:"open.v1"`
+	Keys          []*ListAPIKeysResponse_APIKeyInfo `protobuf:"bytes,1,rep,name=keys,proto3" json:"keys,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAPIKeysResponse) Reset() {
+	*x = ListAPIKeysResponse{}
+	mi := &file_api_v1_service_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAPIKeysResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAPIKeysResponse) ProtoMessage() {}
+
+func (x *ListAPIKeysResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_service_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAPIKeysResponse.ProtoReflect.Descriptor instead.
+func (*ListAPIKeysResponse) Descriptor() ([]byte, []int) {
+	return file_api_v1_service_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ListAPIKeysResponse) GetKeys() []*ListAPIKeysResponse_APIKeyInfo {
+	if x != nil {
+		return x.Keys
+	}
+	return nil
+}
+
+// MintToken
 type MintTokenRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
-	DurationMinutes int32                  `protobuf:"varint,1,opt,name=duration_minutes,json=durationMinutes,proto3" json:"duration_minutes,omitempty"`
-	AllowedBudget   *int32                 `protobuf:"varint,2,opt,name=allowed_budget,json=allowedBudget,proto3,oneof" json:"allowed_budget,omitempty"`
-	AllowedModels   []v1.Model             `protobuf:"varint,3,rep,packed,name=allowed_models,json=allowedModels,proto3,enum=domain.v1.Model" json:"allowed_models,omitempty"`
-	AllowedService  *string                `protobuf:"bytes,4,opt,name=allowed_service,json=allowedService,proto3,oneof" json:"allowed_service,omitempty"`
+	DurationSeconds int32                  `protobuf:"varint,1,opt,name=duration_seconds,json=durationSeconds,proto3" json:"duration_seconds,omitempty"` // Token lifetime (server enforces max)
+	Permissions     *v1.TokenPermissions   `protobuf:"bytes,2,opt,name=permissions,proto3" json:"permissions,omitempty"`                                 // Granular permissions for the token
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *MintTokenRequest) Reset() {
 	*x = MintTokenRequest{}
-	mi := &file_api_v1_service_proto_msgTypes[2]
+	mi := &file_api_v1_service_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -127,7 +285,7 @@ func (x *MintTokenRequest) String() string {
 func (*MintTokenRequest) ProtoMessage() {}
 
 func (x *MintTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_service_proto_msgTypes[2]
+	mi := &file_api_v1_service_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -140,47 +298,35 @@ func (x *MintTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MintTokenRequest.ProtoReflect.Descriptor instead.
 func (*MintTokenRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_service_proto_rawDescGZIP(), []int{2}
+	return file_api_v1_service_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *MintTokenRequest) GetDurationMinutes() int32 {
+func (x *MintTokenRequest) GetDurationSeconds() int32 {
 	if x != nil {
-		return x.DurationMinutes
+		return x.DurationSeconds
 	}
 	return 0
 }
 
-func (x *MintTokenRequest) GetAllowedBudget() int32 {
-	if x != nil && x.AllowedBudget != nil {
-		return *x.AllowedBudget
-	}
-	return 0
-}
-
-func (x *MintTokenRequest) GetAllowedModels() []v1.Model {
+func (x *MintTokenRequest) GetPermissions() *v1.TokenPermissions {
 	if x != nil {
-		return x.AllowedModels
+		return x.Permissions
 	}
 	return nil
 }
 
-func (x *MintTokenRequest) GetAllowedService() string {
-	if x != nil && x.AllowedService != nil {
-		return *x.AllowedService
-	}
-	return ""
-}
-
 type MintTokenResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`                           // PASETO token
+	Jti           string                 `protobuf:"bytes,2,opt,name=jti,proto3" json:"jti,omitempty"`                               // Token ID (for revocation)
+	ExpiresAt     int64                  `protobuf:"varint,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"` // Unix timestamp when token expires
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *MintTokenResponse) Reset() {
 	*x = MintTokenResponse{}
-	mi := &file_api_v1_service_proto_msgTypes[3]
+	mi := &file_api_v1_service_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -192,7 +338,7 @@ func (x *MintTokenResponse) String() string {
 func (*MintTokenResponse) ProtoMessage() {}
 
 func (x *MintTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_service_proto_msgTypes[3]
+	mi := &file_api_v1_service_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -205,7 +351,7 @@ func (x *MintTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MintTokenResponse.ProtoReflect.Descriptor instead.
 func (*MintTokenResponse) Descriptor() ([]byte, []int) {
-	return file_api_v1_service_proto_rawDescGZIP(), []int{3}
+	return file_api_v1_service_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *MintTokenResponse) GetToken() string {
@@ -215,26 +361,184 @@ func (x *MintTokenResponse) GetToken() string {
 	return ""
 }
 
+func (x *MintTokenResponse) GetJti() string {
+	if x != nil {
+		return x.Jti
+	}
+	return ""
+}
+
+func (x *MintTokenResponse) GetExpiresAt() int64 {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return 0
+}
+
+// RevokeToken
+type RevokeTokenRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Jti           string                 `protobuf:"bytes,1,opt,name=jti,proto3" json:"jti,omitempty"` // Token ID to revoke
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeTokenRequest) Reset() {
+	*x = RevokeTokenRequest{}
+	mi := &file_api_v1_service_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeTokenRequest) ProtoMessage() {}
+
+func (x *RevokeTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_service_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeTokenRequest.ProtoReflect.Descriptor instead.
+func (*RevokeTokenRequest) Descriptor() ([]byte, []int) {
+	return file_api_v1_service_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *RevokeTokenRequest) GetJti() string {
+	if x != nil {
+		return x.Jti
+	}
+	return ""
+}
+
+type ListAPIKeysResponse_APIKeyInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	IsActive      bool                   `protobuf:"varint,3,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	LastUsedAt    int64                  `protobuf:"varint,5,opt,name=last_used_at,json=lastUsedAt,proto3" json:"last_used_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAPIKeysResponse_APIKeyInfo) Reset() {
+	*x = ListAPIKeysResponse_APIKeyInfo{}
+	mi := &file_api_v1_service_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAPIKeysResponse_APIKeyInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAPIKeysResponse_APIKeyInfo) ProtoMessage() {}
+
+func (x *ListAPIKeysResponse_APIKeyInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_service_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAPIKeysResponse_APIKeyInfo.ProtoReflect.Descriptor instead.
+func (*ListAPIKeysResponse_APIKeyInfo) Descriptor() ([]byte, []int) {
+	return file_api_v1_service_proto_rawDescGZIP(), []int{4, 0}
+}
+
+func (x *ListAPIKeysResponse_APIKeyInfo) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ListAPIKeysResponse_APIKeyInfo) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ListAPIKeysResponse_APIKeyInfo) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+func (x *ListAPIKeysResponse_APIKeyInfo) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *ListAPIKeysResponse_APIKeyInfo) GetLastUsedAt() int64 {
+	if x != nil {
+		return x.LastUsedAt
+	}
+	return 0
+}
+
 var File_api_v1_service_proto protoreflect.FileDescriptor
 
 const file_api_v1_service_proto_rawDesc = "" +
 	"\n" +
-	"\x14api/v1/service.proto\x12\x06api.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a\x15domain/v1/types.proto\"\x15\n" +
-	"\x13CreateAPIKeyRequest\"/\n" +
-	"\x14CreateAPIKeyResponse\x12\x17\n" +
-	"\aapi_key\x18\x01 \x01(\tR\x06apiKey\"\xf7\x01\n" +
+	"\x14api/v1/service.proto\x12\x06api.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a\x15domain/v1/types.proto\")\n" +
+	"\x13CreateAPIKeyRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"r\n" +
+	"\x14CreateAPIKeyResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\aapi_key\x18\x02 \x01(\tR\x06apiKey\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\x03R\tcreatedAt\"%\n" +
+	"\x13RevokeAPIKeyRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x14\n" +
+	"\x12ListAPIKeysRequest\"\xe2\x01\n" +
+	"\x13ListAPIKeysResponse\x12:\n" +
+	"\x04keys\x18\x01 \x03(\v2&.api.v1.ListAPIKeysResponse.APIKeyInfoR\x04keys\x1a\x8e\x01\n" +
+	"\n" +
+	"APIKeyInfo\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
+	"\tis_active\x18\x03 \x01(\bR\bisActive\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\x03R\tcreatedAt\x12 \n" +
+	"\flast_used_at\x18\x05 \x01(\x03R\n" +
+	"lastUsedAt\"|\n" +
 	"\x10MintTokenRequest\x12)\n" +
-	"\x10duration_minutes\x18\x01 \x01(\x05R\x0fdurationMinutes\x12*\n" +
-	"\x0eallowed_budget\x18\x02 \x01(\x05H\x00R\rallowedBudget\x88\x01\x01\x127\n" +
-	"\x0eallowed_models\x18\x03 \x03(\x0e2\x10.domain.v1.ModelR\rallowedModels\x12,\n" +
-	"\x0fallowed_service\x18\x04 \x01(\tH\x01R\x0eallowedService\x88\x01\x01B\x11\n" +
-	"\x0f_allowed_budgetB\x12\n" +
-	"\x10_allowed_service\")\n" +
+	"\x10duration_seconds\x18\x01 \x01(\x05R\x0fdurationSeconds\x12=\n" +
+	"\vpermissions\x18\x02 \x01(\v2\x1b.domain.v1.TokenPermissionsR\vpermissions\"Z\n" +
 	"\x11MintTokenResponse\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token2\x92\x01\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12\x10\n" +
+	"\x03jti\x18\x02 \x01(\tR\x03jti\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x03 \x01(\x03R\texpiresAt\"&\n" +
+	"\x12RevokeTokenRequest\x12\x10\n" +
+	"\x03jti\x18\x01 \x01(\tR\x03jti2\xe2\x02\n" +
 	"\x03API\x12I\n" +
-	"\fCreateAPIKey\x12\x1b.api.v1.CreateAPIKeyRequest\x1a\x1c.api.v1.CreateAPIKeyResponse\x12@\n" +
-	"\tMintToken\x12\x18.api.v1.MintTokenRequest\x1a\x19.api.v1.MintTokenResponseB7Z5github.com/syss-io/executor/gen/proto/go/api/v1;apiv1b\x06proto3"
+	"\fCreateAPIKey\x12\x1b.api.v1.CreateAPIKeyRequest\x1a\x1c.api.v1.CreateAPIKeyResponse\x12C\n" +
+	"\fRevokeAPIKey\x12\x1b.api.v1.RevokeAPIKeyRequest\x1a\x16.google.protobuf.Empty\x12F\n" +
+	"\vListAPIKeys\x12\x1a.api.v1.ListAPIKeysRequest\x1a\x1b.api.v1.ListAPIKeysResponse\x12@\n" +
+	"\tMintToken\x12\x18.api.v1.MintTokenRequest\x1a\x19.api.v1.MintTokenResponse\x12A\n" +
+	"\vRevokeToken\x12\x1a.api.v1.RevokeTokenRequest\x1a\x16.google.protobuf.EmptyB7Z5github.com/syss-io/executor/gen/proto/go/api/v1;apiv1b\x06proto3"
 
 var (
 	file_api_v1_service_proto_rawDescOnce sync.Once
@@ -248,25 +552,38 @@ func file_api_v1_service_proto_rawDescGZIP() []byte {
 	return file_api_v1_service_proto_rawDescData
 }
 
-var file_api_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_api_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_api_v1_service_proto_goTypes = []any{
-	(*CreateAPIKeyRequest)(nil),  // 0: api.v1.CreateAPIKeyRequest
-	(*CreateAPIKeyResponse)(nil), // 1: api.v1.CreateAPIKeyResponse
-	(*MintTokenRequest)(nil),     // 2: api.v1.MintTokenRequest
-	(*MintTokenResponse)(nil),    // 3: api.v1.MintTokenResponse
-	(v1.Model)(0),                // 4: domain.v1.Model
+	(*CreateAPIKeyRequest)(nil),            // 0: api.v1.CreateAPIKeyRequest
+	(*CreateAPIKeyResponse)(nil),           // 1: api.v1.CreateAPIKeyResponse
+	(*RevokeAPIKeyRequest)(nil),            // 2: api.v1.RevokeAPIKeyRequest
+	(*ListAPIKeysRequest)(nil),             // 3: api.v1.ListAPIKeysRequest
+	(*ListAPIKeysResponse)(nil),            // 4: api.v1.ListAPIKeysResponse
+	(*MintTokenRequest)(nil),               // 5: api.v1.MintTokenRequest
+	(*MintTokenResponse)(nil),              // 6: api.v1.MintTokenResponse
+	(*RevokeTokenRequest)(nil),             // 7: api.v1.RevokeTokenRequest
+	(*ListAPIKeysResponse_APIKeyInfo)(nil), // 8: api.v1.ListAPIKeysResponse.APIKeyInfo
+	(*v1.TokenPermissions)(nil),            // 9: domain.v1.TokenPermissions
+	(*emptypb.Empty)(nil),                  // 10: google.protobuf.Empty
 }
 var file_api_v1_service_proto_depIdxs = []int32{
-	4, // 0: api.v1.MintTokenRequest.allowed_models:type_name -> domain.v1.Model
-	0, // 1: api.v1.API.CreateAPIKey:input_type -> api.v1.CreateAPIKeyRequest
-	2, // 2: api.v1.API.MintToken:input_type -> api.v1.MintTokenRequest
-	1, // 3: api.v1.API.CreateAPIKey:output_type -> api.v1.CreateAPIKeyResponse
-	3, // 4: api.v1.API.MintToken:output_type -> api.v1.MintTokenResponse
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	8,  // 0: api.v1.ListAPIKeysResponse.keys:type_name -> api.v1.ListAPIKeysResponse.APIKeyInfo
+	9,  // 1: api.v1.MintTokenRequest.permissions:type_name -> domain.v1.TokenPermissions
+	0,  // 2: api.v1.API.CreateAPIKey:input_type -> api.v1.CreateAPIKeyRequest
+	2,  // 3: api.v1.API.RevokeAPIKey:input_type -> api.v1.RevokeAPIKeyRequest
+	3,  // 4: api.v1.API.ListAPIKeys:input_type -> api.v1.ListAPIKeysRequest
+	5,  // 5: api.v1.API.MintToken:input_type -> api.v1.MintTokenRequest
+	7,  // 6: api.v1.API.RevokeToken:input_type -> api.v1.RevokeTokenRequest
+	1,  // 7: api.v1.API.CreateAPIKey:output_type -> api.v1.CreateAPIKeyResponse
+	10, // 8: api.v1.API.RevokeAPIKey:output_type -> google.protobuf.Empty
+	4,  // 9: api.v1.API.ListAPIKeys:output_type -> api.v1.ListAPIKeysResponse
+	6,  // 10: api.v1.API.MintToken:output_type -> api.v1.MintTokenResponse
+	10, // 11: api.v1.API.RevokeToken:output_type -> google.protobuf.Empty
+	7,  // [7:12] is the sub-list for method output_type
+	2,  // [2:7] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_api_v1_service_proto_init() }
@@ -274,14 +591,13 @@ func file_api_v1_service_proto_init() {
 	if File_api_v1_service_proto != nil {
 		return
 	}
-	file_api_v1_service_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_v1_service_proto_rawDesc), len(file_api_v1_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
