@@ -66,12 +66,6 @@ func (s *ServiceImpl) AgentSession(ctx context.Context, stream *connect.BidiStre
 
 	s.Logger.LogEvent(ctx, state.sessionID, "session_start", &session.Event{})
 
-	apiKey := os.Getenv("GEMINI_API_KEY")
-	if apiKey == "" {
-		slog.Error("RunBrain: GEMINI_API_KEY not set")
-		return connect.NewError(connect.CodeInternal, fmt.Errorf("GEMINI_API_KEY not set"))
-	}
-
 	// 2. Initialize Gemini Model
 	llm, err := s.initModel(ctx, runReq.GetModel())
 	if err != nil {

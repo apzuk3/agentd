@@ -9,24 +9,6 @@ import "domain/v1/types.proto";
 
 service Executor {
     rpc AgentSession (stream StartSessionRequest) returns (stream StartSessionResponse);
-    rpc PromptSession (stream PromptSessionRequest) returns (stream PromptSessionResponse);
-    // rpc ScriptSession (stream ScriptSessionRequest) returns (stream ScriptSessionResponse);
-}
-
-message PromptSessionRequest {
-    string user_message = 1;
-    domain.v1.Model model = 2;
-    double budget = 3;  // Maximum allowed session cost in USD (0 = unlimited)
-}
-
-message PromptSessionResponse {
-    string content = 1;
-    // Cumulative totals
-    int32 input_token_count = 2;
-    int32 output_token_count = 3;
-    double input_cost = 4;
-    double output_cost = 5;
-    double total_cost = 6;
 }
 
 message StartSessionRequest {

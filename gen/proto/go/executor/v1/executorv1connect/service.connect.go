@@ -35,14 +35,11 @@ const (
 const (
 	// ExecutorAgentSessionProcedure is the fully-qualified name of the Executor's AgentSession RPC.
 	ExecutorAgentSessionProcedure = "/executor.v1.Executor/AgentSession"
-	// ExecutorPromptSessionProcedure is the fully-qualified name of the Executor's PromptSession RPC.
-	ExecutorPromptSessionProcedure = "/executor.v1.Executor/PromptSession"
 )
 
 // ExecutorClient is a client for the executor.v1.Executor service.
 type ExecutorClient interface {
 	AgentSession(context.Context) *connect.BidiStreamForClient[v1.StartSessionRequest, v1.StartSessionResponse]
-	PromptSession(context.Context) *connect.BidiStreamForClient[v1.PromptSessionRequest, v1.PromptSessionResponse]
 }
 
 // NewExecutorClient constructs a client for the executor.v1.Executor service. By default, it uses
@@ -62,19 +59,12 @@ func NewExecutorClient(httpClient connect.HTTPClient, baseURL string, opts ...co
 			connect.WithSchema(executorMethods.ByName("AgentSession")),
 			connect.WithClientOptions(opts...),
 		),
-		promptSession: connect.NewClient[v1.PromptSessionRequest, v1.PromptSessionResponse](
-			httpClient,
-			baseURL+ExecutorPromptSessionProcedure,
-			connect.WithSchema(executorMethods.ByName("PromptSession")),
-			connect.WithClientOptions(opts...),
-		),
 	}
 }
 
 // executorClient implements ExecutorClient.
 type executorClient struct {
-	agentSession  *connect.Client[v1.StartSessionRequest, v1.StartSessionResponse]
-	promptSession *connect.Client[v1.PromptSessionRequest, v1.PromptSessionResponse]
+	agentSession *connect.Client[v1.StartSessionRequest, v1.StartSessionResponse]
 }
 
 // AgentSession calls executor.v1.Executor.AgentSession.
@@ -82,15 +72,9 @@ func (c *executorClient) AgentSession(ctx context.Context) *connect.BidiStreamFo
 	return c.agentSession.CallBidiStream(ctx)
 }
 
-// PromptSession calls executor.v1.Executor.PromptSession.
-func (c *executorClient) PromptSession(ctx context.Context) *connect.BidiStreamForClient[v1.PromptSessionRequest, v1.PromptSessionResponse] {
-	return c.promptSession.CallBidiStream(ctx)
-}
-
 // ExecutorHandler is an implementation of the executor.v1.Executor service.
 type ExecutorHandler interface {
 	AgentSession(context.Context, *connect.BidiStream[v1.StartSessionRequest, v1.StartSessionResponse]) error
-	PromptSession(context.Context, *connect.BidiStream[v1.PromptSessionRequest, v1.PromptSessionResponse]) error
 }
 
 // NewExecutorHandler builds an HTTP handler from the service implementation. It returns the path on
@@ -106,18 +90,10 @@ func NewExecutorHandler(svc ExecutorHandler, opts ...connect.HandlerOption) (str
 		connect.WithSchema(executorMethods.ByName("AgentSession")),
 		connect.WithHandlerOptions(opts...),
 	)
-	executorPromptSessionHandler := connect.NewBidiStreamHandler(
-		ExecutorPromptSessionProcedure,
-		svc.PromptSession,
-		connect.WithSchema(executorMethods.ByName("PromptSession")),
-		connect.WithHandlerOptions(opts...),
-	)
 	return "/executor.v1.Executor/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ExecutorAgentSessionProcedure:
 			executorAgentSessionHandler.ServeHTTP(w, r)
-		case ExecutorPromptSessionProcedure:
-			executorPromptSessionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -129,8 +105,4 @@ type UnimplementedExecutorHandler struct{}
 
 func (UnimplementedExecutorHandler) AgentSession(context.Context, *connect.BidiStream[v1.StartSessionRequest, v1.StartSessionResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("executor.v1.Executor.AgentSession is not implemented"))
-}
-
-func (UnimplementedExecutorHandler) PromptSession(context.Context, *connect.BidiStream[v1.PromptSessionRequest, v1.PromptSessionResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("executor.v1.Executor.PromptSession is not implemented"))
 }

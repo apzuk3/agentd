@@ -156,6 +156,50 @@ func (x *SessionLog) GetEventData() string {
 	return ""
 }
 
+type APIKey struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ApiKey        string                 `protobuf:"bytes,1,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *APIKey) Reset() {
+	*x = APIKey{}
+	mi := &file_domain_v1_types_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *APIKey) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*APIKey) ProtoMessage() {}
+
+func (x *APIKey) ProtoReflect() protoreflect.Message {
+	mi := &file_domain_v1_types_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use APIKey.ProtoReflect.Descriptor instead.
+func (*APIKey) Descriptor() ([]byte, []int) {
+	return file_domain_v1_types_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *APIKey) GetApiKey() string {
+	if x != nil {
+		return x.ApiKey
+	}
+	return ""
+}
+
 var File_domain_v1_types_proto protoreflect.FileDescriptor
 
 const file_domain_v1_types_proto_rawDesc = "" +
@@ -173,7 +217,10 @@ const file_domain_v1_types_proto_rawDesc = "" +
 	"event_type\x18\x04 \x01(\tB\x16\xba\xb9\x19\x12\n" +
 	"\x10R\x0eidx_event_typeR\teventType\x12\x1d\n" +
 	"\n" +
-	"event_data\x18\x05 \x01(\tR\teventData:\x06\xba\xb9\x19\x02\b\x01*\xa7\x01\n" +
+	"event_data\x18\x05 \x01(\tR\teventData:\x06\xba\xb9\x19\x02\b\x01\"3\n" +
+	"\x06APIKey\x12!\n" +
+	"\aapi_key\x18\x01 \x01(\tB\b\xba\xb9\x19\x04\n" +
+	"\x02(\x01R\x06apiKey:\x06\xba\xb9\x19\x02\b\x01*\xa7\x01\n" +
 	"\x05Model\x12\x15\n" +
 	"\x11MODEL_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14MODEL_GEMINI_2_5_PRO\x10\x01\x12\x1a\n" +
@@ -195,10 +242,11 @@ func file_domain_v1_types_proto_rawDescGZIP() []byte {
 }
 
 var file_domain_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_domain_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_domain_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_domain_v1_types_proto_goTypes = []any{
 	(Model)(0),         // 0: domain.v1.Model
 	(*SessionLog)(nil), // 1: domain.v1.SessionLog
+	(*APIKey)(nil),     // 2: domain.v1.APIKey
 }
 var file_domain_v1_types_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -219,7 +267,7 @@ func file_domain_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_domain_v1_types_proto_rawDesc), len(file_domain_v1_types_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
