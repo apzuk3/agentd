@@ -11,7 +11,7 @@ import (
 type SessionLogORM struct {
 	EventData string
 	EventType string `gorm:"index:idx_event_type"`
-	Id        string
+	Id        int64  `gorm:"primaryKey"`
 	SessionId string `gorm:"index:idx_session_id"`
 	Timestamp string
 }
@@ -127,7 +127,7 @@ func DefaultReadSessionLog(ctx context.Context, in *SessionLog, db *gorm.DB) (*S
 	if err != nil {
 		return nil, err
 	}
-	if ormObj.Id == "" {
+	if ormObj.Id == 0 {
 		return nil, errors.EmptyIdError
 	}
 	if hook, ok := interface{}(&ormObj).(SessionLogORMWithBeforeReadApplyQuery); ok {
@@ -171,7 +171,7 @@ func DefaultDeleteSessionLog(ctx context.Context, in *SessionLog, db *gorm.DB) e
 	if err != nil {
 		return err
 	}
-	if ormObj.Id == "" {
+	if ormObj.Id == 0 {
 		return errors.EmptyIdError
 	}
 	if hook, ok := interface{}(&ormObj).(SessionLogORMWithBeforeDelete_); ok {
@@ -201,13 +201,13 @@ func DefaultDeleteSessionLogSet(ctx context.Context, in []*SessionLog, db *gorm.
 		return errors.NilArgumentError
 	}
 	var err error
-	keys := []string{}
+	keys := []int64{}
 	for _, obj := range in {
 		ormObj, err := obj.ToORM(ctx)
 		if err != nil {
 			return err
 		}
-		if ormObj.Id == "" {
+		if ormObj.Id == 0 {
 			return errors.EmptyIdError
 		}
 		keys = append(keys, ormObj.Id)

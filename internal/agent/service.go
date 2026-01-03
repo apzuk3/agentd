@@ -54,6 +54,7 @@ func (s *ServiceImpl) NewAgentSession(ctx context.Context, stream *connect.BidiS
 	state := &agentSessionState{
 		toolsQueue: make(map[string]chan *agentv1.StartSessionRequest_ToolCallResponse),
 		model:      agentv1.Model_MODEL_GEMINI_2_5_PRO, // default, will be updated from request
+		sessionID:  uuid.New().String(),
 	}
 
 	// 1. Receive initial RunRequest
@@ -201,16 +202,10 @@ func (s *ServiceImpl) NewAgentSession(ctx context.Context, stream *connect.BidiS
 		return connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create runner: %w", err))
 	}
 
-	// 7. Initialize session
-	sessionID := uuid.New().String()
-	state.mu.Lock()
-	state.sessionID = sessionID
-	state.mu.Unlock()
-
 	_, err = sessService.Create(ctx, &session.CreateRequest{
 		AppName:   "executor",
 		UserID:    "user",
-		SessionID: sessionID,
+		SessionID: state.sessionID,
 	})
 	if err != nil {
 		slog.Error("RunBrain: failed to create session", "error", err)
@@ -225,15 +220,52 @@ func (s *ServiceImpl) NewAgentSession(ctx context.Context, stream *connect.BidiS
 		},
 	}
 
-	for event, err := range r.Run(ctx, "user", sessionID, userMsg, agent.RunConfig{}) {
+	for event, err := range r.Run(ctx, "user", state.sessionID, userMsg, agent.RunConfig{}) {
 		if err != nil {
 			slog.Error("RunBrain: error during run", "error", err)
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("error during run: %w", err))
 		}
 
+		// Log a summary of the event
+		entry := map[string]any{
+			"session_id": state.sessionID,
+			"event_id":   event.ID,
+			"author":     event.Author,
+			"timestamp":  event.Timestamp,
+		}
+
+		if event.UsageMetadata != nil {
+			entry["usage"] = map[string]int32{
+				"prompt":     event.UsageMetadata.PromptTokenCount,
+				"candidates": event.UsageMetadata.CandidatesTokenCount,
+				"total":      event.UsageMetadata.TotalTokenCount,
+			}
+		}
+
+		// Extract text content if available
+		if event.Content != nil {
+			var text string
+			for _, part := range event.Content.Parts {
+				if part.Text != "" {
+					text += part.Text
+				}
+				if part.FunctionCall != nil {
+					entry["tool_call"] = part.FunctionCall.Name
+					entry["tool_args"] = part.FunctionCall.Args
+				}
+				if part.FunctionResponse != nil {
+					entry["tool_response"] = part.FunctionResponse.Name
+					entry["tool_output"] = part.FunctionResponse.Response
+				}
+			}
+			if text != "" {
+				entry["content"] = text
+			}
+		}
+
 		if s.Logger != nil {
-			if err := s.Logger.LogEvent(ctx, sessionID, "event", event); err != nil {
-				slog.Error("RunBrain: failed to log event", "error", err, "session_id", sessionID)
+			if err := s.Logger.LogEvent(ctx, state.sessionID, "event", event); err != nil {
+				slog.Error("RunBrain: failed to log event", "error", err, "session_id", state.sessionID)
 			}
 		}
 

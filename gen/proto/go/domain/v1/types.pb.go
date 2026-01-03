@@ -24,7 +24,7 @@ const (
 
 type SessionLog struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	SessionId     string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	Timestamp     string                 `protobuf:"bytes,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	EventType     string                 `protobuf:"bytes,4,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
@@ -63,11 +63,11 @@ func (*SessionLog) Descriptor() ([]byte, []int) {
 	return file_domain_v1_types_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *SessionLog) GetId() string {
+func (x *SessionLog) GetId() int64 {
 	if x != nil {
 		return x.Id
 	}
-	return ""
+	return 0
 }
 
 func (x *SessionLog) GetSessionId() string {
@@ -102,10 +102,11 @@ var File_domain_v1_types_proto protoreflect.FileDescriptor
 
 const file_domain_v1_types_proto_rawDesc = "" +
 	"\n" +
-	"\x15domain/v1/types.proto\x12\tdomain.v1\x1a\x12options/gorm.proto\"\xcf\x01\n" +
+	"\x15domain/v1/types.proto\x12\tdomain.v1\x1a\x12options/gorm.proto\"\xd9\x01\n" +
 	"\n" +
-	"SessionLog\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x125\n" +
+	"SessionLog\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\x03B\b\xba\xb9\x19\x04\n" +
+	"\x02(\x01R\x02id\x125\n" +
 	"\n" +
 	"session_id\x18\x02 \x01(\tB\x16\xba\xb9\x19\x12\n" +
 	"\x10R\x0eidx_session_idR\tsessionId\x12\x1c\n" +
