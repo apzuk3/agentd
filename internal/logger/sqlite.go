@@ -24,7 +24,7 @@ func (s *SQLiteLogger) LogEvent(ctx context.Context, sessionID string, eventType
 		return fmt.Errorf("failed to marshal event: %w", err)
 	}
 
-	return s.db.Create(&domainv1.SessionLogORM{
+	return s.db.Create(&domainv1.SessionEventORM{
 		SessionId: sessionID,
 		Timestamp: time.Now().Format(time.RFC3339),
 		EventType: eventType,

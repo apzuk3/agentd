@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package assets.v1;
+
+option go_package = "github.com/syss-io/executor/gen/proto/go/assets/v1;assetsv1";
+
+import "google/protobuf/empty.proto";
+import "domain/v1/types.proto";
+
+service Assets {
+    rpc CreateInstruction (CreateInstructionRequest) returns (CreateInstructionResponse);
+    rpc ListInstructions (ListInstructionsRequest) returns (ListInstructionsResponse);
+}
+
+message CreateInstructionRequest {
+    string name = 1;
+    string description = 2;
+    string content = 3;
+    string args = 4; // JSON encoded arguments
+}
+
+message CreateInstructionResponse {
+    domain.v1.Instruction instruction = 1;
+}
+
+message ListInstructionsRequest {
+}
+
+message ListInstructionsResponse {
+    repeated domain.v1.Instruction instructions = 1;
+}
+

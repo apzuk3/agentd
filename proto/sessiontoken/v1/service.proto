@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package sessiontoken.v1;
+
+option go_package = "github.com/syss-io/executor/gen/proto/go/sessiontoken/v1;sessiontokenv1";
+
+service SessionTokenService {
+  rpc MintSessionToken(MintSessionTokenRequest) returns (MintSessionTokenResponse);
+  rpc RevokeSessionToken(RevokeSessionTokenRequest) returns (RevokeSessionTokenResponse);
+  rpc ValidateSessionToken(ValidateSessionTokenRequest) returns (ValidateSessionTokenResponse);
+}
+
+message MintSessionTokenRequest {
+  uint32 max_usd_cents = 1;
+  repeated string allowed_models = 2;
+  repeated string allowed_asset_ids = 3;
+}
+
+message MintSessionTokenResponse {
+  string session_token = 1;
+  int64 expires_at = 2;
+}
+
+message RevokeSessionTokenRequest {
+  string session_token = 1;
+}
+
+message RevokeSessionTokenResponse {}
+
+message ValidateSessionTokenRequest {
+  string session_token = 1;
+}
+
+message ValidateSessionTokenResponse {
+  bool valid = 1;
+  int64 expires_at = 2;
+  uint32 max_usd_cents = 3;
+  repeated string allowed_models = 4;
+  repeated string allowed_asset_ids = 5;
+}

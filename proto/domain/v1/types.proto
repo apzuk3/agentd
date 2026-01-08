@@ -6,6 +6,13 @@ option go_package = "github.com/syss-io/executor/gen/proto/go/domain/v1;domainv1
 
 import "options/gorm.proto";
 
+enum Provider {
+    PROVIDER_UNSPECIFIED = 0;
+    PROVIDER_GOOGLE = 1;
+    PROVIDER_OPENAI = 2;
+    PROVIDER_ANTHROPIC = 3;
+}
+
 enum Model {
     MODEL_UNSPECIFIED = 0;
     MODEL_GEMINI_2_5_PRO = 1;
@@ -15,7 +22,7 @@ enum Model {
     MODEL_GEMINI_3_FLASH = 5;
 }
 
-message SessionLog {
+message SessionEvent {
     option (gorm.opts) = {
         ormable: true,
     };
@@ -30,5 +37,66 @@ message APIKey {
     option (gorm.opts) = {
         ormable: true,
     };
-    string api_key = 1 [(gorm.field).tag = {primary_key: true}];
+    int64 key_id = 1 [(gorm.field).tag = {primary_key: true}];
+    string account_id = 2 [(gorm.field).tag = {index: "idx_account_id"}];
+    string key_hash = 3 [(gorm.field).tag = {index: "idx_key"}];
+    string name = 4;
+    int64 created_at = 5 [(gorm.field).tag = {index: "idx_created_at"}];
+    optional int64 deleted_at = 6 [(gorm.field).tag = {index: "idx_deleted_at"}];
 }
+
+message SessionToken {
+    option (gorm.opts) = {
+        ormable: true,
+    };
+    string token_id = 1 [(gorm.field).tag = {primary_key: true}];
+    int64 api_key_id = 2 [(gorm.field).tag = {index: "idx_api_key_id"}];
+    int64 expires_at = 3;
+    optional int64 revoked_at = 4 [(gorm.field).tag = {index: "idx_revoked_at"}];
+}
+
+message Workspace {
+    option (gorm.opts) = {
+        ormable: true,
+    };
+    int64 id = 1 [(gorm.field).tag = {primary_key: true}];
+    string slug = 2 [(gorm.field).tag = {index: "idx_slug"}];
+    string name = 3;
+    int64 created_at = 4 [(gorm.field).tag = {index: "idx_created_at"}];
+    string account_id = 5;
+    repeated Folder folders = 6 [(gorm.field).has_many = {foreignkey: "fk_workspace_id"}];
+}
+
+message Folder {
+    option (gorm.opts) = {
+        ormable: true,
+    };
+    int64 id = 1 [(gorm.field).tag = {primary_key: true}];
+    int64 workspace_id = 2 [(gorm.field).tag = {index: "idx_workspace_id"}];
+    int64 parent_id = 3 [(gorm.field).tag = {index: "idx_parent_id"}];
+    string name = 4;
+    int64 created_at = 5 [(gorm.field).tag = {index: "idx_created_at"}];
+    Folder parent = 6 [(gorm.field).belongs_to = {foreignkey: "fk_parent_id"}];
+    repeated Folder children = 7 [(gorm.field).has_many = {foreignkey: "fk_parent_id"}];
+    repeated Instruction instructions = 8 [(gorm.field).has_many = {foreignkey: "fk_folder_id"}];
+}
+
+// Instruction is the system prompt for the LLM to generate a response
+message Instruction {
+    option (gorm.opts) = {
+        ormable: true,
+    };
+    int64 id = 1 [(gorm.field).tag = {primary_key: true}];
+    int64 folder_id = 2 [(gorm.field).tag = {index: "idx_folder_id"}];
+    string slug = 3 [(gorm.field).tag = {index: "idx_slug"}];
+    string body = 4;
+    string args = 5; // JSON encoded arguments
+    int32 version = 6;
+    int64 created_at = 7 [(gorm.field).tag = {index: "idx_created_at"}];
+    bool is_published = 8;
+    repeated Provider providers = 9; // empty array means all providers
+    repeated Model models = 10; // empty array means all models
+    string description = 11;
+    Folder folder = 12 [(gorm.field).belongs_to = {foreignkey: "fk_folder_id"}];
+}
+

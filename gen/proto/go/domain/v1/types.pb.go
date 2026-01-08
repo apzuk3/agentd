@@ -22,6 +22,58 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type Provider int32
+
+const (
+	Provider_PROVIDER_UNSPECIFIED Provider = 0
+	Provider_PROVIDER_GOOGLE      Provider = 1
+	Provider_PROVIDER_OPENAI      Provider = 2
+	Provider_PROVIDER_ANTHROPIC   Provider = 3
+)
+
+// Enum value maps for Provider.
+var (
+	Provider_name = map[int32]string{
+		0: "PROVIDER_UNSPECIFIED",
+		1: "PROVIDER_GOOGLE",
+		2: "PROVIDER_OPENAI",
+		3: "PROVIDER_ANTHROPIC",
+	}
+	Provider_value = map[string]int32{
+		"PROVIDER_UNSPECIFIED": 0,
+		"PROVIDER_GOOGLE":      1,
+		"PROVIDER_OPENAI":      2,
+		"PROVIDER_ANTHROPIC":   3,
+	}
+)
+
+func (x Provider) Enum() *Provider {
+	p := new(Provider)
+	*p = x
+	return p
+}
+
+func (x Provider) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Provider) Descriptor() protoreflect.EnumDescriptor {
+	return file_domain_v1_types_proto_enumTypes[0].Descriptor()
+}
+
+func (Provider) Type() protoreflect.EnumType {
+	return &file_domain_v1_types_proto_enumTypes[0]
+}
+
+func (x Provider) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Provider.Descriptor instead.
+func (Provider) EnumDescriptor() ([]byte, []int) {
+	return file_domain_v1_types_proto_rawDescGZIP(), []int{0}
+}
+
 type Model int32
 
 const (
@@ -64,11 +116,11 @@ func (x Model) String() string {
 }
 
 func (Model) Descriptor() protoreflect.EnumDescriptor {
-	return file_domain_v1_types_proto_enumTypes[0].Descriptor()
+	return file_domain_v1_types_proto_enumTypes[1].Descriptor()
 }
 
 func (Model) Type() protoreflect.EnumType {
-	return &file_domain_v1_types_proto_enumTypes[0]
+	return &file_domain_v1_types_proto_enumTypes[1]
 }
 
 func (x Model) Number() protoreflect.EnumNumber {
@@ -77,10 +129,10 @@ func (x Model) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Model.Descriptor instead.
 func (Model) EnumDescriptor() ([]byte, []int) {
-	return file_domain_v1_types_proto_rawDescGZIP(), []int{0}
+	return file_domain_v1_types_proto_rawDescGZIP(), []int{1}
 }
 
-type SessionLog struct {
+type SessionEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	SessionId     string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
@@ -91,20 +143,20 @@ type SessionLog struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SessionLog) Reset() {
-	*x = SessionLog{}
+func (x *SessionEvent) Reset() {
+	*x = SessionEvent{}
 	mi := &file_domain_v1_types_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SessionLog) String() string {
+func (x *SessionEvent) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SessionLog) ProtoMessage() {}
+func (*SessionEvent) ProtoMessage() {}
 
-func (x *SessionLog) ProtoReflect() protoreflect.Message {
+func (x *SessionEvent) ProtoReflect() protoreflect.Message {
 	mi := &file_domain_v1_types_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -116,40 +168,40 @@ func (x *SessionLog) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SessionLog.ProtoReflect.Descriptor instead.
-func (*SessionLog) Descriptor() ([]byte, []int) {
+// Deprecated: Use SessionEvent.ProtoReflect.Descriptor instead.
+func (*SessionEvent) Descriptor() ([]byte, []int) {
 	return file_domain_v1_types_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *SessionLog) GetId() int64 {
+func (x *SessionEvent) GetId() int64 {
 	if x != nil {
 		return x.Id
 	}
 	return 0
 }
 
-func (x *SessionLog) GetSessionId() string {
+func (x *SessionEvent) GetSessionId() string {
 	if x != nil {
 		return x.SessionId
 	}
 	return ""
 }
 
-func (x *SessionLog) GetTimestamp() string {
+func (x *SessionEvent) GetTimestamp() string {
 	if x != nil {
 		return x.Timestamp
 	}
 	return ""
 }
 
-func (x *SessionLog) GetEventType() string {
+func (x *SessionEvent) GetEventType() string {
 	if x != nil {
 		return x.EventType
 	}
 	return ""
 }
 
-func (x *SessionLog) GetEventData() string {
+func (x *SessionEvent) GetEventData() string {
 	if x != nil {
 		return x.EventData
 	}
@@ -158,14 +210,12 @@ func (x *SessionLog) GetEventData() string {
 
 type APIKey struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                // UUID
-	KeyPrefix     string                 `protobuf:"bytes,2,opt,name=key_prefix,json=keyPrefix,proto3" json:"key_prefix,omitempty"` // First 8 chars, for O(1) lookup
-	KeyHash       string                 `protobuf:"bytes,3,opt,name=key_hash,json=keyHash,proto3" json:"key_hash,omitempty"`       // bcrypt hash of the full key
-	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`                            // Human-readable name
-	OwnerId       string                 `protobuf:"bytes,5,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	IsActive      bool                   `protobuf:"varint,6,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
-	CreatedAt     int64                  `protobuf:"varint,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	LastUsedAt    int64                  `protobuf:"varint,8,opt,name=last_used_at,json=lastUsedAt,proto3" json:"last_used_at,omitempty"`
+	KeyId         int64                  `protobuf:"varint,1,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"`
+	AccountId     string                 `protobuf:"bytes,2,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	KeyHash       string                 `protobuf:"bytes,3,opt,name=key_hash,json=keyHash,proto3" json:"key_hash,omitempty"`
+	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	DeletedAt     *int64                 `protobuf:"varint,6,opt,name=deleted_at,json=deletedAt,proto3,oneof" json:"deleted_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -200,16 +250,16 @@ func (*APIKey) Descriptor() ([]byte, []int) {
 	return file_domain_v1_types_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *APIKey) GetId() string {
+func (x *APIKey) GetKeyId() int64 {
 	if x != nil {
-		return x.Id
+		return x.KeyId
 	}
-	return ""
+	return 0
 }
 
-func (x *APIKey) GetKeyPrefix() string {
+func (x *APIKey) GetAccountId() string {
 	if x != nil {
-		return x.KeyPrefix
+		return x.AccountId
 	}
 	return ""
 }
@@ -228,20 +278,6 @@ func (x *APIKey) GetName() string {
 	return ""
 }
 
-func (x *APIKey) GetOwnerId() string {
-	if x != nil {
-		return x.OwnerId
-	}
-	return ""
-}
-
-func (x *APIKey) GetIsActive() bool {
-	if x != nil {
-		return x.IsActive
-	}
-	return false
-}
-
 func (x *APIKey) GetCreatedAt() int64 {
 	if x != nil {
 		return x.CreatedAt
@@ -249,39 +285,37 @@ func (x *APIKey) GetCreatedAt() int64 {
 	return 0
 }
 
-func (x *APIKey) GetLastUsedAt() int64 {
-	if x != nil {
-		return x.LastUsedAt
+func (x *APIKey) GetDeletedAt() int64 {
+	if x != nil && x.DeletedAt != nil {
+		return *x.DeletedAt
 	}
 	return 0
 }
 
-// Permissions embedded in PASETO tokens
-type TokenPermissions struct {
+type SessionToken struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AllowedModels []Model                `protobuf:"varint,1,rep,packed,name=allowed_models,json=allowedModels,proto3,enum=domain.v1.Model" json:"allowed_models,omitempty"` // Which models can be used
-	MaxBudget     float64                `protobuf:"fixed64,2,opt,name=max_budget,json=maxBudget,proto3" json:"max_budget,omitempty"`                                        // Max USD per session (0 = unlimited)
-	MaxTimeoutMs  int32                  `protobuf:"varint,3,opt,name=max_timeout_ms,json=maxTimeoutMs,proto3" json:"max_timeout_ms,omitempty"`                              // Max session timeout
-	MaxTools      int32                  `protobuf:"varint,4,opt,name=max_tools,json=maxTools,proto3" json:"max_tools,omitempty"`                                            // Max tools per agent
-	MaxAgents     int32                  `protobuf:"varint,5,opt,name=max_agents,json=maxAgents,proto3" json:"max_agents,omitempty"`                                         // Max agents per session
+	TokenId       string                 `protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
+	ApiKeyId      int64                  `protobuf:"varint,2,opt,name=api_key_id,json=apiKeyId,proto3" json:"api_key_id,omitempty"`
+	ExpiresAt     int64                  `protobuf:"varint,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	RevokedAt     *int64                 `protobuf:"varint,4,opt,name=revoked_at,json=revokedAt,proto3,oneof" json:"revoked_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *TokenPermissions) Reset() {
-	*x = TokenPermissions{}
+func (x *SessionToken) Reset() {
+	*x = SessionToken{}
 	mi := &file_domain_v1_types_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *TokenPermissions) String() string {
+func (x *SessionToken) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*TokenPermissions) ProtoMessage() {}
+func (*SessionToken) ProtoMessage() {}
 
-func (x *TokenPermissions) ProtoReflect() protoreflect.Message {
+func (x *SessionToken) ProtoReflect() protoreflect.Message {
 	mi := &file_domain_v1_types_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -293,130 +327,362 @@ func (x *TokenPermissions) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use TokenPermissions.ProtoReflect.Descriptor instead.
-func (*TokenPermissions) Descriptor() ([]byte, []int) {
+// Deprecated: Use SessionToken.ProtoReflect.Descriptor instead.
+func (*SessionToken) Descriptor() ([]byte, []int) {
 	return file_domain_v1_types_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *TokenPermissions) GetAllowedModels() []Model {
+func (x *SessionToken) GetTokenId() string {
 	if x != nil {
-		return x.AllowedModels
-	}
-	return nil
-}
-
-func (x *TokenPermissions) GetMaxBudget() float64 {
-	if x != nil {
-		return x.MaxBudget
-	}
-	return 0
-}
-
-func (x *TokenPermissions) GetMaxTimeoutMs() int32 {
-	if x != nil {
-		return x.MaxTimeoutMs
-	}
-	return 0
-}
-
-func (x *TokenPermissions) GetMaxTools() int32 {
-	if x != nil {
-		return x.MaxTools
-	}
-	return 0
-}
-
-func (x *TokenPermissions) GetMaxAgents() int32 {
-	if x != nil {
-		return x.MaxAgents
-	}
-	return 0
-}
-
-// Audit trail: logged at mint time, links jti to API key
-type MintedToken struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Jti           string                 `protobuf:"bytes,1,opt,name=jti,proto3" json:"jti,omitempty"` // Token ID
-	ApiKeyId      string                 `protobuf:"bytes,2,opt,name=api_key_id,json=apiKeyId,proto3" json:"api_key_id,omitempty"`
-	MintedAt      int64                  `protobuf:"varint,3,opt,name=minted_at,json=mintedAt,proto3" json:"minted_at,omitempty"`
-	ExpiresAt     int64                  `protobuf:"varint,4,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
-	Revoked       bool                   `protobuf:"varint,5,opt,name=revoked,proto3" json:"revoked,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *MintedToken) Reset() {
-	*x = MintedToken{}
-	mi := &file_domain_v1_types_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *MintedToken) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*MintedToken) ProtoMessage() {}
-
-func (x *MintedToken) ProtoReflect() protoreflect.Message {
-	mi := &file_domain_v1_types_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use MintedToken.ProtoReflect.Descriptor instead.
-func (*MintedToken) Descriptor() ([]byte, []int) {
-	return file_domain_v1_types_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *MintedToken) GetJti() string {
-	if x != nil {
-		return x.Jti
+		return x.TokenId
 	}
 	return ""
 }
 
-func (x *MintedToken) GetApiKeyId() string {
+func (x *SessionToken) GetApiKeyId() int64 {
 	if x != nil {
 		return x.ApiKeyId
 	}
-	return ""
-}
-
-func (x *MintedToken) GetMintedAt() int64 {
-	if x != nil {
-		return x.MintedAt
-	}
 	return 0
 }
 
-func (x *MintedToken) GetExpiresAt() int64 {
+func (x *SessionToken) GetExpiresAt() int64 {
 	if x != nil {
 		return x.ExpiresAt
 	}
 	return 0
 }
 
-func (x *MintedToken) GetRevoked() bool {
+func (x *SessionToken) GetRevokedAt() int64 {
+	if x != nil && x.RevokedAt != nil {
+		return *x.RevokedAt
+	}
+	return 0
+}
+
+type Workspace struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Slug          string                 `protobuf:"bytes,2,opt,name=slug,proto3" json:"slug,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	AccountId     string                 `protobuf:"bytes,5,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	Folders       []*Folder              `protobuf:"bytes,6,rep,name=folders,proto3" json:"folders,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Workspace) Reset() {
+	*x = Workspace{}
+	mi := &file_domain_v1_types_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Workspace) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Workspace) ProtoMessage() {}
+
+func (x *Workspace) ProtoReflect() protoreflect.Message {
+	mi := &file_domain_v1_types_proto_msgTypes[3]
 	if x != nil {
-		return x.Revoked
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Workspace.ProtoReflect.Descriptor instead.
+func (*Workspace) Descriptor() ([]byte, []int) {
+	return file_domain_v1_types_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Workspace) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *Workspace) GetSlug() string {
+	if x != nil {
+		return x.Slug
+	}
+	return ""
+}
+
+func (x *Workspace) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Workspace) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *Workspace) GetAccountId() string {
+	if x != nil {
+		return x.AccountId
+	}
+	return ""
+}
+
+func (x *Workspace) GetFolders() []*Folder {
+	if x != nil {
+		return x.Folders
+	}
+	return nil
+}
+
+type Folder struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	WorkspaceId   int64                  `protobuf:"varint,2,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
+	ParentId      int64                  `protobuf:"varint,3,opt,name=parent_id,json=parentId,proto3" json:"parent_id,omitempty"`
+	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Parent        *Folder                `protobuf:"bytes,6,opt,name=parent,proto3" json:"parent,omitempty"`
+	Children      []*Folder              `protobuf:"bytes,7,rep,name=children,proto3" json:"children,omitempty"`
+	Instructions  []*Instruction         `protobuf:"bytes,8,rep,name=instructions,proto3" json:"instructions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Folder) Reset() {
+	*x = Folder{}
+	mi := &file_domain_v1_types_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Folder) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Folder) ProtoMessage() {}
+
+func (x *Folder) ProtoReflect() protoreflect.Message {
+	mi := &file_domain_v1_types_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Folder.ProtoReflect.Descriptor instead.
+func (*Folder) Descriptor() ([]byte, []int) {
+	return file_domain_v1_types_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *Folder) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *Folder) GetWorkspaceId() int64 {
+	if x != nil {
+		return x.WorkspaceId
+	}
+	return 0
+}
+
+func (x *Folder) GetParentId() int64 {
+	if x != nil {
+		return x.ParentId
+	}
+	return 0
+}
+
+func (x *Folder) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Folder) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *Folder) GetParent() *Folder {
+	if x != nil {
+		return x.Parent
+	}
+	return nil
+}
+
+func (x *Folder) GetChildren() []*Folder {
+	if x != nil {
+		return x.Children
+	}
+	return nil
+}
+
+func (x *Folder) GetInstructions() []*Instruction {
+	if x != nil {
+		return x.Instructions
+	}
+	return nil
+}
+
+// Instruction is the system prompt for the LLM to generate a response
+type Instruction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	FolderId      int64                  `protobuf:"varint,2,opt,name=folder_id,json=folderId,proto3" json:"folder_id,omitempty"`
+	Slug          string                 `protobuf:"bytes,3,opt,name=slug,proto3" json:"slug,omitempty"`
+	Body          string                 `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
+	Args          string                 `protobuf:"bytes,5,opt,name=args,proto3" json:"args,omitempty"` // JSON encoded arguments
+	Version       int32                  `protobuf:"varint,6,opt,name=version,proto3" json:"version,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	IsPublished   bool                   `protobuf:"varint,8,opt,name=is_published,json=isPublished,proto3" json:"is_published,omitempty"`
+	Providers     []Provider             `protobuf:"varint,9,rep,packed,name=providers,proto3,enum=domain.v1.Provider" json:"providers,omitempty"` // empty array means all providers
+	Models        []Model                `protobuf:"varint,10,rep,packed,name=models,proto3,enum=domain.v1.Model" json:"models,omitempty"`         // empty array means all models
+	Description   string                 `protobuf:"bytes,11,opt,name=description,proto3" json:"description,omitempty"`
+	Folder        *Folder                `protobuf:"bytes,12,opt,name=folder,proto3" json:"folder,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Instruction) Reset() {
+	*x = Instruction{}
+	mi := &file_domain_v1_types_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Instruction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Instruction) ProtoMessage() {}
+
+func (x *Instruction) ProtoReflect() protoreflect.Message {
+	mi := &file_domain_v1_types_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Instruction.ProtoReflect.Descriptor instead.
+func (*Instruction) Descriptor() ([]byte, []int) {
+	return file_domain_v1_types_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *Instruction) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *Instruction) GetFolderId() int64 {
+	if x != nil {
+		return x.FolderId
+	}
+	return 0
+}
+
+func (x *Instruction) GetSlug() string {
+	if x != nil {
+		return x.Slug
+	}
+	return ""
+}
+
+func (x *Instruction) GetBody() string {
+	if x != nil {
+		return x.Body
+	}
+	return ""
+}
+
+func (x *Instruction) GetArgs() string {
+	if x != nil {
+		return x.Args
+	}
+	return ""
+}
+
+func (x *Instruction) GetVersion() int32 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *Instruction) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *Instruction) GetIsPublished() bool {
+	if x != nil {
+		return x.IsPublished
 	}
 	return false
+}
+
+func (x *Instruction) GetProviders() []Provider {
+	if x != nil {
+		return x.Providers
+	}
+	return nil
+}
+
+func (x *Instruction) GetModels() []Model {
+	if x != nil {
+		return x.Models
+	}
+	return nil
+}
+
+func (x *Instruction) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Instruction) GetFolder() *Folder {
+	if x != nil {
+		return x.Folder
+	}
+	return nil
 }
 
 var File_domain_v1_types_proto protoreflect.FileDescriptor
 
 const file_domain_v1_types_proto_rawDesc = "" +
 	"\n" +
-	"\x15domain/v1/types.proto\x12\tdomain.v1\x1a\x12options/gorm.proto\"\xd9\x01\n" +
-	"\n" +
-	"SessionLog\x12\x18\n" +
+	"\x15domain/v1/types.proto\x12\tdomain.v1\x1a\x12options/gorm.proto\"\xdb\x01\n" +
+	"\fSessionEvent\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\x03B\b\xba\xb9\x19\x04\n" +
 	"\x02(\x01R\x02id\x125\n" +
 	"\n" +
@@ -427,40 +693,92 @@ const file_domain_v1_types_proto_rawDesc = "" +
 	"event_type\x18\x04 \x01(\tB\x16\xba\xb9\x19\x12\n" +
 	"\x10R\x0eidx_event_typeR\teventType\x12\x1d\n" +
 	"\n" +
-	"event_data\x18\x05 \x01(\tR\teventData:\x06\xba\xb9\x19\x02\b\x01\"\x9f\x02\n" +
-	"\x06APIKey\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xba\xb9\x19\x04\n" +
-	"\x02(\x01R\x02id\x125\n" +
+	"event_data\x18\x05 \x01(\tR\teventData:\x06\xba\xb9\x19\x02\b\x01\"\xaa\x02\n" +
+	"\x06APIKey\x12\x1f\n" +
+	"\x06key_id\x18\x01 \x01(\x03B\b\xba\xb9\x19\x04\n" +
+	"\x02(\x01R\x05keyId\x125\n" +
 	"\n" +
-	"key_prefix\x18\x02 \x01(\tB\x16\xba\xb9\x19\x12\n" +
-	"\x10Z\x0eidx_key_prefixR\tkeyPrefix\x12\x19\n" +
-	"\bkey_hash\x18\x03 \x01(\tR\akeyHash\x12\x12\n" +
-	"\x04name\x18\x04 \x01(\tR\x04name\x12/\n" +
-	"\bowner_id\x18\x05 \x01(\tB\x14\xba\xb9\x19\x10\n" +
-	"\x0eR\fidx_owner_idR\aownerId\x12\x1b\n" +
-	"\tis_active\x18\x06 \x01(\bR\bisActive\x12\x1d\n" +
+	"account_id\x18\x02 \x01(\tB\x16\xba\xb9\x19\x12\n" +
+	"\x10R\x0eidx_account_idR\taccountId\x12*\n" +
+	"\bkey_hash\x18\x03 \x01(\tB\x0f\xba\xb9\x19\v\n" +
+	"\tR\aidx_keyR\akeyHash\x12\x12\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\x125\n" +
 	"\n" +
-	"created_at\x18\a \x01(\x03R\tcreatedAt\x12 \n" +
-	"\flast_used_at\x18\b \x01(\x03R\n" +
-	"lastUsedAt:\x06\xba\xb9\x19\x02\b\x01\"\xcc\x01\n" +
-	"\x10TokenPermissions\x127\n" +
-	"\x0eallowed_models\x18\x01 \x03(\x0e2\x10.domain.v1.ModelR\rallowedModels\x12\x1d\n" +
+	"created_at\x18\x05 \x01(\x03B\x16\xba\xb9\x19\x12\n" +
+	"\x10R\x0eidx_created_atR\tcreatedAt\x12:\n" +
 	"\n" +
-	"max_budget\x18\x02 \x01(\x01R\tmaxBudget\x12$\n" +
-	"\x0emax_timeout_ms\x18\x03 \x01(\x05R\fmaxTimeoutMs\x12\x1b\n" +
-	"\tmax_tools\x18\x04 \x01(\x05R\bmaxTools\x12\x1d\n" +
+	"deleted_at\x18\x06 \x01(\x03B\x16\xba\xb9\x19\x12\n" +
+	"\x10R\x0eidx_deleted_atH\x00R\tdeletedAt\x88\x01\x01:\x06\xba\xb9\x19\x02\b\x01B\r\n" +
+	"\v_deleted_at\"\xdb\x01\n" +
+	"\fSessionToken\x12#\n" +
+	"\btoken_id\x18\x01 \x01(\tB\b\xba\xb9\x19\x04\n" +
+	"\x02(\x01R\atokenId\x124\n" +
 	"\n" +
-	"max_agents\x18\x05 \x01(\x05R\tmaxAgents\"\xbd\x01\n" +
-	"\vMintedToken\x12\x1a\n" +
-	"\x03jti\x18\x01 \x01(\tB\b\xba\xb9\x19\x04\n" +
-	"\x02(\x01R\x03jti\x124\n" +
+	"api_key_id\x18\x02 \x01(\x03B\x16\xba\xb9\x19\x12\n" +
+	"\x10R\x0eidx_api_key_idR\bapiKeyId\x12\x1d\n" +
 	"\n" +
-	"api_key_id\x18\x02 \x01(\tB\x16\xba\xb9\x19\x12\n" +
-	"\x10R\x0eidx_api_key_idR\bapiKeyId\x12\x1b\n" +
-	"\tminted_at\x18\x03 \x01(\x03R\bmintedAt\x12\x1d\n" +
+	"expires_at\x18\x03 \x01(\x03R\texpiresAt\x12:\n" +
 	"\n" +
-	"expires_at\x18\x04 \x01(\x03R\texpiresAt\x12\x18\n" +
-	"\arevoked\x18\x05 \x01(\bR\arevoked:\x06\xba\xb9\x19\x02\b\x01*\xa7\x01\n" +
+	"revoked_at\x18\x04 \x01(\x03B\x16\xba\xb9\x19\x12\n" +
+	"\x10R\x0eidx_revoked_atH\x00R\trevokedAt\x88\x01\x01:\x06\xba\xb9\x19\x02\b\x01B\r\n" +
+	"\v_revoked_at\"\x83\x02\n" +
+	"\tWorkspace\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\x03B\b\xba\xb9\x19\x04\n" +
+	"\x02(\x01R\x02id\x12$\n" +
+	"\x04slug\x18\x02 \x01(\tB\x10\xba\xb9\x19\f\n" +
+	"\n" +
+	"R\bidx_slugR\x04slug\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x125\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\x03B\x16\xba\xb9\x19\x12\n" +
+	"\x10R\x0eidx_created_atR\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"account_id\x18\x05 \x01(\tR\taccountId\x12D\n" +
+	"\afolders\x18\x06 \x03(\v2\x11.domain.v1.FolderB\x17\xba\xb9\x19\x13*\x11\n" +
+	"\x0ffk_workspace_idR\afolders:\x06\xba\xb9\x19\x02\b\x01\"\xbe\x03\n" +
+	"\x06Folder\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\x03B\b\xba\xb9\x19\x04\n" +
+	"\x02(\x01R\x02id\x12;\n" +
+	"\fworkspace_id\x18\x02 \x01(\x03B\x18\xba\xb9\x19\x14\n" +
+	"\x12R\x10idx_workspace_idR\vworkspaceId\x122\n" +
+	"\tparent_id\x18\x03 \x01(\x03B\x15\xba\xb9\x19\x11\n" +
+	"\x0fR\ridx_parent_idR\bparentId\x12\x12\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\x125\n" +
+	"\n" +
+	"created_at\x18\x05 \x01(\x03B\x16\xba\xb9\x19\x12\n" +
+	"\x10R\x0eidx_created_atR\tcreatedAt\x12?\n" +
+	"\x06parent\x18\x06 \x01(\v2\x11.domain.v1.FolderB\x14\xba\xb9\x19\x10\"\x0e\n" +
+	"\ffk_parent_idR\x06parent\x12C\n" +
+	"\bchildren\x18\a \x03(\v2\x11.domain.v1.FolderB\x14\xba\xb9\x19\x10*\x0e\n" +
+	"\ffk_parent_idR\bchildren\x12P\n" +
+	"\finstructions\x18\b \x03(\v2\x16.domain.v1.InstructionB\x14\xba\xb9\x19\x10*\x0e\n" +
+	"\ffk_folder_idR\finstructions:\x06\xba\xb9\x19\x02\b\x01\"\xe5\x03\n" +
+	"\vInstruction\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\x03B\b\xba\xb9\x19\x04\n" +
+	"\x02(\x01R\x02id\x122\n" +
+	"\tfolder_id\x18\x02 \x01(\x03B\x15\xba\xb9\x19\x11\n" +
+	"\x0fR\ridx_folder_idR\bfolderId\x12$\n" +
+	"\x04slug\x18\x03 \x01(\tB\x10\xba\xb9\x19\f\n" +
+	"\n" +
+	"R\bidx_slugR\x04slug\x12\x12\n" +
+	"\x04body\x18\x04 \x01(\tR\x04body\x12\x12\n" +
+	"\x04args\x18\x05 \x01(\tR\x04args\x12\x18\n" +
+	"\aversion\x18\x06 \x01(\x05R\aversion\x125\n" +
+	"\n" +
+	"created_at\x18\a \x01(\x03B\x16\xba\xb9\x19\x12\n" +
+	"\x10R\x0eidx_created_atR\tcreatedAt\x12!\n" +
+	"\fis_published\x18\b \x01(\bR\visPublished\x121\n" +
+	"\tproviders\x18\t \x03(\x0e2\x13.domain.v1.ProviderR\tproviders\x12(\n" +
+	"\x06models\x18\n" +
+	" \x03(\x0e2\x10.domain.v1.ModelR\x06models\x12 \n" +
+	"\vdescription\x18\v \x01(\tR\vdescription\x12?\n" +
+	"\x06folder\x18\f \x01(\v2\x11.domain.v1.FolderB\x14\xba\xb9\x19\x10\"\x0e\n" +
+	"\ffk_folder_idR\x06folder:\x06\xba\xb9\x19\x02\b\x01*f\n" +
+	"\bProvider\x12\x18\n" +
+	"\x14PROVIDER_UNSPECIFIED\x10\x00\x12\x13\n" +
+	"\x0fPROVIDER_GOOGLE\x10\x01\x12\x13\n" +
+	"\x0fPROVIDER_OPENAI\x10\x02\x12\x16\n" +
+	"\x12PROVIDER_ANTHROPIC\x10\x03*\xa7\x01\n" +
 	"\x05Model\x12\x15\n" +
 	"\x11MODEL_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14MODEL_GEMINI_2_5_PRO\x10\x01\x12\x1a\n" +
@@ -481,22 +799,31 @@ func file_domain_v1_types_proto_rawDescGZIP() []byte {
 	return file_domain_v1_types_proto_rawDescData
 }
 
-var file_domain_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_domain_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_domain_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_domain_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_domain_v1_types_proto_goTypes = []any{
-	(Model)(0),               // 0: domain.v1.Model
-	(*SessionLog)(nil),       // 1: domain.v1.SessionLog
-	(*APIKey)(nil),           // 2: domain.v1.APIKey
-	(*TokenPermissions)(nil), // 3: domain.v1.TokenPermissions
-	(*MintedToken)(nil),      // 4: domain.v1.MintedToken
+	(Provider)(0),        // 0: domain.v1.Provider
+	(Model)(0),           // 1: domain.v1.Model
+	(*SessionEvent)(nil), // 2: domain.v1.SessionEvent
+	(*APIKey)(nil),       // 3: domain.v1.APIKey
+	(*SessionToken)(nil), // 4: domain.v1.SessionToken
+	(*Workspace)(nil),    // 5: domain.v1.Workspace
+	(*Folder)(nil),       // 6: domain.v1.Folder
+	(*Instruction)(nil),  // 7: domain.v1.Instruction
 }
 var file_domain_v1_types_proto_depIdxs = []int32{
-	0, // 0: domain.v1.TokenPermissions.allowed_models:type_name -> domain.v1.Model
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	6, // 0: domain.v1.Workspace.folders:type_name -> domain.v1.Folder
+	6, // 1: domain.v1.Folder.parent:type_name -> domain.v1.Folder
+	6, // 2: domain.v1.Folder.children:type_name -> domain.v1.Folder
+	7, // 3: domain.v1.Folder.instructions:type_name -> domain.v1.Instruction
+	0, // 4: domain.v1.Instruction.providers:type_name -> domain.v1.Provider
+	1, // 5: domain.v1.Instruction.models:type_name -> domain.v1.Model
+	6, // 6: domain.v1.Instruction.folder:type_name -> domain.v1.Folder
+	7, // [7:7] is the sub-list for method output_type
+	7, // [7:7] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_domain_v1_types_proto_init() }
@@ -504,13 +831,15 @@ func file_domain_v1_types_proto_init() {
 	if File_domain_v1_types_proto != nil {
 		return
 	}
+	file_domain_v1_types_proto_msgTypes[1].OneofWrappers = []any{}
+	file_domain_v1_types_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_domain_v1_types_proto_rawDesc), len(file_domain_v1_types_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   4,
+			NumEnums:      2,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
