@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -33,12 +34,13 @@ import (
 )
 
 type agentSessionState struct {
-	mu         sync.Mutex
-	toolsQueue map[string]chan *executorv1.StartSessionRequest_ToolCallResponse
-	sessionID  string
-	model      domainv1.Model
-	usageLog   []*executorv1.StartSessionResponse_UsageEntry
-	budget     float64 // Session budget in USD (0 = unlimited)
+	mu              sync.Mutex
+	toolsQueue      map[string]chan *executorv1.StartSessionRequest_ToolCallResponse
+	sessionID       string
+	model           domainv1.Model
+	usageLog        []*executorv1.StartSessionResponse_UsageEntry
+	budget          float64  // Session budget in USD (0 = unlimited)
+	allowedAssetIDs []string // Asset IDs allowed by session token
 }
 
 func (s *ServiceImpl) AgentSession(ctx context.Context, stream *connect.BidiStream[executorv1.StartSessionRequest, executorv1.StartSessionResponse]) error {
@@ -47,6 +49,14 @@ func (s *ServiceImpl) AgentSession(ctx context.Context, stream *connect.BidiStre
 		model:      domainv1.Model_MODEL_GEMINI_2_5_PRO, // default, will be updated from request
 		sessionID:  uuid.New().String(),
 	}
+
+	// 0. Validate session token
+	tokenValidation, err := s.validateSessionToken(stream.RequestHeader())
+	if err != nil {
+		slog.Error("AgentSession: token validation failed", "error", err)
+		return connect.NewError(connect.CodeUnauthenticated, err)
+	}
+	state.allowedAssetIDs = tokenValidation.AllowedAssetIDs
 
 	// 1. Receive initial RunRequest
 	message, err := stream.Receive()
@@ -61,8 +71,21 @@ func (s *ServiceImpl) AgentSession(ctx context.Context, stream *connect.BidiStre
 		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("missing run request"))
 	}
 
-	// Set budget from request
-	state.budget = runReq.GetBudget()
+	// Validate model against token constraints
+	requestedModel := getModelName(runReq.GetModel())
+	if err := s.validateModelAllowed(requestedModel, tokenValidation.AllowedModels); err != nil {
+		slog.Error("AgentSession: model not allowed", "model", requestedModel, "allowed", tokenValidation.AllowedModels)
+		return connect.NewError(connect.CodePermissionDenied, err)
+	}
+
+	// Set budget from token constraints (minimum of token budget and request budget)
+	tokenBudgetUSD := float64(tokenValidation.MaxUSDCents) / 100.0
+	requestBudget := runReq.GetBudget()
+	if tokenBudgetUSD > 0 && (requestBudget == 0 || tokenBudgetUSD < requestBudget) {
+		state.budget = tokenBudgetUSD
+	} else {
+		state.budget = requestBudget
+	}
 
 	s.Logger.LogEvent(ctx, state.sessionID, "session_start", &session.Event{})
 
@@ -520,4 +543,36 @@ func getModelName(m domainv1.Model) string {
 	default:
 		return "gemini-2.5-pro"
 	}
+}
+
+// validateSessionToken extracts and validates the session token from request headers.
+func (s *ServiceImpl) validateSessionToken(headers http.Header) (*TokenValidationResult, error) {
+	authHeader := headers.Get("Authorization")
+	if authHeader == "" {
+		return nil, errors.New("missing session token")
+	}
+
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+		return nil, errors.New("invalid authorization header format")
+	}
+
+	token := parts[1]
+	return s.TokenValidator.ValidateToken(token)
+}
+
+// validateModelAllowed checks if the requested model is in the allowed models list.
+func (s *ServiceImpl) validateModelAllowed(model string, allowedModels []string) error {
+	// If no models are specified, all models are allowed
+	if len(allowedModels) == 0 {
+		return nil
+	}
+
+	for _, allowed := range allowedModels {
+		if model == allowed {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("model %q not allowed by session token", model)
 }

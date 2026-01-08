@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"log/slog"
@@ -19,9 +20,15 @@ import (
 
 	"github.com/syss-io/executor/client"
 	domainv1 "github.com/syss-io/executor/gen/proto/go/domain/v1"
+	"github.com/syss-io/executor/gen/proto/go/assets/v1/assetsv1connect"
 	"github.com/syss-io/executor/gen/proto/go/executor/v1/executorv1connect"
+	"github.com/syss-io/executor/gen/proto/go/identity/v1/identityv1connect"
+	"github.com/syss-io/executor/gen/proto/go/sessiontoken/v1/sessiontokenv1connect"
+	"github.com/syss-io/executor/internal/assets"
 	"github.com/syss-io/executor/internal/executor"
+	"github.com/syss-io/executor/internal/identity"
 	"github.com/syss-io/executor/internal/logger"
+	"github.com/syss-io/executor/internal/sessiontoken"
 )
 
 func main() {
@@ -49,6 +56,11 @@ func main() {
 						Name:    "turso-db-token",
 						Usage:   "Turso database auth token",
 						Sources: cli.EnvVars("TURSO_CONNECTION_TOKEN"),
+					},
+					&cli.StringFlag{
+						Name:    "paseto-key",
+						Usage:   "Base64-encoded 32-byte PASETO symmetric key",
+						Sources: cli.EnvVars("PASETO_KEY"),
 					},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
@@ -78,18 +90,58 @@ func main() {
 						return fmt.Errorf("failed to open gorm connection: %w", err)
 					}
 
-					if err := gormDB.AutoMigrate(&domainv1.SessionLogORM{}); err != nil {
+					if err := gormDB.AutoMigrate(
+						&domainv1.SessionEventORM{},
+						&domainv1.APIKeyORM{},
+						&domainv1.SessionTokenORM{},
+						&domainv1.WorkspaceORM{},
+						&domainv1.FolderORM{},
+						&domainv1.InstructionORM{},
+					); err != nil {
 						return fmt.Errorf("failed to auto migrate: %w", err)
 					}
 
-					service := &executor.ServiceImpl{
-						Logger: logger.NewSQLiteLogger(gormDB),
-						DB:     gormDB,
+					pasetoKeyB64 := cmd.String("paseto-key")
+					var pasetoKey []byte
+					if pasetoKeyB64 != "" {
+						var err error
+						pasetoKey, err = base64.StdEncoding.DecodeString(pasetoKeyB64)
+						if err != nil {
+							return fmt.Errorf("failed to decode PASETO key: %w", err)
+						}
+						if len(pasetoKey) != 32 {
+							return fmt.Errorf("PASETO key must be 32 bytes, got %d", len(pasetoKey))
+						}
 					}
-					path, handler := executorv1connect.NewExecutorHandler(service)
+
+					sessionTokenService := &sessiontoken.Service{
+						DB:        gormDB,
+						PasetoKey: pasetoKey,
+					}
+					sessionTokenPath, sessionTokenHandler := sessiontokenv1connect.NewSessionTokenServiceHandler(sessionTokenService)
+
+					executorService := &executor.ServiceImpl{
+						Logger:         logger.NewSQLiteLogger(gormDB),
+						DB:             gormDB,
+						TokenValidator: sessionTokenService,
+					}
+					executorPath, executorHandler := executorv1connect.NewExecutorHandler(executorService)
+
+					identityService := &identity.Service{
+						DB: gormDB,
+					}
+					identityPath, identityHandler := identityv1connect.NewIdentityHandler(identityService)
+
+					assetsService := &assets.Service{
+						DB: gormDB,
+					}
+					assetsPath, assetsHandler := assetsv1connect.NewAssetsHandler(assetsService)
 
 					mux := http.NewServeMux()
-					mux.Handle(path, handler)
+					mux.Handle(executorPath, executorHandler)
+					mux.Handle(identityPath, identityHandler)
+					mux.Handle(assetsPath, assetsHandler)
+					mux.Handle(sessionTokenPath, sessionTokenHandler)
 
 					server := &http.Server{
 						Addr:    ":" + port,

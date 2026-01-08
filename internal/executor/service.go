@@ -12,8 +12,9 @@ type ExecutionLogger interface {
 }
 
 type ServiceImpl struct {
-	Logger ExecutionLogger
-	DB     *gorm.DB
+	Logger         ExecutionLogger
+	DB             *gorm.DB
+	TokenValidator TokenValidator
 }
 
 var _ executorv1connect.ExecutorHandler = (*ServiceImpl)(nil)
