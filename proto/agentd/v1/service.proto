@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package agentd.v1;
+
+option go_package = "github.com/apzuk3/agentd/gen/proto/go/agentd/v1;agentdv1";
+
+import "agentd/v1/types.proto";
+
+service Agentd {
+  rpc Run(stream RunRequest) returns (stream RunResponse);
+}
+
+message RunRequest {
+  message ExecuteRequest {
+    Agent agent = 1;
+    optional string session_id = 2;
+    string user_prompt = 3;
+  }
+
+  message HeartbeatRequest {
+    string session_id = 1;
+  }
+
+  message ToolCallResponse {
+    string session_id = 1;
+    string tool_call_id = 2;
+    string tool_name = 3;
+    oneof result {
+      string output = 4;
+      string error = 5;
+    }
+  }
+
+  message EndRequest {
+    string session_id = 1;
+    optional string reason = 2;
+  }
+
+  message CancelRequest {
+    string session_id = 1;
+    optional string tool_call_id = 2;
+  }
+
+  oneof request {
+    ExecuteRequest execute = 1;
+    HeartbeatRequest heartbeat = 2;
+    ToolCallResponse tool_call_response = 3;
+    EndRequest end = 4;
+    CancelRequest cancel = 5;
+  }
+}
+
+message RunResponse {
+  message ExecuteResponse {
+    string session_id = 1;
+  }
+
+  message HeartbeatResponse {
+    string session_id = 1;
+  }
+
+  message ToolCallRequest {
+    string session_id = 1;
+    string tool_call_id = 2;
+    string tool_name = 3;
+    string tool_input = 4;
+    repeated string agent_path = 5;
+  }
+
+  message OutputChunk {
+    string session_id = 1;
+    repeated string agent_path = 2;
+    string content = 3;
+    bool last = 4; // true when this is the final chunk from the agent identified by agent_path
+  }
+
+  message ErrorResponse {
+    string session_id = 1;
+    ErrorCode code = 2;
+    string message = 3;
+    bool retryable = 4;
+  }
+
+  message EndResponse {
+    string session_id = 1;
+    optional string reason = 2;
+    UsageSummary usage_summary = 3;
+    bool completed = 4; // true if the agent tree finished naturally; false if client-initiated end
+  }
+
+  oneof response {
+    ExecuteResponse execute = 1;
+    HeartbeatResponse heartbeat = 2;
+    ToolCallRequest tool_call = 3;
+    ErrorResponse error = 4;
+    EndResponse end = 5;
+    OutputChunk output_chunk = 6;
+  }
+}

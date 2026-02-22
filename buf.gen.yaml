@@ -8,6 +8,4 @@ plugins:
     out: gen/proto/go
     opt:
       - paths=source_relative
-  - local: protoc-gen-gorm
-    out: gen/proto/go
-    opt: paths=source_relative
+      - simple
