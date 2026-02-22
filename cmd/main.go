@@ -13,9 +13,9 @@ import (
 )
 
 func main() {
-	apiKey := os.Getenv("GOOGLE_API_KEY")
+	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
-		log.Fatal("GOOGLE_API_KEY environment variable is required")
+		log.Fatal("GEMINI_API_KEY environment variable is required")
 	}
 
 	svc := &agentd.Service{APIKey: apiKey}

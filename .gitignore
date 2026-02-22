@@ -1,0 +1,27 @@
+# Compiled binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go build output
+/calculator
+/multi_agent
+/simple_chat
+
+# Test binary
+*.test
+
+# Go coverage
+*.out
+*.prof
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
