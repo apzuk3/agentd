@@ -16,5 +16,5 @@ type Service struct {
 }
 
 func (s *Service) Run(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]) error {
-	return s.UnimplementedAgentdHandler.Run(ctx, stream)
+	return NewSession(ctx, stream)
 }
