@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -12,7 +13,12 @@ import (
 )
 
 func main() {
-	svc := &agentd.Service{}
+	apiKey := os.Getenv("GOOGLE_API_KEY")
+	if apiKey == "" {
+		log.Fatal("GOOGLE_API_KEY environment variable is required")
+	}
+
+	svc := &agentd.Service{APIKey: apiKey}
 
 	mux := http.NewServeMux()
 

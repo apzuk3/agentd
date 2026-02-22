@@ -5,25 +5,44 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"google.golang.org/adk/agent"
+	"google.golang.org/adk/runner"
+	adksession "google.golang.org/adk/session"
+	"google.golang.org/genai"
 
 	agentdv1 "github.com/apzuk3/agentd/gen/proto/go/agentd/v1"
 )
 
 type Session struct {
 	id     string
+	apiKey string
 	stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]
 
 	mu           sync.Mutex
 	pendingTools map[string]chan *agentdv1.RunRequest_ToolCallResponse
+
+	cancel     context.CancelFunc
+	agentPaths map[string][]string
+	usage      usageSummary
+}
+
+type usageSummary struct {
+	promptTokens     atomic.Int32
+	completionTokens atomic.Int32
+	cachedTokens     atomic.Int32
+	thoughtsTokens   atomic.Int32
+	totalTokens      atomic.Int32
+	llmCalls         atomic.Int32
 }
 
 // NewSession handles a single Run bidi stream. It expects the first message to
-// be an ExecuteRequest, then enters the main read loop dispatching each request
-// variant until the stream closes or the client sends an EndRequest.
-func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]) error {
+// be an ExecuteRequest, then builds the ADK agent tree and runs the agent loop
+// concurrently with the client message read loop.
+func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse], apiKey string) error {
 	req, err := stream.Receive()
 	if err != nil {
 		return err
@@ -37,10 +56,16 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 		return errors.New("first message was not ExecuteRequest")
 	}
 
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	s := &Session{
 		id:           uuid.New().String(),
+		apiKey:       apiKey,
 		stream:       stream,
 		pendingTools: make(map[string]chan *agentdv1.RunRequest_ToolCallResponse),
+		cancel:       cancel,
+		agentPaths:   make(map[string][]string),
 	}
 
 	if err := stream.Send(&agentdv1.RunResponse{
@@ -53,7 +78,138 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 		return err
 	}
 
-	return s.loop(ctx)
+	if exec.GetAgent() == nil {
+		if sendErr := sendError(stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INVALID_AGENT_TREE, "agent definition is required"); sendErr != nil {
+			return sendErr
+		}
+		return errors.New("agent definition is required")
+	}
+
+	rootAgent, err := createAgent(runCtx, exec.GetAgent(), s, s.apiKey, nil, s.agentPaths)
+	if err != nil {
+		if sendErr := sendError(stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INVALID_AGENT_TREE, err.Error()); sendErr != nil {
+			return sendErr
+		}
+		return fmt.Errorf("building agent tree: %w", err)
+	}
+
+	sessionService := adksession.InMemoryService()
+
+	adkSession, err := sessionService.Create(runCtx, &adksession.CreateRequest{
+		AppName: "agentd",
+		UserID:  "user",
+	})
+	if err != nil {
+		return fmt.Errorf("creating ADK session: %w", err)
+	}
+
+	r, err := runner.New(runner.Config{
+		AppName:        "agentd",
+		Agent:          rootAgent,
+		SessionService: sessionService,
+	})
+	if err != nil {
+		return fmt.Errorf("creating runner: %w", err)
+	}
+
+	runnerDone := make(chan error, 1)
+	go func() {
+		runnerDone <- s.runAgent(runCtx, r, adkSession.Session.ID(), exec.GetUserPrompt())
+	}()
+
+	loopErr := s.loop(runCtx)
+
+	cancel()
+	runnerErr := <-runnerDone
+
+	if loopErr != nil {
+		return loopErr
+	}
+	return runnerErr
+}
+
+// runAgent drives the ADK runner, iterating over events and streaming
+// OutputChunks back to the client. Sends EndResponse when complete.
+func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, userPrompt string) error {
+	userContent := genai.NewContentFromText(userPrompt, "user")
+
+	cfg := agent.RunConfig{
+		StreamingMode: agent.StreamingModeSSE,
+	}
+
+	var lastErr error
+	for event, err := range r.Run(ctx, "user", adkSessionID, userContent, cfg) {
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if event == nil {
+			continue
+		}
+
+		if event.UsageMetadata != nil {
+			s.usage.promptTokens.Add(int32(event.UsageMetadata.PromptTokenCount))
+			s.usage.completionTokens.Add(int32(event.UsageMetadata.CandidatesTokenCount))
+			s.usage.cachedTokens.Add(int32(event.UsageMetadata.CachedContentTokenCount))
+			s.usage.thoughtsTokens.Add(int32(event.UsageMetadata.ThoughtsTokenCount))
+			s.usage.totalTokens.Add(int32(event.UsageMetadata.TotalTokenCount))
+			s.usage.llmCalls.Add(1)
+		}
+
+		if event.Content == nil || len(event.Content.Parts) == 0 {
+			continue
+		}
+
+		agentPath := s.agentPaths[event.Author]
+		if agentPath == nil {
+			agentPath = []string{event.Author}
+		}
+
+		for _, part := range event.Content.Parts {
+			if part.Text == "" {
+				continue
+			}
+			if part.FunctionCall != nil || part.FunctionResponse != nil {
+				continue
+			}
+
+			if err := s.stream.Send(&agentdv1.RunResponse{
+				Response: &agentdv1.RunResponse_OutputChunk_{
+					OutputChunk: &agentdv1.RunResponse_OutputChunk{
+						SessionId: s.id,
+						AgentPath: agentPath,
+						Content:   part.Text,
+						Last:      !event.Partial && event.IsFinalResponse(),
+					},
+				},
+			}); err != nil {
+				return fmt.Errorf("sending output chunk: %w", err)
+			}
+		}
+	}
+
+	if lastErr != nil {
+		_ = sendError(s.stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INTERNAL, lastErr.Error())
+	}
+
+	return s.stream.Send(&agentdv1.RunResponse{
+		Response: &agentdv1.RunResponse_End{
+			End: &agentdv1.RunResponse_EndResponse{
+				SessionId: s.id,
+				Completed: lastErr == nil,
+				UsageSummary: &agentdv1.UsageSummary{
+					TotalUsage: &agentdv1.TokenUsage{
+						PromptTokens:     s.usage.promptTokens.Load(),
+						CompletionTokens: s.usage.completionTokens.Load(),
+						CachedTokens:     s.usage.cachedTokens.Load(),
+						ThoughtsTokens:   s.usage.thoughtsTokens.Load(),
+						TotalTokens:      s.usage.totalTokens.Load(),
+					},
+					LlmCalls: s.usage.llmCalls.Load(),
+				},
+			},
+		},
+	})
 }
 
 func (s *Session) loop(ctx context.Context) error {
@@ -80,9 +236,7 @@ func (s *Session) loop(ctx context.Context) error {
 			s.handleToolCallResponse(r.ToolCallResponse)
 
 		case *agentdv1.RunRequest_Cancel:
-			if err := s.handleCancel(r.Cancel); err != nil {
-				return err
-			}
+			s.handleCancel(r.Cancel)
 
 		case *agentdv1.RunRequest_End:
 			return s.handleEnd(r.End)
@@ -118,26 +272,19 @@ func (s *Session) handleToolCallResponse(resp *agentdv1.RunRequest_ToolCallRespo
 	}
 }
 
-func (s *Session) handleCancel(_ *agentdv1.RunRequest_CancelRequest) error {
-	return s.stream.Send(&agentdv1.RunResponse{
-		Response: &agentdv1.RunResponse_End{
-			End: &agentdv1.RunResponse_EndResponse{
-				SessionId: s.id,
-				Completed: false,
-			},
-		},
-	})
+// handleCancel cancels the runner context. The runner goroutine will observe
+// the cancellation and wind down.
+func (s *Session) handleCancel(_ *agentdv1.RunRequest_CancelRequest) {
+	if s.cancel != nil {
+		s.cancel()
+	}
 }
 
 func (s *Session) handleEnd(_ *agentdv1.RunRequest_EndRequest) error {
-	return s.stream.Send(&agentdv1.RunResponse{
-		Response: &agentdv1.RunResponse_End{
-			End: &agentdv1.RunResponse_EndResponse{
-				SessionId: s.id,
-				Completed: false,
-			},
-		},
-	})
+	if s.cancel != nil {
+		s.cancel()
+	}
+	return nil
 }
 
 // DispatchToolCall sends a ToolCallRequest to the client and blocks until the

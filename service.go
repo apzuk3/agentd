@@ -13,8 +13,10 @@ var _ agentdv1connect.AgentdHandler = (*Service)(nil)
 
 type Service struct {
 	agentdv1connect.UnimplementedAgentdHandler
+
+	APIKey string
 }
 
 func (s *Service) Run(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]) error {
-	return NewSession(ctx, stream)
+	return NewSession(ctx, stream, s.APIKey)
 }
