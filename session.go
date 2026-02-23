@@ -18,9 +18,11 @@ import (
 )
 
 type Session struct {
-	id     string
-	apiKey string
-	stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]
+	id              string
+	geminiAPIKey    string
+	anthropicAPIKey string
+	openaiAPIKey    string
+	stream          *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]
 
 	mu           sync.Mutex
 	pendingTools map[string]chan *agentdv1.RunRequest_ToolCallResponse
@@ -42,7 +44,7 @@ type usageSummary struct {
 // NewSession handles a single Run bidi stream. It expects the first message to
 // be an ExecuteRequest, then builds the ADK agent tree and runs the agent loop
 // concurrently with the client message read loop.
-func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse], apiKey string) error {
+func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse], geminiAPIKey, anthropicAPIKey, openaiAPIKey string) error {
 	req, err := stream.Receive()
 	if err != nil {
 		return err
@@ -60,12 +62,14 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 	defer cancel()
 
 	s := &Session{
-		id:           uuid.New().String(),
-		apiKey:       apiKey,
-		stream:       stream,
-		pendingTools: make(map[string]chan *agentdv1.RunRequest_ToolCallResponse),
-		cancel:       cancel,
-		agentPaths:   make(map[string][]string),
+		id:              uuid.New().String(),
+		geminiAPIKey:    geminiAPIKey,
+		anthropicAPIKey: anthropicAPIKey,
+		openaiAPIKey:    openaiAPIKey,
+		stream:          stream,
+		pendingTools:    make(map[string]chan *agentdv1.RunRequest_ToolCallResponse),
+		cancel:          cancel,
+		agentPaths:      make(map[string][]string),
 	}
 
 	if err := stream.Send(&agentdv1.RunResponse{
@@ -85,7 +89,7 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 		return errors.New("agent definition is required")
 	}
 
-	rootAgent, err := createAgent(runCtx, exec.GetAgent(), s, s.apiKey, nil, s.agentPaths)
+	rootAgent, err := createAgent(runCtx, exec.GetAgent(), s, s.geminiAPIKey, s.anthropicAPIKey, s.openaiAPIKey, nil, s.agentPaths)
 	if err != nil {
 		if sendErr := sendError(stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INVALID_AGENT_TREE, err.Error()); sendErr != nil {
 			return sendErr

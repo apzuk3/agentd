@@ -5,7 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
+	adkanthropic "github.com/Alcova-AI/adk-anthropic-go"
+	"github.com/anthropics/anthropic-sdk-go"
+	adkopenai "github.com/byebyebruce/adk-go-openai"
 	"github.com/google/jsonschema-go/jsonschema"
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/agent/llmagent"
@@ -21,10 +25,30 @@ import (
 	agentdv1 "github.com/apzuk3/agentd/gen/proto/go/agentd/v1"
 )
 
-// createModel creates an ADK model from a model name string and API key.
-func createModel(ctx context.Context, modelName, apiKey string) (model.LLM, error) {
+var openAIPrefixes = []string{"gpt-", "o1-", "o3-", "o4-", "chatgpt-"}
+
+func isOpenAIModel(modelName string) bool {
+	for _, prefix := range openAIPrefixes {
+		if strings.HasPrefix(modelName, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// createModel creates an ADK model from a model name string, routing to the
+// appropriate provider based on the model name prefix.
+func createModel(ctx context.Context, modelName, geminiAPIKey, anthropicAPIKey, openaiAPIKey string) (model.LLM, error) {
+	if strings.HasPrefix(modelName, "claude-") {
+		return adkanthropic.NewModel(ctx, anthropic.Model(modelName), &adkanthropic.Config{
+			APIKey: anthropicAPIKey,
+		})
+	}
+	if isOpenAIModel(modelName) {
+		return adkopenai.NewOpenAIModelWithAPIKey(modelName, openaiAPIKey), nil
+	}
 	return gemini.NewModel(ctx, modelName, &genai.ClientConfig{
-		APIKey: apiKey,
+		APIKey: geminiAPIKey,
 	})
 }
 
@@ -80,7 +104,7 @@ func createAgent(
 	ctx context.Context,
 	protoAgent *agentdv1.Agent,
 	sess *Session,
-	apiKey string,
+	geminiAPIKey, anthropicAPIKey, openaiAPIKey string,
 	parentPath []string,
 	agentPaths map[string][]string,
 ) (agent.Agent, error) {
@@ -98,13 +122,13 @@ func createAgent(
 
 	switch {
 	case protoAgent.GetLlm() != nil:
-		return createLLMAgent(ctx, protoAgent, sess, apiKey, currentPath, agentPaths)
+		return createLLMAgent(ctx, protoAgent, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths)
 	case protoAgent.GetSequential() != nil:
-		return createSequentialAgent(ctx, protoAgent, sess, apiKey, currentPath, agentPaths)
+		return createSequentialAgent(ctx, protoAgent, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths)
 	case protoAgent.GetParallel() != nil:
-		return createParallelAgent(ctx, protoAgent, sess, apiKey, currentPath, agentPaths)
+		return createParallelAgent(ctx, protoAgent, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths)
 	case protoAgent.GetLoop() != nil:
-		return createLoopAgent(ctx, protoAgent, sess, apiKey, currentPath, agentPaths)
+		return createLoopAgent(ctx, protoAgent, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths)
 	default:
 		return nil, fmt.Errorf("agent %q has no agent_type set", name)
 	}
@@ -114,13 +138,13 @@ func createLLMAgent(
 	ctx context.Context,
 	protoAgent *agentdv1.Agent,
 	sess *Session,
-	apiKey string,
+	geminiAPIKey, anthropicAPIKey, openaiAPIKey string,
 	currentPath []string,
 	agentPaths map[string][]string,
 ) (agent.Agent, error) {
 	llm := protoAgent.GetLlm()
 
-	m, err := createModel(ctx, llm.GetModel(), apiKey)
+	m, err := createModel(ctx, llm.GetModel(), geminiAPIKey, anthropicAPIKey, openaiAPIKey)
 	if err != nil {
 		return nil, fmt.Errorf("creating model for agent %q: %w", protoAgent.GetName(), err)
 	}
@@ -136,7 +160,7 @@ func createLLMAgent(
 
 	var subAgents []agent.Agent
 	for _, sa := range llm.GetSubAgents() {
-		a, err := createAgent(ctx, sa, sess, apiKey, currentPath, agentPaths)
+		a, err := createAgent(ctx, sa, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths)
 		if err != nil {
 			return nil, fmt.Errorf("creating sub-agent for %q: %w", protoAgent.GetName(), err)
 		}
@@ -157,13 +181,13 @@ func createSequentialAgent(
 	ctx context.Context,
 	protoAgent *agentdv1.Agent,
 	sess *Session,
-	apiKey string,
+	geminiAPIKey, anthropicAPIKey, openaiAPIKey string,
 	currentPath []string,
 	agentPaths map[string][]string,
 ) (agent.Agent, error) {
 	seq := protoAgent.GetSequential()
 
-	subAgents, err := buildSubAgents(ctx, seq.GetAgents(), sess, apiKey, currentPath, agentPaths)
+	subAgents, err := buildSubAgents(ctx, seq.GetAgents(), sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths)
 	if err != nil {
 		return nil, err
 	}
@@ -181,13 +205,13 @@ func createParallelAgent(
 	ctx context.Context,
 	protoAgent *agentdv1.Agent,
 	sess *Session,
-	apiKey string,
+	geminiAPIKey, anthropicAPIKey, openaiAPIKey string,
 	currentPath []string,
 	agentPaths map[string][]string,
 ) (agent.Agent, error) {
 	par := protoAgent.GetParallel()
 
-	subAgents, err := buildSubAgents(ctx, par.GetAgents(), sess, apiKey, currentPath, agentPaths)
+	subAgents, err := buildSubAgents(ctx, par.GetAgents(), sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths)
 	if err != nil {
 		return nil, err
 	}
@@ -205,13 +229,13 @@ func createLoopAgent(
 	ctx context.Context,
 	protoAgent *agentdv1.Agent,
 	sess *Session,
-	apiKey string,
+	geminiAPIKey, anthropicAPIKey, openaiAPIKey string,
 	currentPath []string,
 	agentPaths map[string][]string,
 ) (agent.Agent, error) {
 	loop := protoAgent.GetLoop()
 
-	subAgents, err := buildSubAgents(ctx, loop.GetAgents(), sess, apiKey, currentPath, agentPaths)
+	subAgents, err := buildSubAgents(ctx, loop.GetAgents(), sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths)
 	if err != nil {
 		return nil, err
 	}
@@ -230,13 +254,13 @@ func buildSubAgents(
 	ctx context.Context,
 	protoAgents []*agentdv1.Agent,
 	sess *Session,
-	apiKey string,
+	geminiAPIKey, anthropicAPIKey, openaiAPIKey string,
 	parentPath []string,
 	agentPaths map[string][]string,
 ) ([]agent.Agent, error) {
 	var agents []agent.Agent
 	for _, pa := range protoAgents {
-		a, err := createAgent(ctx, pa, sess, apiKey, parentPath, agentPaths)
+		a, err := createAgent(ctx, pa, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, parentPath, agentPaths)
 		if err != nil {
 			return nil, err
 		}

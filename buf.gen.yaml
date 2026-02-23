@@ -9,3 +9,9 @@ plugins:
     opt:
       - paths=source_relative
       - simple
+  - remote: buf.build/bufbuild/es
+    out: gen/proto/ts
+    opt: target=ts
+  - remote: buf.build/connectrpc/es
+    out: gen/proto/ts/connect
+    opt: target=ts

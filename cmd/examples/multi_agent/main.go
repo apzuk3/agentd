@@ -54,7 +54,7 @@ func main() {
 		Description: "A multi-agent pipeline that researches a topic and writes an article",
 		AgentType: &agentdv1.Agent_Llm{
 			Llm: &agentdv1.LlmAgent{
-				Model:       "gemini-2.5-flash",
+				Model:       "gemini-3-pro-preview",
 				Instruction: "You are an orchestrator. Delegate research to the researcher sub-agent, then write a polished short article based on the gathered facts. Keep it under 300 words.",
 				Tools: []*agentdv1.Tool{
 					c.Tool("web_search"),

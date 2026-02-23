@@ -13,12 +13,19 @@ import (
 )
 
 func main() {
-	apiKey := os.Getenv("GEMINI_API_KEY")
-	if apiKey == "" {
-		log.Fatal("GEMINI_API_KEY environment variable is required")
+	geminiAPIKey := os.Getenv("GEMINI_API_KEY")
+	anthropicAPIKey := os.Getenv("ANTHROPIC_API_KEY")
+	openaiAPIKey := os.Getenv("OPENAI_API_KEY")
+
+	if geminiAPIKey == "" && anthropicAPIKey == "" && openaiAPIKey == "" {
+		log.Fatal("at least one of GEMINI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY must be set")
 	}
 
-	svc := &agentd.Service{APIKey: apiKey}
+	svc := &agentd.Service{
+		GeminiAPIKey:    geminiAPIKey,
+		AnthropicAPIKey: anthropicAPIKey,
+		OpenAIAPIKey:    openaiAPIKey,
+	}
 
 	mux := http.NewServeMux()
 
