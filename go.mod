@@ -4,6 +4,9 @@ go 1.26.0
 
 require (
 	connectrpc.com/connect v1.19.1
+	github.com/Alcova-AI/adk-anthropic-go v0.1.11
+	github.com/anthropics/anthropic-sdk-go v1.24.0
+	github.com/byebyebruce/adk-go-openai v0.0.0-20251208092515-f5b0ac07643e
 	github.com/google/jsonschema-go v0.4.2
 	github.com/google/uuid v1.6.0
 	golang.org/x/net v0.47.0
@@ -17,9 +20,6 @@ require (
 	cloud.google.com/go/auth v0.17.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
-	github.com/Alcova-AI/adk-anthropic-go v0.1.11 // indirect
-	github.com/anthropics/anthropic-sdk-go v1.24.0 // indirect
-	github.com/byebyebruce/adk-go-openai v0.0.0-20251208092515-f5b0ac07643e // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
