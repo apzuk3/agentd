@@ -1,5 +1,7 @@
 # agentd — Agent Orchestration Service
 
+**Experimental.** This project aims to provide multi-provider, multi-agent orchestration while keeping privacy in mind.
+
 ## What this project is
 
 agentd is a server-side agent orchestration service built in Go. It uses **Google ADK** (Agent Development Kit) under the hood to orchestrate agents and sub-agents, while exposing a **ConnectRPC bidirectional streaming** API to clients.
@@ -45,17 +47,17 @@ The `Run` RPC is a single bidirectional stream. Client and server exchange messa
 ```
 Client                           Server
   │                                │
-  │─── ExecuteRequest ───────────►│  (agent tree, optional session_id)
-  │◄── ExecuteResponse ──────────│  (session_id assigned)
+  │─── ExecuteRequest ───────────► │  (agent tree, optional session_id)
+  │◄── ExecuteResponse ──────────  │  (session_id assigned)
   │                                │
-  │◄── OutputChunk [root, planner]│  (planner streams, last=false)
-  │◄── ToolCallRequest ──────────│  (session_id, tool_call_id)
-  │─── ToolCallResponse ─────────►│  (oneof output/error)
-  │◄── OutputChunk [root, planner]│  (planner continues, last=true)
+  │◄── OutputChunk [root, planner] │  (planner streams, last=false)
+  │◄── ToolCallRequest ──────────  │  (session_id, tool_call_id)
+  │─── ToolCallResponse ─────────► │  (oneof output/error)
+  │◄── OutputChunk [root, planner] │  (planner continues, last=true)
   │                                │
-  │◄── OutputChunk [root, writer] │  (writer streams, last=true)
+  │◄── OutputChunk [root, writer]  │  (writer streams, last=true)
   │                                │
-  │◄── EndResponse (completed) ───│  (agent tree done, usage_summary)
+  │◄── EndResponse (completed) ─── │  (agent tree done, usage_summary)
 ```
 
 ### Cancellation flow
