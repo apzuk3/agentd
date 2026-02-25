@@ -187,6 +187,7 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 						AgentPath: agentPath,
 						Content:   part.Text,
 						Last:      !event.Partial && event.IsFinalResponse(),
+						IsThought: part.Thought,
 					},
 				},
 			}); err != nil {

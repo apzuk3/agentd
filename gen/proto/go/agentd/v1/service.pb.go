@@ -780,7 +780,8 @@ type RunResponse_OutputChunk struct {
 	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	AgentPath     []string               `protobuf:"bytes,2,rep,name=agent_path,json=agentPath,proto3" json:"agent_path,omitempty"`
 	Content       string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
-	Last          bool                   `protobuf:"varint,4,opt,name=last,proto3" json:"last,omitempty"` // true when this is the final chunk from the agent identified by agent_path
+	Last          bool                   `protobuf:"varint,4,opt,name=last,proto3" json:"last,omitempty"`                            // true when this is the final chunk from the agent identified by agent_path
+	IsThought     bool                   `protobuf:"varint,5,opt,name=is_thought,json=isThought,proto3" json:"is_thought,omitempty"` // true when the content is model thinking rather than final response
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -839,6 +840,13 @@ func (x *RunResponse_OutputChunk) GetContent() string {
 func (x *RunResponse_OutputChunk) GetLast() bool {
 	if x != nil {
 		return x.Last
+	}
+	return false
+}
+
+func (x *RunResponse_OutputChunk) GetIsThought() bool {
+	if x != nil {
+		return x.IsThought
 	}
 	return false
 }
@@ -1022,7 +1030,7 @@ const file_agentd_v1_service_proto_rawDesc = "" +
 	"\ftool_call_id\x18\x02 \x01(\tH\x00R\n" +
 	"toolCallId\x88\x01\x01B\x0f\n" +
 	"\r_tool_call_idB\t\n" +
-	"\arequest\"\x84\t\n" +
+	"\arequest\"\xa4\t\n" +
 	"\vRunResponse\x12B\n" +
 	"\aexecute\x18\x01 \x01(\v2&.agentd.v1.RunResponse.ExecuteResponseH\x00R\aexecute\x12H\n" +
 	"\theartbeat\x18\x02 \x01(\v2(.agentd.v1.RunResponse.HeartbeatResponseH\x00R\theartbeat\x12E\n" +
@@ -1045,14 +1053,16 @@ const file_agentd_v1_service_proto_rawDesc = "" +
 	"\n" +
 	"tool_input\x18\x04 \x01(\tR\ttoolInput\x12\x1d\n" +
 	"\n" +
-	"agent_path\x18\x05 \x03(\tR\tagentPath\x1ay\n" +
+	"agent_path\x18\x05 \x03(\tR\tagentPath\x1a\x98\x01\n" +
 	"\vOutputChunk\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1d\n" +
 	"\n" +
 	"agent_path\x18\x02 \x03(\tR\tagentPath\x12\x18\n" +
 	"\acontent\x18\x03 \x01(\tR\acontent\x12\x12\n" +
-	"\x04last\x18\x04 \x01(\bR\x04last\x1a\x90\x01\n" +
+	"\x04last\x18\x04 \x01(\bR\x04last\x12\x1d\n" +
+	"\n" +
+	"is_thought\x18\x05 \x01(\bR\tisThought\x1a\x90\x01\n" +
 	"\rErrorResponse\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12(\n" +

@@ -72,6 +72,7 @@ message RunResponse {
     repeated string agent_path = 2;
     string content = 3;
     bool last = 4; // true when this is the final chunk from the agent identified by agent_path
+    bool is_thought = 5; // true when the content is model thinking rather than final response
   }
 
   message ErrorResponse {

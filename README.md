@@ -38,7 +38,7 @@ The `Run` RPC is a single bidirectional stream. Client and server exchange messa
 - `ExecuteResponse` — acknowledge session creation, return `session_id`
 - `HeartbeatResponse` — heartbeat ack
 - `ToolCallRequest` — ask the client to execute a tool with given input, includes `session_id` and `agent_path` for attribution
-- `OutputChunk` — stream a chunk of LLM-generated text, tagged with `agent_path`; `last = true` signals the specific agent is done producing output
+- `OutputChunk` — stream a chunk of LLM-generated text, tagged with `agent_path`; `last = true` signals the specific agent is done producing output; `is_thought = true` indicates model thinking content rather than final response
 - `ErrorResponse` — a structured error with `ErrorCode`, human-readable `message`, and `retryable` flag
 - `EndResponse` — session ended; `completed = true` when the agent tree finished naturally, `false` for client-initiated ends; includes `UsageSummary`
 
@@ -181,7 +181,7 @@ agentd/
 - **Google ADK orchestration.** The server-side implementation translates the proto `Agent` tree into ADK agent/sub-agent structures and manages the agentic loop, forwarding tool calls to the client.
 - **Models as strings.** Model identifiers are plain strings validated at runtime. See the Models section for currently supported values.
 - **Instruction vs. user prompt.** `LlmAgent.instruction` is the static system prompt baked into the agent definition. `ExecuteRequest.user_prompt` is the per-invocation user input, passed through to ADK's `runner.Run()`. This keeps the agent tree a reusable template while the user's query varies per session.
-- **Streaming output via `OutputChunk`.** LLM-generated text is streamed to the client in real-time. Each chunk carries `repeated string agent_path` — the ordered list from root to the producing agent (e.g. `["root", "planner", "researcher"]`) — so the client always knows which agent at which depth produced the text. The `last` field signals per-agent completion.
+- **Streaming output via `OutputChunk`.** LLM-generated text is streamed to the client in real-time. Each chunk carries `repeated string agent_path` — the ordered list from root to the producing agent (e.g. `["root", "planner", "researcher"]`) — so the client always knows which agent at which depth produced the text. The `last` field signals per-agent completion. The `is_thought` field is `true` when the chunk contains model thinking (chain-of-thought) rather than final response content, allowing clients to render or hide thinking separately.
 - **`EndResponse` signals completion.** When the entire agent tree finishes, the server sends `EndResponse` with `completed = true` and the `UsageSummary`. No separate `FinalResponse` exists — `EndResponse` serves both natural completion and client-initiated termination.
 - **Structured errors.** `ErrorResponse` carries an `ErrorCode` enum, a human-readable `message`, and a `retryable` boolean so clients can decide whether to retry automatically.
 - **Tool results are unambiguous.** `ToolCallResponse` uses a `oneof result` with `output` and `error` branches — exactly one is always set.

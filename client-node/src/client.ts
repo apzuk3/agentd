@@ -74,6 +74,7 @@ export type Event =
       agentPath: string[];
       content: string;
       last: boolean;
+      isThought: boolean;
     }
   | {
       type: "error";
@@ -284,6 +285,7 @@ export class AgentdClient {
               agentPath: [...chunk.agentPath],
               content: chunk.content,
               last: chunk.last,
+              isThought: chunk.isThought,
             };
             break;
           }

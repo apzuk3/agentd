@@ -154,6 +154,7 @@ type OutputChunk struct {
 	AgentPath []string
 	Content   string
 	Last      bool
+	IsThought bool
 }
 
 type End struct {
@@ -307,6 +308,7 @@ func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt stri
 						AgentPath: chunk.GetAgentPath(),
 						Content:   chunk.GetContent(),
 						Last:      chunk.GetLast(),
+						IsThought: chunk.GetIsThought(),
 					},
 				}, nil) {
 					return
