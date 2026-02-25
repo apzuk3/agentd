@@ -144,6 +144,9 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 	var lastErr error
 	for event, err := range r.Run(ctx, "user", adkSessionID, userContent, cfg) {
 		if err != nil {
+			if ctx.Err() != nil {
+				break
+			}
 			lastErr = err
 			continue
 		}
