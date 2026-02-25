@@ -5,6 +5,9 @@
 *.so
 *.dylib
 
+# GoReleaser dist output
+/dist
+
 # Go build output
 /calculator
 /multi_agent
