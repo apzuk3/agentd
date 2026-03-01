@@ -8,6 +8,66 @@ agentd is a server-side agent orchestration service built in Go. It uses **Googl
 
 The core architectural principle: **agents run on the server, but tool calls execute on the client**. This keeps private data on the client side — the server never sees raw tool outputs beyond what the client explicitly sends back. The client communicates directly with the LLM provider through the server's mediation of the agent loop.
 
+## Quick start
+
+**1. Start the server**
+
+```bash
+GEMINI_API_KEY=your-key go run ./cmd
+```
+
+**2. Run an agent with a client-side tool**
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	"github.com/apzuk3/agentd/client"
+	agentdv1 "github.com/apzuk3/agentd/gen/proto/go/agentd/v1"
+)
+
+func main() {
+	clnt := client.New("http://localhost:8080")
+
+	// Register a tool — the handler runs on the client, keeping data private.
+	client.AddTool(clnt, "greet", "Returns a greeting", func(ctx context.Context, input struct {
+		Name string `json:"name"`
+	}) (any, error) {
+		return map[string]string{"greeting": "Hello, " + input.Name + "!"}, nil
+	})
+
+	// Define an agent that can use the tool.
+	agent := &agentdv1.Agent{
+		Name: "greeter",
+		AgentType: &agentdv1.Agent_Llm{
+			Llm: &agentdv1.LlmAgent{
+				Model:     "gemini-2.5-flash",
+				ToolNames: []string{"greet"},
+			},
+		},
+	}
+
+	// Run the agent and stream the response.
+	for event, err := range clnt.Run(context.Background(), agent, "Say hi to Alice") {
+		if err != nil {
+			log.Fatal(err)
+		}
+		if event.OutputChunk != nil {
+			fmt.Print(event.OutputChunk.Content)
+		}
+		if event.End != nil {
+			break
+		}
+	}
+}
+```
+
+See [`examples/`](examples/) for more complete examples.
+
 ## Architecture overview
 
 ```
