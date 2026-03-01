@@ -13,7 +13,7 @@ The core architectural principle: **agents run on the server, but tool calls exe
 **1. Start the server**
 
 ```bash
-GEMINI_API_KEY=your-key go run ./cmd
+docker run -p 8080:8080 -e GEMINI_API_KEY=${GEMINI_API_KEY} ghcr.io/apzuk3/agentd:latest
 ```
 
 **2. Run an agent with a client-side tool**
@@ -30,14 +30,21 @@ import (
 	agentdv1 "github.com/apzuk3/agentd/gen/proto/go/agentd/v1"
 )
 
+type GreetInput struct {
+	Name string `json:"name"`
+}
+
+type GreetOutput struct {
+	Greeting string `json:"greeting"`
+}
+
 func main() {
 	clnt := client.New("http://localhost:8080")
 
 	// Register a tool — the handler runs on the client, keeping data private.
-	client.AddTool(clnt, "greet", "Returns a greeting", func(ctx context.Context, input struct {
-		Name string `json:"name"`
-	}) (any, error) {
-		return map[string]string{"greeting": "Hello, " + input.Name + "!"}, nil
+	// Use concrete struct types so AddTool[T] can generate the JSON schema.
+	client.AddTool(clnt, "greet", "Returns a greeting", func(ctx context.Context, input GreetInput) (any, error) {
+		return GreetOutput{Greeting: "Hello, " + input.Name + "!"}, nil
 	})
 
 	// Define an agent that can use the tool.
