@@ -302,6 +302,7 @@ type RunRequest_ExecuteRequest struct {
 	Agent         *Agent                 `protobuf:"bytes,1,opt,name=agent,proto3" json:"agent,omitempty"`
 	SessionId     *string                `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`
 	UserPrompt    string                 `protobuf:"bytes,3,opt,name=user_prompt,json=userPrompt,proto3" json:"user_prompt,omitempty"`
+	Tools         []*Tool                `protobuf:"bytes,4,rep,name=tools,proto3" json:"tools,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -355,6 +356,13 @@ func (x *RunRequest_ExecuteRequest) GetUserPrompt() string {
 		return x.UserPrompt
 	}
 	return ""
+}
+
+func (x *RunRequest_ExecuteRequest) GetTools() []*Tool {
+	if x != nil {
+		return x.Tools
+	}
+	return nil
 }
 
 type RunRequest_HeartbeatRequest struct {
@@ -991,20 +999,21 @@ var File_agentd_v1_service_proto protoreflect.FileDescriptor
 
 const file_agentd_v1_service_proto_rawDesc = "" +
 	"\n" +
-	"\x17agentd/v1/service.proto\x12\tagentd.v1\x1a\x15agentd/v1/types.proto\"\x9c\a\n" +
+	"\x17agentd/v1/service.proto\x12\tagentd.v1\x1a\x15agentd/v1/types.proto\"\xc3\a\n" +
 	"\n" +
 	"RunRequest\x12@\n" +
 	"\aexecute\x18\x01 \x01(\v2$.agentd.v1.RunRequest.ExecuteRequestH\x00R\aexecute\x12F\n" +
 	"\theartbeat\x18\x02 \x01(\v2&.agentd.v1.RunRequest.HeartbeatRequestH\x00R\theartbeat\x12V\n" +
 	"\x12tool_call_response\x18\x03 \x01(\v2&.agentd.v1.RunRequest.ToolCallResponseH\x00R\x10toolCallResponse\x124\n" +
 	"\x03end\x18\x04 \x01(\v2 .agentd.v1.RunRequest.EndRequestH\x00R\x03end\x12=\n" +
-	"\x06cancel\x18\x05 \x01(\v2#.agentd.v1.RunRequest.CancelRequestH\x00R\x06cancel\x1a\x8c\x01\n" +
+	"\x06cancel\x18\x05 \x01(\v2#.agentd.v1.RunRequest.CancelRequestH\x00R\x06cancel\x1a\xb3\x01\n" +
 	"\x0eExecuteRequest\x12&\n" +
 	"\x05agent\x18\x01 \x01(\v2\x10.agentd.v1.AgentR\x05agent\x12\"\n" +
 	"\n" +
 	"session_id\x18\x02 \x01(\tH\x00R\tsessionId\x88\x01\x01\x12\x1f\n" +
 	"\vuser_prompt\x18\x03 \x01(\tR\n" +
-	"userPromptB\r\n" +
+	"userPrompt\x12%\n" +
+	"\x05tools\x18\x04 \x03(\v2\x0f.agentd.v1.ToolR\x05toolsB\r\n" +
 	"\v_session_id\x1a1\n" +
 	"\x10HeartbeatRequest\x12\x1d\n" +
 	"\n" +
@@ -1109,8 +1118,9 @@ var file_agentd_v1_service_proto_goTypes = []any{
 	(*RunResponse_ErrorResponse)(nil),     // 11: agentd.v1.RunResponse.ErrorResponse
 	(*RunResponse_EndResponse)(nil),       // 12: agentd.v1.RunResponse.EndResponse
 	(*Agent)(nil),                         // 13: agentd.v1.Agent
-	(ErrorCode)(0),                        // 14: agentd.v1.ErrorCode
-	(*UsageSummary)(nil),                  // 15: agentd.v1.UsageSummary
+	(*Tool)(nil),                          // 14: agentd.v1.Tool
+	(ErrorCode)(0),                        // 15: agentd.v1.ErrorCode
+	(*UsageSummary)(nil),                  // 16: agentd.v1.UsageSummary
 }
 var file_agentd_v1_service_proto_depIdxs = []int32{
 	2,  // 0: agentd.v1.RunRequest.execute:type_name -> agentd.v1.RunRequest.ExecuteRequest
@@ -1125,15 +1135,16 @@ var file_agentd_v1_service_proto_depIdxs = []int32{
 	12, // 9: agentd.v1.RunResponse.end:type_name -> agentd.v1.RunResponse.EndResponse
 	10, // 10: agentd.v1.RunResponse.output_chunk:type_name -> agentd.v1.RunResponse.OutputChunk
 	13, // 11: agentd.v1.RunRequest.ExecuteRequest.agent:type_name -> agentd.v1.Agent
-	14, // 12: agentd.v1.RunResponse.ErrorResponse.code:type_name -> agentd.v1.ErrorCode
-	15, // 13: agentd.v1.RunResponse.EndResponse.usage_summary:type_name -> agentd.v1.UsageSummary
-	0,  // 14: agentd.v1.Agentd.Run:input_type -> agentd.v1.RunRequest
-	1,  // 15: agentd.v1.Agentd.Run:output_type -> agentd.v1.RunResponse
-	15, // [15:16] is the sub-list for method output_type
-	14, // [14:15] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	14, // 12: agentd.v1.RunRequest.ExecuteRequest.tools:type_name -> agentd.v1.Tool
+	15, // 13: agentd.v1.RunResponse.ErrorResponse.code:type_name -> agentd.v1.ErrorCode
+	16, // 14: agentd.v1.RunResponse.EndResponse.usage_summary:type_name -> agentd.v1.UsageSummary
+	0,  // 15: agentd.v1.Agentd.Run:input_type -> agentd.v1.RunRequest
+	1,  // 16: agentd.v1.Agentd.Run:output_type -> agentd.v1.RunResponse
+	16, // [16:17] is the sub-list for method output_type
+	15, // [15:16] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_agentd_v1_service_proto_init() }
