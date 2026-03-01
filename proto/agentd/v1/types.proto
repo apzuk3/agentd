@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package agentd.v1;
 
+import "buf/validate/validate.proto";
+
 option go_package = "github.com/apzuk3/agentd/gen/proto/go/agentd/v1;agentdv1";
 
 enum ErrorCode {
@@ -16,8 +18,14 @@ enum ErrorCode {
 }
 
 message Tool {
-    string name = 1;
-    string description = 2;
+    // Must comply with Gemini function naming: start with a letter or underscore,
+    // only [a-zA-Z0-9_.\-:], max 64 characters.
+    string name = 1 [(buf.validate.field).string = {
+        pattern: "^[A-Za-z_][A-Za-z0-9_.:\\-]{0,63}$",
+        min_len: 1,
+        max_len: 64
+    }];
+    string description = 2 [(buf.validate.field).string.min_len = 1];
     optional string input_schema = 3;
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 
@@ -23,6 +24,7 @@ type Session struct {
 	anthropicAPIKey string
 	openaiAPIKey    string
 	stream          *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]
+	log             *slog.Logger
 
 	mu           sync.Mutex
 	pendingTools map[string]chan *agentdv1.RunRequest_ToolCallResponse
@@ -47,11 +49,13 @@ type usageSummary struct {
 func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse], geminiAPIKey, anthropicAPIKey, openaiAPIKey string) error {
 	req, err := stream.Receive()
 	if err != nil {
+		slog.ErrorContext(ctx, "failed to receive initial message", "error", err)
 		return err
 	}
 
 	exec := req.GetExecute()
 	if exec == nil {
+		slog.WarnContext(ctx, "first message was not ExecuteRequest")
 		if sendErr := sendError(stream, "", agentdv1.ErrorCode_ERROR_CODE_INTERNAL, "first message must be ExecuteRequest"); sendErr != nil {
 			return sendErr
 		}
@@ -61,16 +65,21 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	sessionID := uuid.New().String()
+
 	s := &Session{
-		id:              uuid.New().String(),
+		id:              sessionID,
 		geminiAPIKey:    geminiAPIKey,
 		anthropicAPIKey: anthropicAPIKey,
 		openaiAPIKey:    openaiAPIKey,
 		stream:          stream,
+		log:             slog.Default().With("session_id", sessionID),
 		pendingTools:    make(map[string]chan *agentdv1.RunRequest_ToolCallResponse),
 		cancel:          cancel,
 		agentPaths:      make(map[string][]string),
 	}
+
+	s.log.InfoContext(ctx, "session created")
 
 	if err := stream.Send(&agentdv1.RunResponse{
 		Response: &agentdv1.RunResponse_Execute{
@@ -79,23 +88,30 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 			},
 		},
 	}); err != nil {
+		s.log.ErrorContext(ctx, "failed to send execute response", "error", err)
 		return err
 	}
 
 	if exec.GetAgent() == nil {
+		s.log.ErrorContext(ctx, "agent definition is missing")
 		if sendErr := sendError(stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INVALID_AGENT_TREE, "agent definition is required"); sendErr != nil {
 			return sendErr
 		}
 		return errors.New("agent definition is required")
 	}
 
+	s.log.InfoContext(ctx, "building agent tree", "root_agent", exec.GetAgent().GetName())
+
 	rootAgent, err := createAgent(runCtx, exec.GetAgent(), s, s.geminiAPIKey, s.anthropicAPIKey, s.openaiAPIKey, nil, s.agentPaths)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to build agent tree", "error", err)
 		if sendErr := sendError(stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INVALID_AGENT_TREE, err.Error()); sendErr != nil {
 			return sendErr
 		}
 		return fmt.Errorf("building agent tree: %w", err)
 	}
+
+	s.log.InfoContext(ctx, "agent tree built", "agent_count", len(s.agentPaths))
 
 	sessionService := adksession.InMemoryService()
 
@@ -104,6 +120,7 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 		UserID:  "user",
 	})
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to create ADK session", "error", err)
 		return fmt.Errorf("creating ADK session: %w", err)
 	}
 
@@ -113,8 +130,11 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 		SessionService: sessionService,
 	})
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to create runner", "error", err)
 		return fmt.Errorf("creating runner: %w", err)
 	}
+
+	s.log.InfoContext(ctx, "starting agent run", "user_prompt_len", len(exec.GetUserPrompt()))
 
 	runnerDone := make(chan error, 1)
 	go func() {
@@ -125,6 +145,17 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 
 	cancel()
 	runnerErr := <-runnerDone
+
+	s.log.InfoContext(ctx, "session ended",
+		"prompt_tokens", s.usage.promptTokens.Load(),
+		"completion_tokens", s.usage.completionTokens.Load(),
+		"cached_tokens", s.usage.cachedTokens.Load(),
+		"thoughts_tokens", s.usage.thoughtsTokens.Load(),
+		"total_tokens", s.usage.totalTokens.Load(),
+		"llm_calls", s.usage.llmCalls.Load(),
+		"loop_error", loopErr,
+		"runner_error", runnerErr,
+	)
 
 	if loopErr != nil {
 		return loopErr
@@ -141,12 +172,16 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 		StreamingMode: agent.StreamingModeSSE,
 	}
 
+	s.log.DebugContext(ctx, "runner loop started", "adk_session_id", adkSessionID)
+
 	var lastErr error
 	for event, err := range r.Run(ctx, "user", adkSessionID, userContent, cfg) {
 		if err != nil {
 			if ctx.Err() != nil {
+				s.log.InfoContext(ctx, "runner loop cancelled")
 				break
 			}
+			s.log.ErrorContext(ctx, "runner event error", "error", err)
 			lastErr = err
 			continue
 		}
@@ -161,6 +196,12 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 			s.usage.thoughtsTokens.Add(int32(event.UsageMetadata.ThoughtsTokenCount))
 			s.usage.totalTokens.Add(int32(event.UsageMetadata.TotalTokenCount))
 			s.usage.llmCalls.Add(1)
+
+			s.log.DebugContext(ctx, "usage recorded",
+				"prompt_tokens", event.UsageMetadata.PromptTokenCount,
+				"completion_tokens", event.UsageMetadata.CandidatesTokenCount,
+				"total_tokens", event.UsageMetadata.TotalTokenCount,
+			)
 		}
 
 		if event.Content == nil || len(event.Content.Parts) == 0 {
@@ -180,24 +221,37 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 				continue
 			}
 
+			isFinal := !event.Partial && event.IsFinalResponse()
+
+			s.log.DebugContext(ctx, "sending output chunk",
+				"agent", event.Author,
+				"is_thought", part.Thought,
+				"is_final", isFinal,
+				"content_len", len(part.Text),
+			)
+
 			if err := s.stream.Send(&agentdv1.RunResponse{
 				Response: &agentdv1.RunResponse_OutputChunk_{
 					OutputChunk: &agentdv1.RunResponse_OutputChunk{
 						SessionId: s.id,
 						AgentPath: agentPath,
 						Content:   part.Text,
-						Last:      !event.Partial && event.IsFinalResponse(),
+						Last:      isFinal,
 						IsThought: part.Thought,
 					},
 				},
 			}); err != nil {
+				s.log.ErrorContext(ctx, "failed to send output chunk", "error", err)
 				return fmt.Errorf("sending output chunk: %w", err)
 			}
 		}
 	}
 
 	if lastErr != nil {
+		s.log.ErrorContext(ctx, "runner completed with error", "error", lastErr)
 		_ = sendError(s.stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INTERNAL, lastErr.Error())
+	} else {
+		s.log.InfoContext(ctx, "runner completed successfully")
 	}
 
 	return s.stream.Send(&agentdv1.RunResponse{
@@ -223,33 +277,42 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 func (s *Session) loop(ctx context.Context) error {
 	defer s.closeAllPending()
 
+	s.log.DebugContext(ctx, "message loop started")
+
 	for {
 		req, err := s.stream.Receive()
 		if err != nil {
+			s.log.DebugContext(ctx, "message loop ended", "error", err)
 			return nil
 		}
 
 		switch r := req.GetRequest().(type) {
 		case *agentdv1.RunRequest_Execute:
+			s.log.WarnContext(ctx, "received ExecuteRequest after session start")
 			if err := sendError(s.stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INTERNAL, "ExecuteRequest only valid as first message"); err != nil {
 				return err
 			}
 
 		case *agentdv1.RunRequest_Heartbeat:
+			s.log.DebugContext(ctx, "received heartbeat")
 			if err := s.handleHeartbeat(r.Heartbeat); err != nil {
 				return err
 			}
 
 		case *agentdv1.RunRequest_ToolCallResponse_:
+			s.log.DebugContext(ctx, "received tool call response", "tool_call_id", r.ToolCallResponse.GetToolCallId())
 			s.handleToolCallResponse(r.ToolCallResponse)
 
 		case *agentdv1.RunRequest_Cancel:
+			s.log.InfoContext(ctx, "received cancel request")
 			s.handleCancel(r.Cancel)
 
 		case *agentdv1.RunRequest_End:
+			s.log.InfoContext(ctx, "received end request")
 			return s.handleEnd(r.End)
 
 		default:
+			s.log.WarnContext(ctx, "received unknown request type", "type", fmt.Sprintf("%T", r))
 			if err := sendError(s.stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INTERNAL, fmt.Sprintf("unknown request type: %T", r)); err != nil {
 				return err
 			}
@@ -298,6 +361,13 @@ func (s *Session) handleEnd(_ *agentdv1.RunRequest_EndRequest) error {
 // DispatchToolCall sends a ToolCallRequest to the client and blocks until the
 // matching ToolCallResponse arrives or the context is cancelled.
 func (s *Session) DispatchToolCall(ctx context.Context, toolCallID, toolName, toolInput string, agentPath []string) (*agentdv1.RunRequest_ToolCallResponse, error) {
+	s.log.InfoContext(ctx, "dispatching tool call",
+		"tool_call_id", toolCallID,
+		"tool_name", toolName,
+		"agent_path", agentPath,
+		"input_len", len(toolInput),
+	)
+
 	ch := make(chan *agentdv1.RunRequest_ToolCallResponse, 1)
 
 	s.mu.Lock()
@@ -318,19 +388,23 @@ func (s *Session) DispatchToolCall(ctx context.Context, toolCallID, toolName, to
 		s.mu.Lock()
 		delete(s.pendingTools, toolCallID)
 		s.mu.Unlock()
+		s.log.ErrorContext(ctx, "failed to send tool call request", "tool_call_id", toolCallID, "error", err)
 		return nil, fmt.Errorf("sending tool call request: %w", err)
 	}
 
 	select {
 	case resp, ok := <-ch:
 		if !ok {
+			s.log.WarnContext(ctx, "session closed while waiting for tool call response", "tool_call_id", toolCallID)
 			return nil, errors.New("session closed while waiting for tool call response")
 		}
+		s.log.InfoContext(ctx, "tool call response received", "tool_call_id", toolCallID, "tool_name", toolName)
 		return resp, nil
 	case <-ctx.Done():
 		s.mu.Lock()
 		delete(s.pendingTools, toolCallID)
 		s.mu.Unlock()
+		s.log.WarnContext(ctx, "tool call cancelled", "tool_call_id", toolCallID, "tool_name", toolName)
 		return nil, ctx.Err()
 	}
 }

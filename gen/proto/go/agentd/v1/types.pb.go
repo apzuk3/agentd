@@ -7,6 +7,7 @@
 package agentdv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -86,10 +87,12 @@ func (ErrorCode) EnumDescriptor() ([]byte, []int) {
 }
 
 type Tool struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	InputSchema   *string                `protobuf:"bytes,3,opt,name=input_schema,json=inputSchema,proto3,oneof" json:"input_schema,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Must comply with Gemini function naming: start with a letter or underscore,
+	// only [a-zA-Z0-9_.\-:], max 64 characters.
+	Name          string  `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string  `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	InputSchema   *string `protobuf:"bytes,3,opt,name=input_schema,json=inputSchema,proto3,oneof" json:"input_schema,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -625,10 +628,10 @@ var File_agentd_v1_types_proto protoreflect.FileDescriptor
 
 const file_agentd_v1_types_proto_rawDesc = "" +
 	"\n" +
-	"\x15agentd/v1/types.proto\x12\tagentd.v1\"u\n" +
-	"\x04Tool\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\x12&\n" +
+	"\x15agentd/v1/types.proto\x12\tagentd.v1\x1a\x1bbuf/validate/validate.proto\"\xac\x01\n" +
+	"\x04Tool\x12@\n" +
+	"\x04name\x18\x01 \x01(\tB,\xbaH)r'\x10\x01\x18@2!^[A-Za-z_][A-Za-z0-9_.:\\-]{0,63}$R\x04name\x12)\n" +
+	"\vdescription\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vdescription\x12&\n" +
 	"\finput_schema\x18\x03 \x01(\tH\x00R\vinputSchema\x88\x01\x01B\x0f\n" +
 	"\r_input_schema\"\x96\x02\n" +
 	"\x05Agent\x12\x12\n" +
