@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"buf.build/go/protovalidate"
 	"connectrpc.com/connect"
 	"github.com/google/jsonschema-go/jsonschema"
 	"golang.org/x/net/http2"
@@ -72,29 +73,34 @@ func New(baseURL string, opts ...Option) *Client {
 }
 
 // AddTool registers a tool whose input schema is automatically generated from T.
-// T should be a struct with json tags; use the "jsonschema" struct tag for
-// property descriptions. The handler fn receives the parsed input and returns
-// a result that is JSON-marshaled back to the server.
-func AddTool[T any](c *Client, name, description string, fn func(context.Context, T) (any, error)) {
+// T must be a concrete struct (not any/interface{}); use json tags for field
+// names and the "jsonschema" struct tag for property descriptions.
+// The handler fn receives the parsed input and returns a result that is
+// JSON-marshaled back to the server.
+func AddTool[T any](c *Client, name, description string, fn func(context.Context, T) (any, error)) error {
 	schema, err := jsonschema.For[T](nil)
-	var schemaStr string
-	if err == nil {
-		if b, merr := json.Marshal(schema); merr == nil {
-			schemaStr = string(b)
-		}
+	if err != nil {
+		return fmt.Errorf("failed to infer input schema for tool %q: %w (T must be a concrete struct, not any/interface{})", name, err)
 	}
 
-	var inputSchema *string
-	if schemaStr != "" {
-		inputSchema = &schemaStr
+	b, err := json.Marshal(schema)
+	if err != nil {
+		return fmt.Errorf("failed to marshal input schema for tool %q: %w", name, err)
+	}
+	schemaStr := string(b)
+
+	toolProto := &agentdv1.Tool{
+		Name:        name,
+		Description: description,
+		InputSchema: &schemaStr,
+	}
+
+	if err := protovalidate.Validate(toolProto); err != nil {
+		return fmt.Errorf("invalid tool definition: %w", err)
 	}
 
 	c.tools[name] = &registeredTool{
-		proto: &agentdv1.Tool{
-			Name:        name,
-			Description: description,
-			InputSchema: inputSchema,
-		},
+		proto: toolProto,
 		handler: func(ctx context.Context, input string) (string, error) {
 			var args T
 			if input != "" {
@@ -118,6 +124,7 @@ func AddTool[T any](c *Client, name, description string, fn func(context.Context
 			}
 		},
 	}
+	return nil
 }
 
 // Tool returns the proto Tool definition for a registered tool, for use when
