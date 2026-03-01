@@ -3,6 +3,8 @@ module github.com/apzuk3/agentd
 go 1.26.0
 
 require (
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260209202127-80ab13bee0bf.1
+	buf.build/go/protovalidate v1.1.3
 	connectrpc.com/connect v1.19.1
 	github.com/Alcova-AI/adk-anthropic-go v0.1.11
 	github.com/anthropics/anthropic-sdk-go v1.24.0
@@ -16,8 +18,6 @@ require (
 )
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260209202127-80ab13bee0bf.1 // indirect
-	buf.build/go/protovalidate v1.1.3 // indirect
 	cel.dev/expr v0.25.1 // indirect
 	cloud.google.com/go v0.123.0 // indirect
 	cloud.google.com/go/auth v0.17.0 // indirect

@@ -1,9 +1,10 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -13,12 +14,18 @@ import (
 )
 
 func main() {
+	logLevel := parseLogLevel(os.Getenv("LOG_LEVEL"))
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: logLevel,
+	})))
+
 	geminiAPIKey := os.Getenv("GEMINI_API_KEY")
 	anthropicAPIKey := os.Getenv("ANTHROPIC_API_KEY")
 	openaiAPIKey := os.Getenv("OPENAI_API_KEY")
 
 	if geminiAPIKey == "" && anthropicAPIKey == "" && openaiAPIKey == "" {
-		log.Fatal("at least one of GEMINI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY must be set")
+		slog.Error("at least one of GEMINI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY must be set")
+		os.Exit(1)
 	}
 
 	svc := &agentd.Service{
@@ -33,7 +40,7 @@ func main() {
 	mux.Handle(path, handler)
 
 	addr := ":8080"
-	log.Printf("Starting ConnectRPC server on %s", addr)
+	slog.Info("starting server", "addr", addr)
 
 	server := &http.Server{
 		Addr:    addr,
@@ -41,6 +48,20 @@ func main() {
 	}
 
 	if err := server.ListenAndServe(); err != nil {
-		log.Fatalf("Server failed: %v", err)
+		slog.Error("server failed", "error", err)
+		os.Exit(1)
+	}
+}
+
+func parseLogLevel(s string) slog.Level {
+	switch strings.ToLower(s) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
 	}
 }

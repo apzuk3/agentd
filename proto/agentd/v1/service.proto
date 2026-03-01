@@ -15,6 +15,7 @@ message RunRequest {
     Agent agent = 1;
     optional string session_id = 2;
     string user_prompt = 3;
+    repeated Tool tools = 4;
   }
 
   message HeartbeatRequest {

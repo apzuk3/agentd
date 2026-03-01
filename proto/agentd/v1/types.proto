@@ -21,7 +21,7 @@ message Tool {
     // Must comply with Gemini function naming: start with a letter or underscore,
     // only [a-zA-Z0-9_.\-:], max 64 characters.
     string name = 1 [(buf.validate.field).string = {
-        pattern: "^[A-Za-z_][A-Za-z0-9_.:\\-]{0,63}$",
+        pattern: "^[A-Za-z_][A-Za-z0-9_.:-]{0,63}$",
         min_len: 1,
         max_len: 64
     }];
@@ -43,7 +43,7 @@ message Agent {
 
 message LlmAgent {
     string model = 1;
-    repeated Tool tools = 2;
+    repeated string tool_names = 2;
     repeated Agent sub_agents = 3;
     string instruction = 4;
 }

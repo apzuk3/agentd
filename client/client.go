@@ -127,14 +127,62 @@ func AddTool[T any](c *Client, name, description string, fn func(context.Context
 	return nil
 }
 
-// Tool returns the proto Tool definition for a registered tool, for use when
-// constructing agent trees.
-func (c *Client) Tool(name string) *agentdv1.Tool {
-	rt, ok := c.tools[name]
-	if !ok {
+// resolveTools walks the agent tree, collects all tool_names from LlmAgents,
+// resolves each against the registered tools, and returns a deduplicated catalog.
+func (c *Client) resolveTools(agent *agentdv1.Agent) ([]*agentdv1.Tool, error) {
+	seen := make(map[string]bool)
+	var catalog []*agentdv1.Tool
+
+	var walk func(a *agentdv1.Agent) error
+	walk = func(a *agentdv1.Agent) error {
+		if a == nil {
+			return nil
+		}
+		switch {
+		case a.GetLlm() != nil:
+			llm := a.GetLlm()
+			for _, name := range llm.GetToolNames() {
+				if seen[name] {
+					continue
+				}
+				rt, ok := c.tools[name]
+				if !ok {
+					return fmt.Errorf("tool %q referenced by agent %q is not registered", name, a.GetName())
+				}
+				seen[name] = true
+				catalog = append(catalog, rt.proto)
+			}
+			for _, sub := range llm.GetSubAgents() {
+				if err := walk(sub); err != nil {
+					return err
+				}
+			}
+		case a.GetSequential() != nil:
+			for _, sub := range a.GetSequential().GetAgents() {
+				if err := walk(sub); err != nil {
+					return err
+				}
+			}
+		case a.GetParallel() != nil:
+			for _, sub := range a.GetParallel().GetAgents() {
+				if err := walk(sub); err != nil {
+					return err
+				}
+			}
+		case a.GetLoop() != nil:
+			for _, sub := range a.GetLoop().GetAgents() {
+				if err := walk(sub); err != nil {
+					return err
+				}
+			}
+		}
 		return nil
 	}
-	return rt.proto
+
+	if err := walk(agent); err != nil {
+		return nil, err
+	}
+	return catalog, nil
 }
 
 // RunOption configures a single Run invocation.
@@ -175,6 +223,15 @@ type Error struct {
 	Retryable bool
 }
 
+func errorEvent(format string, args ...any) *Event {
+	return &Event{
+		Error: &Error{
+			Code:    agentdv1.ErrorCode_ERROR_CODE_INTERNAL,
+			Message: fmt.Sprintf(format, args...),
+		},
+	}
+}
+
 // Run opens a bidirectional stream to the server, sends the agent tree and
 // user prompt, and returns an iterator that yields events. Tool calls and
 // heartbeats are handled internally. Breaking out of the iterator cancels
@@ -186,6 +243,12 @@ func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt stri
 	}
 
 	return func(yield func(*Event, error) bool) {
+		toolCatalog, err := c.resolveTools(agent)
+		if err != nil {
+			yield(errorEvent("%v", err), nil)
+			return
+		}
+
 		rpcClient := agentdv1connect.NewAgentdClient(c.httpClient, c.baseURL, c.connectOpts...)
 
 		streamCtx, cancel := context.WithCancel(ctx)
@@ -193,7 +256,7 @@ func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt stri
 
 		stream, err := rpcClient.Run(streamCtx)
 		if err != nil {
-			yield(nil, fmt.Errorf("opening stream: %w", err))
+			yield(errorEvent("opening stream: %v", err), nil)
 			return
 		}
 		defer stream.CloseResponse()
@@ -204,6 +267,7 @@ func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt stri
 				Execute: &agentdv1.RunRequest_ExecuteRequest{
 					Agent:      agent,
 					UserPrompt: userPrompt,
+					Tools:      toolCatalog,
 				},
 			},
 		}
@@ -212,19 +276,19 @@ func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt stri
 		}
 
 		if err := stream.Send(execReq); err != nil {
-			yield(nil, fmt.Errorf("sending execute request: %w", err))
+			yield(errorEvent("sending execute request: %v", err), nil)
 			return
 		}
 
 		resp, err := stream.Receive()
 		if err != nil {
-			yield(nil, fmt.Errorf("receiving execute response: %w", err))
+			yield(errorEvent("receiving execute response: %v", err), nil)
 			return
 		}
 
 		execResp := resp.GetExecute()
 		if execResp == nil {
-			yield(nil, fmt.Errorf("expected ExecuteResponse, got %T", resp.GetResponse()))
+			yield(errorEvent("expected ExecuteResponse, got %T", resp.GetResponse()), nil)
 			return
 		}
 		sessionID := execResp.GetSessionId()
@@ -263,7 +327,7 @@ func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt stri
 		for {
 			resp, err := stream.Receive()
 			if err != nil {
-				yield(nil, err)
+				yield(errorEvent("%v", err), nil)
 				return
 			}
 

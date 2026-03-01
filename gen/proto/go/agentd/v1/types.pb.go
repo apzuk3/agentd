@@ -281,7 +281,7 @@ func (*Agent_Loop) isAgent_AgentType() {}
 type LlmAgent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Model         string                 `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
-	Tools         []*Tool                `protobuf:"bytes,2,rep,name=tools,proto3" json:"tools,omitempty"`
+	ToolNames     []string               `protobuf:"bytes,2,rep,name=tool_names,json=toolNames,proto3" json:"tool_names,omitempty"`
 	SubAgents     []*Agent               `protobuf:"bytes,3,rep,name=sub_agents,json=subAgents,proto3" json:"sub_agents,omitempty"`
 	Instruction   string                 `protobuf:"bytes,4,opt,name=instruction,proto3" json:"instruction,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -325,9 +325,9 @@ func (x *LlmAgent) GetModel() string {
 	return ""
 }
 
-func (x *LlmAgent) GetTools() []*Tool {
+func (x *LlmAgent) GetToolNames() []string {
 	if x != nil {
-		return x.Tools
+		return x.ToolNames
 	}
 	return nil
 }
@@ -628,9 +628,9 @@ var File_agentd_v1_types_proto protoreflect.FileDescriptor
 
 const file_agentd_v1_types_proto_rawDesc = "" +
 	"\n" +
-	"\x15agentd/v1/types.proto\x12\tagentd.v1\x1a\x1bbuf/validate/validate.proto\"\xac\x01\n" +
-	"\x04Tool\x12@\n" +
-	"\x04name\x18\x01 \x01(\tB,\xbaH)r'\x10\x01\x18@2!^[A-Za-z_][A-Za-z0-9_.:\\-]{0,63}$R\x04name\x12)\n" +
+	"\x15agentd/v1/types.proto\x12\tagentd.v1\x1a\x1bbuf/validate/validate.proto\"\xab\x01\n" +
+	"\x04Tool\x12?\n" +
+	"\x04name\x18\x01 \x01(\tB+\xbaH(r&\x10\x01\x18@2 ^[A-Za-z_][A-Za-z0-9_.:-]{0,63}$R\x04name\x12)\n" +
 	"\vdescription\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vdescription\x12&\n" +
 	"\finput_schema\x18\x03 \x01(\tH\x00R\vinputSchema\x88\x01\x01B\x0f\n" +
 	"\r_input_schema\"\x96\x02\n" +
@@ -644,10 +644,11 @@ const file_agentd_v1_types_proto_rawDesc = "" +
 	"\bparallel\x18\x05 \x01(\v2\x18.agentd.v1.ParallelAgentH\x00R\bparallel\x12*\n" +
 	"\x04loop\x18\x06 \x01(\v2\x14.agentd.v1.LoopAgentH\x00R\x04loopB\f\n" +
 	"\n" +
-	"agent_type\"\x9a\x01\n" +
+	"agent_type\"\x92\x01\n" +
 	"\bLlmAgent\x12\x14\n" +
-	"\x05model\x18\x01 \x01(\tR\x05model\x12%\n" +
-	"\x05tools\x18\x02 \x03(\v2\x0f.agentd.v1.ToolR\x05tools\x12/\n" +
+	"\x05model\x18\x01 \x01(\tR\x05model\x12\x1d\n" +
+	"\n" +
+	"tool_names\x18\x02 \x03(\tR\ttoolNames\x12/\n" +
 	"\n" +
 	"sub_agents\x18\x03 \x03(\v2\x10.agentd.v1.AgentR\tsubAgents\x12 \n" +
 	"\vinstruction\x18\x04 \x01(\tR\vinstruction\";\n" +
@@ -706,21 +707,20 @@ var file_agentd_v1_types_proto_goTypes = []any{
 	(*UsageSummary)(nil),    // 8: agentd.v1.UsageSummary
 }
 var file_agentd_v1_types_proto_depIdxs = []int32{
-	3,  // 0: agentd.v1.Agent.llm:type_name -> agentd.v1.LlmAgent
-	4,  // 1: agentd.v1.Agent.sequential:type_name -> agentd.v1.SequentialAgent
-	5,  // 2: agentd.v1.Agent.parallel:type_name -> agentd.v1.ParallelAgent
-	6,  // 3: agentd.v1.Agent.loop:type_name -> agentd.v1.LoopAgent
-	1,  // 4: agentd.v1.LlmAgent.tools:type_name -> agentd.v1.Tool
-	2,  // 5: agentd.v1.LlmAgent.sub_agents:type_name -> agentd.v1.Agent
-	2,  // 6: agentd.v1.SequentialAgent.agents:type_name -> agentd.v1.Agent
-	2,  // 7: agentd.v1.ParallelAgent.agents:type_name -> agentd.v1.Agent
-	2,  // 8: agentd.v1.LoopAgent.agents:type_name -> agentd.v1.Agent
-	7,  // 9: agentd.v1.UsageSummary.total_usage:type_name -> agentd.v1.TokenUsage
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	3, // 0: agentd.v1.Agent.llm:type_name -> agentd.v1.LlmAgent
+	4, // 1: agentd.v1.Agent.sequential:type_name -> agentd.v1.SequentialAgent
+	5, // 2: agentd.v1.Agent.parallel:type_name -> agentd.v1.ParallelAgent
+	6, // 3: agentd.v1.Agent.loop:type_name -> agentd.v1.LoopAgent
+	2, // 4: agentd.v1.LlmAgent.sub_agents:type_name -> agentd.v1.Agent
+	2, // 5: agentd.v1.SequentialAgent.agents:type_name -> agentd.v1.Agent
+	2, // 6: agentd.v1.ParallelAgent.agents:type_name -> agentd.v1.Agent
+	2, // 7: agentd.v1.LoopAgent.agents:type_name -> agentd.v1.Agent
+	7, // 8: agentd.v1.UsageSummary.total_usage:type_name -> agentd.v1.TokenUsage
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_agentd_v1_types_proto_init() }

@@ -100,9 +100,14 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 		return errors.New("agent definition is required")
 	}
 
-	s.log.InfoContext(ctx, "building agent tree", "root_agent", exec.GetAgent().GetName())
+	toolCatalog := make(map[string]*agentdv1.Tool, len(exec.GetTools()))
+	for _, t := range exec.GetTools() {
+		toolCatalog[t.GetName()] = t
+	}
 
-	rootAgent, err := createAgent(runCtx, exec.GetAgent(), s, s.geminiAPIKey, s.anthropicAPIKey, s.openaiAPIKey, nil, s.agentPaths)
+	s.log.InfoContext(ctx, "building agent tree", "root_agent", exec.GetAgent().GetName(), "tool_count", len(toolCatalog))
+
+	rootAgent, err := createAgent(runCtx, exec.GetAgent(), s, s.geminiAPIKey, s.anthropicAPIKey, s.openaiAPIKey, nil, s.agentPaths, toolCatalog)
 	if err != nil {
 		s.log.ErrorContext(ctx, "failed to build agent tree", "error", err)
 		if sendErr := sendError(stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INVALID_AGENT_TREE, err.Error()); sendErr != nil {
