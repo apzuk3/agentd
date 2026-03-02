@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"iter"
+	"maps"
 	"net"
 	"net/http"
 	"sync"
@@ -19,6 +20,21 @@ import (
 	agentdv1 "github.com/apzuk3/agentd/gen/proto/go/agentd/v1"
 	"github.com/apzuk3/agentd/gen/proto/go/agentd/v1/agentdv1connect"
 )
+
+type contextKey struct{}
+
+var stateKey contextKey
+
+// GetState retrieves the current ADK session state from the context.
+// This is populated automatically during tool execution.
+// The returned map is a copy; modifying it does not affect the session state.
+func GetState(ctx context.Context) map[string]string {
+	v := ctx.Value(stateKey)
+	if v == nil {
+		return nil
+	}
+	return v.(map[string]string)
+}
 
 type registeredTool struct {
 	proto   *agentdv1.Tool
@@ -201,6 +217,7 @@ func WithSessionID(id string) RunOption {
 // Exactly one field is non-nil.
 type Event struct {
 	OutputChunk *OutputChunk
+	StateUpdate *StateUpdate
 	Error       *Error
 	End         *End
 }
@@ -210,6 +227,13 @@ type OutputChunk struct {
 	Content   string
 	Last      bool
 	IsThought bool
+}
+
+// StateUpdate carries a snapshot or incremental delta of the ADK session state.
+// Values are JSON-encoded strings; use [json.Unmarshal] to decode them into
+// your application types.
+type StateUpdate struct {
+	State map[string]string
 }
 
 type End struct {
@@ -292,6 +316,7 @@ func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt stri
 			return
 		}
 		sessionID := execResp.GetSessionId()
+		currentState := make(map[string]string)
 
 		var sendMu sync.Mutex
 
@@ -352,7 +377,11 @@ func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt stri
 					continue
 				}
 
-				output, execErr := rt.handler(streamCtx, tc.GetToolInput())
+				stateCopy := make(map[string]string, len(currentState))
+				maps.Copy(stateCopy, currentState)
+				toolCtx := context.WithValue(streamCtx, stateKey, stateCopy)
+
+				output, execErr := rt.handler(toolCtx, tc.GetToolInput())
 				tcResp := &agentdv1.RunRequest_ToolCallResponse{
 					SessionId:  sessionID,
 					ToolCallId: tc.GetToolCallId(),
@@ -406,6 +435,17 @@ func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt stri
 					},
 				}, nil)
 				return
+
+			case *agentdv1.RunResponse_StateUpdate_:
+				su := r.StateUpdate
+				maps.Copy(currentState, su.GetState())
+				if !yield(&Event{
+					StateUpdate: &StateUpdate{
+						State: su.GetState(),
+					},
+				}, nil) {
+					return
+				}
 
 			case *agentdv1.RunResponse_Heartbeat:
 				// Internal bookkeeping, not yielded.

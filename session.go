@@ -2,6 +2,7 @@ package agentd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -129,6 +130,11 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 		return fmt.Errorf("creating ADK session: %w", err)
 	}
 
+	if err := s.sendStateSnapshot(adkSession.Session.State()); err != nil {
+		s.log.ErrorContext(ctx, "failed to send initial state", "error", err)
+		return fmt.Errorf("sending initial state: %w", err)
+	}
+
 	r, err := runner.New(runner.Config{
 		AppName:        "agentd",
 		Agent:          rootAgent,
@@ -207,6 +213,13 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 				"completion_tokens", event.UsageMetadata.CandidatesTokenCount,
 				"total_tokens", event.UsageMetadata.TotalTokenCount,
 			)
+		}
+
+		if len(event.Actions.StateDelta) > 0 {
+			if err := s.sendStateDelta(event.Actions.StateDelta); err != nil {
+				s.log.ErrorContext(ctx, "failed to send state delta", "error", err)
+				return fmt.Errorf("sending state delta: %w", err)
+			}
 		}
 
 		if event.Content == nil || len(event.Content.Parts) == 0 {
@@ -421,6 +434,60 @@ func (s *Session) closeAllPending() {
 		close(ch)
 		delete(s.pendingTools, id)
 	}
+}
+
+func serializeStateValue(v any) (string, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+func (s *Session) sendStateSnapshot(state adksession.ReadonlyState) error {
+	m := make(map[string]string)
+	for k, v := range state.All() {
+		encoded, err := serializeStateValue(v)
+		if err != nil {
+			s.log.Warn("skipping unserializable state key", "key", k, "error", err)
+			continue
+		}
+		m[k] = encoded
+	}
+	if len(m) == 0 {
+		return nil
+	}
+	return s.stream.Send(&agentdv1.RunResponse{
+		Response: &agentdv1.RunResponse_StateUpdate_{
+			StateUpdate: &agentdv1.RunResponse_StateUpdate{
+				SessionId: s.id,
+				State:     m,
+			},
+		},
+	})
+}
+
+func (s *Session) sendStateDelta(delta map[string]any) error {
+	m := make(map[string]string, len(delta))
+	for k, v := range delta {
+		encoded, err := serializeStateValue(v)
+		if err != nil {
+			s.log.Warn("skipping unserializable state delta key", "key", k, "error", err)
+			continue
+		}
+		m[k] = encoded
+	}
+	if len(m) == 0 {
+		return nil
+	}
+	return s.stream.Send(&agentdv1.RunResponse{
+		Response: &agentdv1.RunResponse_StateUpdate_{
+			StateUpdate: &agentdv1.RunResponse_StateUpdate{
+				SessionId: s.id,
+				State:     m,
+			},
+		},
+	})
 }
 
 func sendError(stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse], sessionID string, code agentdv1.ErrorCode, msg string) error {
