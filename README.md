@@ -1,6 +1,8 @@
 # agentd — Agent Orchestration Service
 
-**Experimental.** This project aims to provide multi-provider, multi-agent orchestration while keeping privacy in mind.
+**Alpha / Experimental.** This project is under active development. APIs and behavior may change.
+
+It aims to provide multi-provider, multi-agent orchestration while keeping privacy in mind.
 
 ## What this project is
 
