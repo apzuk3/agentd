@@ -90,6 +90,11 @@ message RunResponse {
     bool completed = 4; // true if the agent tree finished naturally; false if client-initiated end
   }
 
+  message StateUpdate {
+    string session_id = 1;
+    map<string, string> state = 2; // key-value pairs; values are JSON-encoded
+  }
+
   oneof response {
     ExecuteResponse execute = 1;
     HeartbeatResponse heartbeat = 2;
@@ -97,5 +102,6 @@ message RunResponse {
     ErrorResponse error = 4;
     EndResponse end = 5;
     OutputChunk output_chunk = 6;
+    StateUpdate state_update = 7;
   }
 }

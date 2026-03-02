@@ -108,6 +108,7 @@ The `Run` RPC is a single bidirectional stream. Client and server exchange messa
 - `HeartbeatResponse` — heartbeat ack
 - `ToolCallRequest` — ask the client to execute a tool with given input, includes `session_id` and `agent_path` for attribution
 - `OutputChunk` — stream a chunk of LLM-generated text, tagged with `agent_path`; `last = true` signals the specific agent is done producing output; `is_thought = true` indicates model thinking content rather than final response
+- `StateUpdate` — stream a state snapshot or incremental delta; the client automatically merges these updates.
 - `ErrorResponse` — a structured error with `ErrorCode`, human-readable `message`, and `retryable` flag
 - `EndResponse` — session ended; `completed = true` when the agent tree finished naturally, `false` for client-initiated ends; includes `UsageSummary`
 
@@ -118,8 +119,10 @@ Client                           Server
   │                                │
   │─── ExecuteRequest ───────────► │  (agent tree, optional session_id)
   │◄── ExecuteResponse ──────────  │  (session_id assigned)
+  │◄── StateUpdate (snapshot) ──── │  (initial state sync)
   │                                │
   │◄── OutputChunk [root, planner] │  (planner streams, last=false)
+  │◄── StateUpdate (delta) ─────── │  (planner updates state)
   │◄── ToolCallRequest ──────────  │  (session_id, tool_call_id)
   │─── ToolCallResponse ─────────► │  (oneof output/error)
   │◄── OutputChunk [root, planner] │  (planner continues, last=true)
@@ -169,77 +172,6 @@ Agents are defined as a recursive tree in proto. The server uses Google ADK to e
 | **SequentialAgent** | `SequentialAgent` | Runs child agents in sequence                                                                                                                                        |
 | **ParallelAgent**   | `ParallelAgent`   | Runs child agents in parallel                                                                                                                                        |
 | **LoopAgent**       | `LoopAgent`       | Repeats child agents up to `max_iterations`; client controls continuation via a pre-defined tool through the standard `ToolCallRequest`/`ToolCallResponse` mechanism |
-
-## Models
-
-Models are specified as free-form strings in `LlmAgent.model`. The server routes to the correct provider based on the model name prefix (`claude-` for Anthropic, `gpt-`/`o1-`/`o3-`/`o4-`/`chatgpt-` for OpenAI, everything else for Gemini) and returns `ERROR_CODE_MODEL_UNAVAILABLE` for unsupported values.
-
-### Gemini models
-
-- `gemini-2.5-pro`
-- `gemini-2.5-flash`
-- `gemini-3-pro-preview`
-- `gemini-3-flash-preview`
-
-### Anthropic models (via [adk-anthropic-go](https://github.com/Alcova-AI/adk-anthropic-go))
-
-- `claude-sonnet-4-5` / `claude-sonnet-4-5-20250929`
-- `claude-opus-4-5` / `claude-opus-4-5-20251101`
-- `claude-sonnet-4-0` / `claude-sonnet-4-20250514`
-- `claude-opus-4-0` / `claude-opus-4-20250514`
-- `claude-opus-4-1-20250805`
-- `claude-haiku-4-5` / `claude-haiku-4-5-20251001`
-- `claude-3-5-haiku-latest` / `claude-3-5-haiku-20241022`
-
-### OpenAI models (via [adk-go-openai](https://github.com/byebyebruce/adk-go-openai))
-
-- `gpt-4o` / `gpt-4o-mini`
-- `gpt-4.1` / `gpt-4.1-mini` / `gpt-4.1-nano`
-- `gpt-5.1`
-- `o1` / `o1-mini` / `o1-preview`
-- `o3` / `o3-mini`
-- `o4-mini`
-- `chatgpt-4o-latest`
-
-### Environment variables
-
-| Variable            | Required | Description                                          |
-| ------------------- | -------- | ---------------------------------------------------- |
-| `GEMINI_API_KEY`    | No*      | API key for Google Gemini models                     |
-| `ANTHROPIC_API_KEY` | No*      | API key for Anthropic Claude models                  |
-| `OPENAI_API_KEY`    | No*      | API key for OpenAI models                            |
-
-\* At least one of `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, or `OPENAI_API_KEY` must be set.
-
-## Tech stack
-
-| Component           | Technology                                           |
-| ------------------- | ---------------------------------------------------- |
-| Language            | Go 1.24                                              |
-| RPC framework       | ConnectRPC (`connectrpc.com/connect`)                |
-| Transport           | HTTP/2 cleartext (h2c)                               |
-| Agent orchestration | Google ADK (`google.golang.org/adk`)                 |
-| LLM providers       | Google GenAI (`google.golang.org/genai`), Anthropic (`adk-anthropic-go`), OpenAI (`adk-go-openai`) |
-| Protobuf codegen    | `buf` with `protoc-gen-go` + `protoc-gen-connect-go` |
-| Proto style         | `simple` streaming (Connect simple streams)          |
-
-## Project structure
-
-```
-agentd/
-├── cmd/main.go                          # HTTP/2 server entrypoint
-├── proto/agentd/v1/
-│   ├── service.proto                    # Run RPC + request/response envelopes
-│   └── types.proto                      # Agent, Tool, ErrorCode, TokenUsage
-├── gen/proto/go/agentd/v1/             # Generated Go code (do not edit)
-│   ├── service.pb.go
-│   ├── types.pb.go
-│   └── agentdv1connect/
-│       └── service.connect.go           # AgentdHandler interface + AgentdClient
-├── buf.gen.yaml                         # Buf codegen config
-├── go.mod / go.sum
-└── AGENTS.md                            # This file
-```
 
 ## Key conventions
 

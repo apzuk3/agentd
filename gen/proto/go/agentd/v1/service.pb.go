@@ -161,6 +161,7 @@ type RunResponse struct {
 	//	*RunResponse_Error
 	//	*RunResponse_End
 	//	*RunResponse_OutputChunk_
+	//	*RunResponse_StateUpdate_
 	Response      isRunResponse_Response `protobuf_oneof:"response"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -257,6 +258,15 @@ func (x *RunResponse) GetOutputChunk() *RunResponse_OutputChunk {
 	return nil
 }
 
+func (x *RunResponse) GetStateUpdate() *RunResponse_StateUpdate {
+	if x != nil {
+		if x, ok := x.Response.(*RunResponse_StateUpdate_); ok {
+			return x.StateUpdate
+		}
+	}
+	return nil
+}
+
 type isRunResponse_Response interface {
 	isRunResponse_Response()
 }
@@ -285,6 +295,10 @@ type RunResponse_OutputChunk_ struct {
 	OutputChunk *RunResponse_OutputChunk `protobuf:"bytes,6,opt,name=output_chunk,json=outputChunk,proto3,oneof"`
 }
 
+type RunResponse_StateUpdate_ struct {
+	StateUpdate *RunResponse_StateUpdate `protobuf:"bytes,7,opt,name=state_update,json=stateUpdate,proto3,oneof"`
+}
+
 func (*RunResponse_Execute) isRunResponse_Response() {}
 
 func (*RunResponse_Heartbeat) isRunResponse_Response() {}
@@ -296,6 +310,8 @@ func (*RunResponse_Error) isRunResponse_Response() {}
 func (*RunResponse_End) isRunResponse_Response() {}
 
 func (*RunResponse_OutputChunk_) isRunResponse_Response() {}
+
+func (*RunResponse_StateUpdate_) isRunResponse_Response() {}
 
 type RunRequest_ExecuteRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -995,6 +1011,58 @@ func (x *RunResponse_EndResponse) GetCompleted() bool {
 	return false
 }
 
+type RunResponse_StateUpdate struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	State         map[string]string      `protobuf:"bytes,2,rep,name=state,proto3" json:"state,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // key-value pairs; values are JSON-encoded
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RunResponse_StateUpdate) Reset() {
+	*x = RunResponse_StateUpdate{}
+	mi := &file_agentd_v1_service_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RunResponse_StateUpdate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunResponse_StateUpdate) ProtoMessage() {}
+
+func (x *RunResponse_StateUpdate) ProtoReflect() protoreflect.Message {
+	mi := &file_agentd_v1_service_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunResponse_StateUpdate.ProtoReflect.Descriptor instead.
+func (*RunResponse_StateUpdate) Descriptor() ([]byte, []int) {
+	return file_agentd_v1_service_proto_rawDescGZIP(), []int{1, 6}
+}
+
+func (x *RunResponse_StateUpdate) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *RunResponse_StateUpdate) GetState() map[string]string {
+	if x != nil {
+		return x.State
+	}
+	return nil
+}
+
 var File_agentd_v1_service_proto protoreflect.FileDescriptor
 
 const file_agentd_v1_service_proto_rawDesc = "" +
@@ -1039,14 +1107,15 @@ const file_agentd_v1_service_proto_rawDesc = "" +
 	"\ftool_call_id\x18\x02 \x01(\tH\x00R\n" +
 	"toolCallId\x88\x01\x01B\x0f\n" +
 	"\r_tool_call_idB\t\n" +
-	"\arequest\"\xa4\t\n" +
+	"\arequest\"\x9b\v\n" +
 	"\vRunResponse\x12B\n" +
 	"\aexecute\x18\x01 \x01(\v2&.agentd.v1.RunResponse.ExecuteResponseH\x00R\aexecute\x12H\n" +
 	"\theartbeat\x18\x02 \x01(\v2(.agentd.v1.RunResponse.HeartbeatResponseH\x00R\theartbeat\x12E\n" +
 	"\ttool_call\x18\x03 \x01(\v2&.agentd.v1.RunResponse.ToolCallRequestH\x00R\btoolCall\x12<\n" +
 	"\x05error\x18\x04 \x01(\v2$.agentd.v1.RunResponse.ErrorResponseH\x00R\x05error\x126\n" +
 	"\x03end\x18\x05 \x01(\v2\".agentd.v1.RunResponse.EndResponseH\x00R\x03end\x12G\n" +
-	"\foutput_chunk\x18\x06 \x01(\v2\".agentd.v1.RunResponse.OutputChunkH\x00R\voutputChunk\x1a0\n" +
+	"\foutput_chunk\x18\x06 \x01(\v2\".agentd.v1.RunResponse.OutputChunkH\x00R\voutputChunk\x12G\n" +
+	"\fstate_update\x18\a \x01(\v2\".agentd.v1.RunResponse.StateUpdateH\x00R\vstateUpdate\x1a0\n" +
 	"\x0fExecuteResponse\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x1a2\n" +
@@ -1084,7 +1153,15 @@ const file_agentd_v1_service_proto_rawDesc = "" +
 	"\x06reason\x18\x02 \x01(\tH\x00R\x06reason\x88\x01\x01\x12<\n" +
 	"\rusage_summary\x18\x03 \x01(\v2\x17.agentd.v1.UsageSummaryR\fusageSummary\x12\x1c\n" +
 	"\tcompleted\x18\x04 \x01(\bR\tcompletedB\t\n" +
-	"\a_reasonB\n" +
+	"\a_reason\x1a\xab\x01\n" +
+	"\vStateUpdate\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12C\n" +
+	"\x05state\x18\x02 \x03(\v2-.agentd.v1.RunResponse.StateUpdate.StateEntryR\x05state\x1a8\n" +
+	"\n" +
+	"StateEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\n" +
 	"\n" +
 	"\bresponse2B\n" +
 	"\x06Agentd\x128\n" +
@@ -1102,7 +1179,7 @@ func file_agentd_v1_service_proto_rawDescGZIP() []byte {
 	return file_agentd_v1_service_proto_rawDescData
 }
 
-var file_agentd_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_agentd_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_agentd_v1_service_proto_goTypes = []any{
 	(*RunRequest)(nil),                    // 0: agentd.v1.RunRequest
 	(*RunResponse)(nil),                   // 1: agentd.v1.RunResponse
@@ -1117,10 +1194,12 @@ var file_agentd_v1_service_proto_goTypes = []any{
 	(*RunResponse_OutputChunk)(nil),       // 10: agentd.v1.RunResponse.OutputChunk
 	(*RunResponse_ErrorResponse)(nil),     // 11: agentd.v1.RunResponse.ErrorResponse
 	(*RunResponse_EndResponse)(nil),       // 12: agentd.v1.RunResponse.EndResponse
-	(*Agent)(nil),                         // 13: agentd.v1.Agent
-	(*Tool)(nil),                          // 14: agentd.v1.Tool
-	(ErrorCode)(0),                        // 15: agentd.v1.ErrorCode
-	(*UsageSummary)(nil),                  // 16: agentd.v1.UsageSummary
+	(*RunResponse_StateUpdate)(nil),       // 13: agentd.v1.RunResponse.StateUpdate
+	nil,                                   // 14: agentd.v1.RunResponse.StateUpdate.StateEntry
+	(*Agent)(nil),                         // 15: agentd.v1.Agent
+	(*Tool)(nil),                          // 16: agentd.v1.Tool
+	(ErrorCode)(0),                        // 17: agentd.v1.ErrorCode
+	(*UsageSummary)(nil),                  // 18: agentd.v1.UsageSummary
 }
 var file_agentd_v1_service_proto_depIdxs = []int32{
 	2,  // 0: agentd.v1.RunRequest.execute:type_name -> agentd.v1.RunRequest.ExecuteRequest
@@ -1134,17 +1213,19 @@ var file_agentd_v1_service_proto_depIdxs = []int32{
 	11, // 8: agentd.v1.RunResponse.error:type_name -> agentd.v1.RunResponse.ErrorResponse
 	12, // 9: agentd.v1.RunResponse.end:type_name -> agentd.v1.RunResponse.EndResponse
 	10, // 10: agentd.v1.RunResponse.output_chunk:type_name -> agentd.v1.RunResponse.OutputChunk
-	13, // 11: agentd.v1.RunRequest.ExecuteRequest.agent:type_name -> agentd.v1.Agent
-	14, // 12: agentd.v1.RunRequest.ExecuteRequest.tools:type_name -> agentd.v1.Tool
-	15, // 13: agentd.v1.RunResponse.ErrorResponse.code:type_name -> agentd.v1.ErrorCode
-	16, // 14: agentd.v1.RunResponse.EndResponse.usage_summary:type_name -> agentd.v1.UsageSummary
-	0,  // 15: agentd.v1.Agentd.Run:input_type -> agentd.v1.RunRequest
-	1,  // 16: agentd.v1.Agentd.Run:output_type -> agentd.v1.RunResponse
-	16, // [16:17] is the sub-list for method output_type
-	15, // [15:16] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	13, // 11: agentd.v1.RunResponse.state_update:type_name -> agentd.v1.RunResponse.StateUpdate
+	15, // 12: agentd.v1.RunRequest.ExecuteRequest.agent:type_name -> agentd.v1.Agent
+	16, // 13: agentd.v1.RunRequest.ExecuteRequest.tools:type_name -> agentd.v1.Tool
+	17, // 14: agentd.v1.RunResponse.ErrorResponse.code:type_name -> agentd.v1.ErrorCode
+	18, // 15: agentd.v1.RunResponse.EndResponse.usage_summary:type_name -> agentd.v1.UsageSummary
+	14, // 16: agentd.v1.RunResponse.StateUpdate.state:type_name -> agentd.v1.RunResponse.StateUpdate.StateEntry
+	0,  // 17: agentd.v1.Agentd.Run:input_type -> agentd.v1.RunRequest
+	1,  // 18: agentd.v1.Agentd.Run:output_type -> agentd.v1.RunResponse
+	18, // [18:19] is the sub-list for method output_type
+	17, // [17:18] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_agentd_v1_service_proto_init() }
@@ -1167,6 +1248,7 @@ func file_agentd_v1_service_proto_init() {
 		(*RunResponse_Error)(nil),
 		(*RunResponse_End)(nil),
 		(*RunResponse_OutputChunk_)(nil),
+		(*RunResponse_StateUpdate_)(nil),
 	}
 	file_agentd_v1_service_proto_msgTypes[2].OneofWrappers = []any{}
 	file_agentd_v1_service_proto_msgTypes[4].OneofWrappers = []any{
@@ -1182,7 +1264,7 @@ func file_agentd_v1_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agentd_v1_service_proto_rawDesc), len(file_agentd_v1_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
