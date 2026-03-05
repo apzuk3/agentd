@@ -17,8 +17,24 @@ type Service struct {
 	GeminiAPIKey    string
 	AnthropicAPIKey string
 	OpenAIAPIKey    string
+	TavilyAPIKey    string
 }
 
 func (s *Service) Run(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]) error {
-	return NewSession(ctx, stream, s.GeminiAPIKey, s.AnthropicAPIKey, s.OpenAIAPIKey)
+	keys := resolveProviderKeys(
+		ProviderKeys{
+			GeminiAPIKey:    s.GeminiAPIKey,
+			AnthropicAPIKey: s.AnthropicAPIKey,
+			OpenAIAPIKey:    s.OpenAIAPIKey,
+			TavilyAPIKey:    s.TavilyAPIKey,
+		},
+		stream.RequestHeader(),
+	)
+
+	return NewSession(ctx, stream,
+		WithGeminiAPIKey(keys.GeminiAPIKey),
+		WithAnthropicAPIKey(keys.AnthropicAPIKey),
+		WithOpenAIAPIKey(keys.OpenAIAPIKey),
+		WithTavilyAPIKey(keys.TavilyAPIKey),
+	)
 }

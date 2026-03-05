@@ -10,7 +10,6 @@ import (
 	"sync/atomic"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/runner"
 	adksession "google.golang.org/adk/session"
@@ -24,6 +23,7 @@ type Session struct {
 	geminiAPIKey    string
 	anthropicAPIKey string
 	openaiAPIKey    string
+	tavilyAPIKey    string
 	stream          *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]
 	log             *slog.Logger
 
@@ -47,7 +47,7 @@ type usageSummary struct {
 // NewSession handles a single Run bidi stream. It expects the first message to
 // be an ExecuteRequest, then builds the ADK agent tree and runs the agent loop
 // concurrently with the client message read loop.
-func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse], geminiAPIKey, anthropicAPIKey, openaiAPIKey string) error {
+func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse], opts ...SessionOption) error {
 	req, err := stream.Receive()
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to receive initial message", "error", err)
@@ -66,19 +66,32 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	sessionID := uuid.New().String()
-
 	s := &Session{
-		id:              sessionID,
-		geminiAPIKey:    geminiAPIKey,
-		anthropicAPIKey: anthropicAPIKey,
-		openaiAPIKey:    openaiAPIKey,
-		stream:          stream,
-		log:             slog.Default().With("session_id", sessionID),
-		pendingTools:    make(map[string]chan *agentdv1.RunRequest_ToolCallResponse),
-		cancel:          cancel,
-		agentPaths:      make(map[string][]string),
+		stream:       stream,
+		log:          slog.Default(),
+		pendingTools: make(map[string]chan *agentdv1.RunRequest_ToolCallResponse),
+		cancel:       cancel,
+		agentPaths:   make(map[string][]string),
 	}
+
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	sessionService := adksession.InMemoryService()
+
+	adkSession, err := sessionService.Create(runCtx, &adksession.CreateRequest{
+		AppName:   "agentd",
+		UserID:    "user",
+		SessionID: exec.GetSessionId(),
+	})
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to create ADK session", "error", err)
+		return fmt.Errorf("creating ADK session: %w", err)
+	}
+
+	s.id = adkSession.Session.ID()
+	s.log = s.log.With("session_id", s.id)
 
 	s.log.InfoContext(ctx, "session created")
 
@@ -108,7 +121,11 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 
 	s.log.InfoContext(ctx, "building agent tree", "root_agent", exec.GetAgent().GetName(), "tool_count", len(toolCatalog))
 
-	rootAgent, err := createAgent(runCtx, exec.GetAgent(), s, s.geminiAPIKey, s.anthropicAPIKey, s.openaiAPIKey, nil, s.agentPaths, toolCatalog)
+	builtinCfg := &BuiltinToolConfig{
+		TavilyAPIKey: s.tavilyAPIKey,
+	}
+
+	rootAgent, err := createAgent(runCtx, exec.GetAgent(), s, s.geminiAPIKey, s.anthropicAPIKey, s.openaiAPIKey, nil, s.agentPaths, toolCatalog, builtinCfg)
 	if err != nil {
 		s.log.ErrorContext(ctx, "failed to build agent tree", "error", err)
 		if sendErr := sendError(stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INVALID_AGENT_TREE, err.Error()); sendErr != nil {
@@ -118,17 +135,6 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 	}
 
 	s.log.InfoContext(ctx, "agent tree built", "agent_count", len(s.agentPaths))
-
-	sessionService := adksession.InMemoryService()
-
-	adkSession, err := sessionService.Create(runCtx, &adksession.CreateRequest{
-		AppName: "agentd",
-		UserID:  "user",
-	})
-	if err != nil {
-		s.log.ErrorContext(ctx, "failed to create ADK session", "error", err)
-		return fmt.Errorf("creating ADK session: %w", err)
-	}
 
 	if err := s.sendStateSnapshot(adkSession.Session.State()); err != nil {
 		s.log.ErrorContext(ctx, "failed to send initial state", "error", err)
@@ -149,7 +155,7 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 
 	runnerDone := make(chan error, 1)
 	go func() {
-		runnerDone <- s.runAgent(runCtx, r, adkSession.Session.ID(), exec.GetUserPrompt())
+		runnerDone <- s.runAgent(runCtx, r, s.id, exec.GetUserPrompt())
 	}()
 
 	loopErr := s.loop(runCtx)

@@ -57,9 +57,9 @@ func checkDomainAvailability(domain string) (bool, error) {
 }
 
 func main() {
-	clnt := client.New("http://localhost:8080")
+	agentdClient := client.New("http://localhost:8080")
 
-	err := client.AddTool(clnt, "domainnamechecker", "Checks if a domain name is available", func(ctx context.Context, input DomainNameCheckerInput) (any, error) {
+	err := client.AddTool(agentdClient, "domainnamechecker", "Checks if a domain name is available", func(ctx context.Context, input DomainNameCheckerInput) (any, error) {
 		slog.Info("Checking domain name", "domain_name", input.DomainName)
 
 		available, err := checkDomainAvailability(input.DomainName)
@@ -87,7 +87,7 @@ func main() {
 		},
 	}
 
-	iter := clnt.Run(context.Background(), agent, "is agentd.run available?")
+	iter := agentdClient.Run(context.Background(), agent, "is agentd.run available?")
 	for event, err := range iter {
 		if err != nil {
 			log.Fatalf("failed to run agent: %v", err)

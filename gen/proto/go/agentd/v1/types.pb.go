@@ -284,6 +284,7 @@ type LlmAgent struct {
 	ToolNames     []string               `protobuf:"bytes,2,rep,name=tool_names,json=toolNames,proto3" json:"tool_names,omitempty"`
 	SubAgents     []*Agent               `protobuf:"bytes,3,rep,name=sub_agents,json=subAgents,proto3" json:"sub_agents,omitempty"`
 	Instruction   string                 `protobuf:"bytes,4,opt,name=instruction,proto3" json:"instruction,omitempty"`
+	BuiltinTools  []string               `protobuf:"bytes,5,rep,name=builtin_tools,json=builtinTools,proto3" json:"builtin_tools,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -344,6 +345,13 @@ func (x *LlmAgent) GetInstruction() string {
 		return x.Instruction
 	}
 	return ""
+}
+
+func (x *LlmAgent) GetBuiltinTools() []string {
+	if x != nil {
+		return x.BuiltinTools
+	}
+	return nil
 }
 
 type SequentialAgent struct {
@@ -644,14 +652,15 @@ const file_agentd_v1_types_proto_rawDesc = "" +
 	"\bparallel\x18\x05 \x01(\v2\x18.agentd.v1.ParallelAgentH\x00R\bparallel\x12*\n" +
 	"\x04loop\x18\x06 \x01(\v2\x14.agentd.v1.LoopAgentH\x00R\x04loopB\f\n" +
 	"\n" +
-	"agent_type\"\x92\x01\n" +
+	"agent_type\"\xb7\x01\n" +
 	"\bLlmAgent\x12\x14\n" +
 	"\x05model\x18\x01 \x01(\tR\x05model\x12\x1d\n" +
 	"\n" +
 	"tool_names\x18\x02 \x03(\tR\ttoolNames\x12/\n" +
 	"\n" +
 	"sub_agents\x18\x03 \x03(\v2\x10.agentd.v1.AgentR\tsubAgents\x12 \n" +
-	"\vinstruction\x18\x04 \x01(\tR\vinstruction\";\n" +
+	"\vinstruction\x18\x04 \x01(\tR\vinstruction\x12#\n" +
+	"\rbuiltin_tools\x18\x05 \x03(\tR\fbuiltinTools\";\n" +
 	"\x0fSequentialAgent\x12(\n" +
 	"\x06agents\x18\x01 \x03(\v2\x10.agentd.v1.AgentR\x06agents\"9\n" +
 	"\rParallelAgent\x12(\n" +

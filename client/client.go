@@ -206,11 +206,51 @@ type RunOption func(*runConfig)
 
 type runConfig struct {
 	sessionID string
+	headers   http.Header
 }
 
 // WithSessionID resumes an existing session instead of creating a new one.
 func WithSessionID(id string) RunOption {
 	return func(rc *runConfig) { rc.sessionID = id }
+}
+
+// BYOK header names mirroring the server-side constants. Clients use the
+// convenience RunOption helpers below instead of setting these directly.
+const (
+	headerGeminiAPIKey    = "X-Agentd-Gemini-Api-Key"
+	headerAnthropicAPIKey = "X-Agentd-Anthropic-Api-Key"
+	headerOpenAIAPIKey    = "X-Agentd-Openai-Api-Key"
+	headerTavilyAPIKey    = "X-Agentd-Tavily-Api-Key"
+)
+
+// WithGeminiAPIKey sets the Gemini API key for this Run only, overriding
+// any server-side default.
+func WithGeminiAPIKey(key string) RunOption {
+	return withHeader(headerGeminiAPIKey, key)
+}
+
+// WithAnthropicAPIKey sets the Anthropic API key for this Run only.
+func WithAnthropicAPIKey(key string) RunOption {
+	return withHeader(headerAnthropicAPIKey, key)
+}
+
+// WithOpenAIAPIKey sets the OpenAI API key for this Run only.
+func WithOpenAIAPIKey(key string) RunOption {
+	return withHeader(headerOpenAIAPIKey, key)
+}
+
+// WithTavilyAPIKey sets the Tavily API key for this Run only.
+func WithTavilyAPIKey(key string) RunOption {
+	return withHeader(headerTavilyAPIKey, key)
+}
+
+func withHeader(name, value string) RunOption {
+	return func(rc *runConfig) {
+		if rc.headers == nil {
+			rc.headers = make(http.Header)
+		}
+		rc.headers.Set(name, value)
+	}
 }
 
 // Event is yielded by Run for each server message the caller should see.
@@ -273,7 +313,11 @@ func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt stri
 			return
 		}
 
-		rpcClient := agentdv1connect.NewAgentdClient(c.httpClient, c.baseURL, c.connectOpts...)
+		opts := append([]connect.ClientOption{}, c.connectOpts...)
+		if len(rc.headers) > 0 {
+			opts = append(opts, connect.WithInterceptors(&headerInterceptor{headers: rc.headers}))
+		}
+		rpcClient := agentdv1connect.NewAgentdClient(c.httpClient, c.baseURL, opts...)
 
 		streamCtx, cancel := context.WithCancel(ctx)
 		defer cancel()
@@ -455,4 +499,36 @@ func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt stri
 			}
 		}
 	}
+}
+
+// headerInterceptor injects per-run HTTP headers into the outgoing request.
+type headerInterceptor struct {
+	headers http.Header
+}
+
+func (i *headerInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
+	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+		for k, vals := range i.headers {
+			for _, v := range vals {
+				req.Header().Set(k, v)
+			}
+		}
+		return next(ctx, req)
+	}
+}
+
+func (i *headerInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
+	return func(ctx context.Context, spec connect.Spec) connect.StreamingClientConn {
+		conn := next(ctx, spec)
+		for k, vals := range i.headers {
+			for _, v := range vals {
+				conn.RequestHeader().Set(k, v)
+			}
+		}
+		return conn
+	}
+}
+
+func (i *headerInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+	return next
 }

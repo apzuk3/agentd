@@ -46,6 +46,7 @@ message LlmAgent {
     repeated string tool_names = 2;
     repeated Agent sub_agents = 3;
     string instruction = 4;
+    repeated string builtin_tools = 5;
 }
 
 message SequentialAgent {
