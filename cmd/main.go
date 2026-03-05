@@ -25,8 +25,7 @@ func main() {
 	tavilyAPIKey := os.Getenv("TAVILY_API_KEY")
 
 	if geminiAPIKey == "" && anthropicAPIKey == "" && openaiAPIKey == "" {
-		slog.Error("at least one of GEMINI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY must be set")
-		os.Exit(1)
+		slog.Warn("no provider API keys configured via environment; clients must supply keys via BYOK headers")
 	}
 
 	svc := &agentd.Service{

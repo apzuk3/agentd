@@ -37,15 +37,25 @@ func isOpenAIModel(modelName string) bool {
 }
 
 // createModel creates an ADK model from a model name string, routing to the
-// appropriate provider based on the model name prefix.
+// appropriate provider based on the model name prefix. Returns a structured
+// error when the required provider API key is missing.
 func createModel(ctx context.Context, modelName, geminiAPIKey, anthropicAPIKey, openaiAPIKey string) (model.LLM, error) {
 	if strings.HasPrefix(modelName, "claude-") {
+		if anthropicAPIKey == "" {
+			return nil, fmt.Errorf("Anthropic API key is required for model %q; set ANTHROPIC_API_KEY or pass via %s header", modelName, HeaderAnthropicAPIKey)
+		}
 		return adkanthropic.NewModel(ctx, anthropic.Model(modelName), &adkanthropic.Config{
 			APIKey: anthropicAPIKey,
 		})
 	}
 	if isOpenAIModel(modelName) {
+		if openaiAPIKey == "" {
+			return nil, fmt.Errorf("OpenAI API key is required for model %q; set OPENAI_API_KEY or pass via %s header", modelName, HeaderOpenAIAPIKey)
+		}
 		return adkopenai.NewOpenAIModelWithAPIKey(modelName, openaiAPIKey), nil
+	}
+	if geminiAPIKey == "" {
+		return nil, fmt.Errorf("Gemini API key is required for model %q; set GEMINI_API_KEY or pass via %s header", modelName, HeaderGeminiAPIKey)
 	}
 	return gemini.NewModel(ctx, modelName, &genai.ClientConfig{
 		APIKey: geminiAPIKey,

@@ -173,6 +173,34 @@ Agents are defined as a recursive tree in proto. The server uses Google ADK to e
 | **ParallelAgent**   | `ParallelAgent`   | Runs child agents in parallel                                                                                                                                        |
 | **LoopAgent**       | `LoopAgent`       | Repeats child agents up to `max_iterations`; client controls continuation via a pre-defined tool through the standard `ToolCallRequest`/`ToolCallResponse` mechanism |
 
+## BYOK (Bring Your Own Key)
+
+Clients can supply their own provider API keys on a per-run basis via request headers. Header-supplied keys override server-configured environment defaults for the lifetime of a single `Run` stream and are held in memory only — they are never persisted or logged.
+
+| Header                          | Provider   | Env equivalent     |
+| ------------------------------- | ---------- | ------------------ |
+| `X-Agentd-Gemini-Api-Key`      | Gemini     | `GEMINI_API_KEY`   |
+| `X-Agentd-Anthropic-Api-Key`   | Anthropic  | `ANTHROPIC_API_KEY`|
+| `X-Agentd-Openai-Api-Key`      | OpenAI     | `OPENAI_API_KEY`   |
+| `X-Agentd-Tavily-Api-Key`      | Tavily     | `TAVILY_API_KEY`   |
+
+**Precedence:** header value > server env default. Empty header values are ignored.
+
+**Go client helpers:**
+
+```go
+clnt := client.New("http://localhost:8080")
+
+for event, err := range clnt.Run(ctx, agent, "Hello",
+    client.WithGeminiAPIKey("my-gemini-key"),
+    client.WithAnthropicAPIKey("my-anthropic-key"),
+) {
+    // ...
+}
+```
+
+The server can start without any provider keys configured; clients are then required to supply keys via headers for every run.
+
 ## Key conventions
 
 - **Proto is the source of truth.** All types flow from `proto/agentd/v1/`. Run `buf generate` to regenerate Go code after proto changes.
