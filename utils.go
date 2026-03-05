@@ -109,6 +109,7 @@ func createAgent(
 	parentPath []string,
 	agentPaths map[string][]string,
 	toolCatalog map[string]*agentdv1.Tool,
+	builtinCfg *BuiltinToolConfig,
 ) (agent.Agent, error) {
 	if protoAgent == nil {
 		return nil, errors.New("agent definition is nil")
@@ -124,13 +125,13 @@ func createAgent(
 
 	switch {
 	case protoAgent.GetLlm() != nil:
-		return createLLMAgent(ctx, protoAgent, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog)
+		return createLLMAgent(ctx, protoAgent, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog, builtinCfg)
 	case protoAgent.GetSequential() != nil:
-		return createSequentialAgent(ctx, protoAgent, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog)
+		return createSequentialAgent(ctx, protoAgent, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog, builtinCfg)
 	case protoAgent.GetParallel() != nil:
-		return createParallelAgent(ctx, protoAgent, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog)
+		return createParallelAgent(ctx, protoAgent, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog, builtinCfg)
 	case protoAgent.GetLoop() != nil:
-		return createLoopAgent(ctx, protoAgent, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog)
+		return createLoopAgent(ctx, protoAgent, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog, builtinCfg)
 	default:
 		return nil, fmt.Errorf("agent %q has no agent_type set", name)
 	}
@@ -144,6 +145,7 @@ func createLLMAgent(
 	currentPath []string,
 	agentPaths map[string][]string,
 	toolCatalog map[string]*agentdv1.Tool,
+	builtinCfg *BuiltinToolConfig,
 ) (agent.Agent, error) {
 	llm := protoAgent.GetLlm()
 
@@ -165,9 +167,17 @@ func createLLMAgent(
 		tools = append(tools, t)
 	}
 
+	for _, name := range llm.GetBuiltinTools() {
+		bt, err := ResolveBuiltinTool(name, builtinCfg)
+		if err != nil {
+			return nil, fmt.Errorf("resolving built-in tool %q for agent %q: %w", name, protoAgent.GetName(), err)
+		}
+		tools = append(tools, bt)
+	}
+
 	var subAgents []agent.Agent
 	for _, sa := range llm.GetSubAgents() {
-		a, err := createAgent(ctx, sa, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog)
+		a, err := createAgent(ctx, sa, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog, builtinCfg)
 		if err != nil {
 			return nil, fmt.Errorf("creating sub-agent for %q: %w", protoAgent.GetName(), err)
 		}
@@ -192,10 +202,11 @@ func createSequentialAgent(
 	currentPath []string,
 	agentPaths map[string][]string,
 	toolCatalog map[string]*agentdv1.Tool,
+	builtinCfg *BuiltinToolConfig,
 ) (agent.Agent, error) {
 	seq := protoAgent.GetSequential()
 
-	subAgents, err := buildSubAgents(ctx, seq.GetAgents(), sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog)
+	subAgents, err := buildSubAgents(ctx, seq.GetAgents(), sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog, builtinCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -217,10 +228,11 @@ func createParallelAgent(
 	currentPath []string,
 	agentPaths map[string][]string,
 	toolCatalog map[string]*agentdv1.Tool,
+	builtinCfg *BuiltinToolConfig,
 ) (agent.Agent, error) {
 	par := protoAgent.GetParallel()
 
-	subAgents, err := buildSubAgents(ctx, par.GetAgents(), sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog)
+	subAgents, err := buildSubAgents(ctx, par.GetAgents(), sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog, builtinCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -242,10 +254,11 @@ func createLoopAgent(
 	currentPath []string,
 	agentPaths map[string][]string,
 	toolCatalog map[string]*agentdv1.Tool,
+	builtinCfg *BuiltinToolConfig,
 ) (agent.Agent, error) {
 	loop := protoAgent.GetLoop()
 
-	subAgents, err := buildSubAgents(ctx, loop.GetAgents(), sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog)
+	subAgents, err := buildSubAgents(ctx, loop.GetAgents(), sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, currentPath, agentPaths, toolCatalog, builtinCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -268,10 +281,11 @@ func buildSubAgents(
 	parentPath []string,
 	agentPaths map[string][]string,
 	toolCatalog map[string]*agentdv1.Tool,
+	builtinCfg *BuiltinToolConfig,
 ) ([]agent.Agent, error) {
 	var agents []agent.Agent
 	for _, pa := range protoAgents {
-		a, err := createAgent(ctx, pa, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, parentPath, agentPaths, toolCatalog)
+		a, err := createAgent(ctx, pa, sess, geminiAPIKey, anthropicAPIKey, openaiAPIKey, parentPath, agentPaths, toolCatalog, builtinCfg)
 		if err != nil {
 			return nil, err
 		}

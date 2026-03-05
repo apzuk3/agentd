@@ -22,6 +22,7 @@ func main() {
 	geminiAPIKey := os.Getenv("GEMINI_API_KEY")
 	anthropicAPIKey := os.Getenv("ANTHROPIC_API_KEY")
 	openaiAPIKey := os.Getenv("OPENAI_API_KEY")
+	tavilyAPIKey := os.Getenv("TAVILY_API_KEY")
 
 	if geminiAPIKey == "" && anthropicAPIKey == "" && openaiAPIKey == "" {
 		slog.Error("at least one of GEMINI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY must be set")
@@ -32,6 +33,7 @@ func main() {
 		GeminiAPIKey:    geminiAPIKey,
 		AnthropicAPIKey: anthropicAPIKey,
 		OpenAIAPIKey:    openaiAPIKey,
+		TavilyAPIKey:    tavilyAPIKey,
 	}
 
 	mux := http.NewServeMux()
