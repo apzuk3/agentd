@@ -126,4 +126,3 @@ func newSessionEventPlugin(sessionID string, emitter *SessionEventEmitter) (*plu
 		},
 	})
 }
-
