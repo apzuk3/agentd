@@ -1,7 +1,5 @@
 package agentd
 
-import "log/slog"
-
 type SessionOption func(*Session)
 
 func WithGeminiAPIKey(key string) SessionOption {
@@ -28,8 +26,8 @@ func WithTavilyAPIKey(key string) SessionOption {
 	}
 }
 
-func WithLogger(logger *slog.Logger) SessionOption {
+func WithEventEmitter(emitter *SessionEventEmitter) SessionOption {
 	return func(s *Session) {
-		s.log = logger
+		s.emitter = emitter
 	}
 }

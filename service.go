@@ -18,6 +18,8 @@ type Service struct {
 	AnthropicAPIKey string
 	OpenAIAPIKey    string
 	TavilyAPIKey    string
+
+	EventEmitter *SessionEventEmitter
 }
 
 func (s *Service) Run(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]) error {
@@ -31,10 +33,16 @@ func (s *Service) Run(ctx context.Context, stream *connect.BidiStream[agentdv1.R
 		stream.RequestHeader(),
 	)
 
-	return NewSession(ctx, stream,
+	opts := []SessionOption{
 		WithGeminiAPIKey(keys.GeminiAPIKey),
 		WithAnthropicAPIKey(keys.AnthropicAPIKey),
 		WithOpenAIAPIKey(keys.OpenAIAPIKey),
 		WithTavilyAPIKey(keys.TavilyAPIKey),
-	)
+	}
+
+	if s.EventEmitter != nil {
+		opts = append(opts, WithEventEmitter(s.EventEmitter))
+	}
+
+	return NewSession(ctx, stream, opts...)
 }
