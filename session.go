@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"connectrpc.com/connect"
 	"google.golang.org/adk/agent"
+	"google.golang.org/adk/plugin"
 	"google.golang.org/adk/runner"
 	adksession "google.golang.org/adk/session"
 	"google.golang.org/genai"
@@ -25,7 +26,7 @@ type Session struct {
 	openaiAPIKey    string
 	tavilyAPIKey    string
 	stream          *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]
-	log             *slog.Logger
+	emitter         *SessionEventEmitter
 
 	mu           sync.Mutex
 	pendingTools map[string]chan *agentdv1.RunRequest_ToolCallResponse
@@ -33,6 +34,18 @@ type Session struct {
 	cancel     context.CancelFunc
 	agentPaths map[string][]string
 	usage      usageSummary
+}
+
+func (s *Session) emit(ctx context.Context, eventType SessionEventType, data map[string]any) {
+	if s.emitter == nil {
+		return
+	}
+	s.emitter.Emit(ctx, SessionEvent{
+		Type:      eventType,
+		Timestamp: time.Now(),
+		SessionID: s.id,
+		Data:      data,
+	})
 }
 
 type usageSummary struct {
@@ -50,13 +63,11 @@ type usageSummary struct {
 func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse], opts ...SessionOption) error {
 	req, err := stream.Receive()
 	if err != nil {
-		slog.ErrorContext(ctx, "failed to receive initial message", "error", err)
 		return err
 	}
 
 	exec := req.GetExecute()
 	if exec == nil {
-		slog.WarnContext(ctx, "first message was not ExecuteRequest")
 		if sendErr := sendError(stream, "", agentdv1.ErrorCode_ERROR_CODE_INTERNAL, "first message must be ExecuteRequest"); sendErr != nil {
 			return sendErr
 		}
@@ -68,7 +79,6 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 
 	s := &Session{
 		stream:       stream,
-		log:          slog.Default(),
 		pendingTools: make(map[string]chan *agentdv1.RunRequest_ToolCallResponse),
 		cancel:       cancel,
 		agentPaths:   make(map[string][]string),
@@ -86,14 +96,17 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 		SessionID: exec.GetSessionId(),
 	})
 	if err != nil {
-		slog.ErrorContext(ctx, "failed to create ADK session", "error", err)
 		return fmt.Errorf("creating ADK session: %w", err)
 	}
 
 	s.id = adkSession.Session.ID()
-	s.log = s.log.With("session_id", s.id)
 
-	s.log.InfoContext(ctx, "session created")
+	s.emit(ctx, EventSessionStarted, map[string]any{
+		"root_agent":   exec.GetAgent().GetName(),
+		"tool_count":   len(exec.GetTools()),
+		"user_prompt":  exec.GetUserPrompt(),
+		"requested_id": exec.GetSessionId(),
+	})
 
 	if err := stream.Send(&agentdv1.RunResponse{
 		Response: &agentdv1.RunResponse_Execute{
@@ -102,12 +115,12 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 			},
 		},
 	}); err != nil {
-		s.log.ErrorContext(ctx, "failed to send execute response", "error", err)
+		s.emit(ctx, EventError, map[string]any{"message": "failed to send execute response", "error": err.Error()})
 		return err
 	}
 
 	if exec.GetAgent() == nil {
-		s.log.ErrorContext(ctx, "agent definition is missing")
+		s.emit(ctx, EventError, map[string]any{"message": "agent definition is missing"})
 		if sendErr := sendError(stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INVALID_AGENT_TREE, "agent definition is required"); sendErr != nil {
 			return sendErr
 		}
@@ -119,39 +132,46 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 		toolCatalog[t.GetName()] = t
 	}
 
-	s.log.InfoContext(ctx, "building agent tree", "root_agent", exec.GetAgent().GetName(), "tool_count", len(toolCatalog))
-
 	builtinCfg := &BuiltinToolConfig{
 		TavilyAPIKey: s.tavilyAPIKey,
 	}
 
 	rootAgent, err := createAgent(runCtx, exec.GetAgent(), s, s.geminiAPIKey, s.anthropicAPIKey, s.openaiAPIKey, nil, s.agentPaths, toolCatalog, builtinCfg)
 	if err != nil {
-		s.log.ErrorContext(ctx, "failed to build agent tree", "error", err)
+		s.emit(ctx, EventError, map[string]any{"message": "failed to build agent tree", "error": err.Error()})
 		if sendErr := sendError(stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INVALID_AGENT_TREE, err.Error()); sendErr != nil {
 			return sendErr
 		}
 		return fmt.Errorf("building agent tree: %w", err)
 	}
 
-	s.log.InfoContext(ctx, "agent tree built", "agent_count", len(s.agentPaths))
-
 	if err := s.sendStateSnapshot(adkSession.Session.State()); err != nil {
-		s.log.ErrorContext(ctx, "failed to send initial state", "error", err)
+		s.emit(ctx, EventError, map[string]any{"message": "failed to send initial state", "error": err.Error()})
 		return fmt.Errorf("sending initial state: %w", err)
 	}
 
-	r, err := runner.New(runner.Config{
+	runnerCfg := runner.Config{
 		AppName:        "agentd",
 		Agent:          rootAgent,
 		SessionService: sessionService,
-	})
-	if err != nil {
-		s.log.ErrorContext(ctx, "failed to create runner", "error", err)
-		return fmt.Errorf("creating runner: %w", err)
 	}
 
-	s.log.InfoContext(ctx, "starting agent run", "user_prompt_len", len(exec.GetUserPrompt()))
+	if s.emitter != nil {
+		p, pluginErr := newSessionEventPlugin(s.id, s.emitter)
+		if pluginErr != nil {
+			s.emit(ctx, EventError, map[string]any{"message": "failed to create event plugin", "error": pluginErr.Error()})
+			return fmt.Errorf("creating event plugin: %w", pluginErr)
+		}
+		runnerCfg.PluginConfig = runner.PluginConfig{
+			Plugins: []*plugin.Plugin{p},
+		}
+	}
+
+	r, err := runner.New(runnerCfg)
+	if err != nil {
+		s.emit(ctx, EventError, map[string]any{"message": "failed to create runner", "error": err.Error()})
+		return fmt.Errorf("creating runner: %w", err)
+	}
 
 	runnerDone := make(chan error, 1)
 	go func() {
@@ -163,16 +183,16 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 	cancel()
 	runnerErr := <-runnerDone
 
-	s.log.InfoContext(ctx, "session ended",
-		"prompt_tokens", s.usage.promptTokens.Load(),
-		"completion_tokens", s.usage.completionTokens.Load(),
-		"cached_tokens", s.usage.cachedTokens.Load(),
-		"thoughts_tokens", s.usage.thoughtsTokens.Load(),
-		"total_tokens", s.usage.totalTokens.Load(),
-		"llm_calls", s.usage.llmCalls.Load(),
-		"loop_error", loopErr,
-		"runner_error", runnerErr,
-	)
+	s.emit(ctx, EventSessionEnded, map[string]any{
+		"prompt_tokens":     s.usage.promptTokens.Load(),
+		"completion_tokens": s.usage.completionTokens.Load(),
+		"cached_tokens":     s.usage.cachedTokens.Load(),
+		"thoughts_tokens":   s.usage.thoughtsTokens.Load(),
+		"total_tokens":      s.usage.totalTokens.Load(),
+		"llm_calls":         s.usage.llmCalls.Load(),
+		"loop_error":        loopErr,
+		"runner_error":      runnerErr,
+	})
 
 	if loopErr != nil {
 		return loopErr
@@ -189,16 +209,13 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 		StreamingMode: agent.StreamingModeSSE,
 	}
 
-	s.log.DebugContext(ctx, "runner loop started", "adk_session_id", adkSessionID)
-
 	var lastErr error
 	for event, err := range r.Run(ctx, "user", adkSessionID, userContent, cfg) {
 		if err != nil {
 			if ctx.Err() != nil {
-				s.log.InfoContext(ctx, "runner loop cancelled")
 				break
 			}
-			s.log.ErrorContext(ctx, "runner event error", "error", err)
+			s.emit(ctx, EventError, map[string]any{"message": "runner event error", "error": err.Error()})
 			lastErr = err
 			continue
 		}
@@ -213,17 +230,15 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 			s.usage.thoughtsTokens.Add(int32(event.UsageMetadata.ThoughtsTokenCount))
 			s.usage.totalTokens.Add(int32(event.UsageMetadata.TotalTokenCount))
 			s.usage.llmCalls.Add(1)
-
-			s.log.DebugContext(ctx, "usage recorded",
-				"prompt_tokens", event.UsageMetadata.PromptTokenCount,
-				"completion_tokens", event.UsageMetadata.CandidatesTokenCount,
-				"total_tokens", event.UsageMetadata.TotalTokenCount,
-			)
 		}
 
 		if len(event.Actions.StateDelta) > 0 {
+			s.emit(ctx, EventStateChange, map[string]any{
+				"agent":     event.Author,
+				"key_count": len(event.Actions.StateDelta),
+			})
 			if err := s.sendStateDelta(event.Actions.StateDelta); err != nil {
-				s.log.ErrorContext(ctx, "failed to send state delta", "error", err)
+				s.emit(ctx, EventError, map[string]any{"message": "failed to send state delta", "error": err.Error()})
 				return fmt.Errorf("sending state delta: %w", err)
 			}
 		}
@@ -247,12 +262,13 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 
 			isFinal := !event.Partial && event.IsFinalResponse()
 
-			s.log.DebugContext(ctx, "sending output chunk",
-				"agent", event.Author,
-				"is_thought", part.Thought,
-				"is_final", isFinal,
-				"content_len", len(part.Text),
-			)
+			s.emit(ctx, EventOutputChunk, map[string]any{
+				"agent":       event.Author,
+				"agent_path":  agentPath,
+				"is_thought":  part.Thought,
+				"is_final":    isFinal,
+				"content_len": len(part.Text),
+			})
 
 			if err := s.stream.Send(&agentdv1.RunResponse{
 				Response: &agentdv1.RunResponse_OutputChunk_{
@@ -265,17 +281,14 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 					},
 				},
 			}); err != nil {
-				s.log.ErrorContext(ctx, "failed to send output chunk", "error", err)
+				s.emit(ctx, EventError, map[string]any{"message": "failed to send output chunk", "error": err.Error()})
 				return fmt.Errorf("sending output chunk: %w", err)
 			}
 		}
 	}
 
 	if lastErr != nil {
-		s.log.ErrorContext(ctx, "runner completed with error", "error", lastErr)
 		_ = sendError(s.stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INTERNAL, lastErr.Error())
-	} else {
-		s.log.InfoContext(ctx, "runner completed successfully")
 	}
 
 	return s.stream.Send(&agentdv1.RunResponse{
@@ -301,42 +314,36 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 func (s *Session) loop(ctx context.Context) error {
 	defer s.closeAllPending()
 
-	s.log.DebugContext(ctx, "message loop started")
-
 	for {
 		req, err := s.stream.Receive()
 		if err != nil {
-			s.log.DebugContext(ctx, "message loop ended", "error", err)
 			return nil
 		}
 
 		switch r := req.GetRequest().(type) {
 		case *agentdv1.RunRequest_Execute:
-			s.log.WarnContext(ctx, "received ExecuteRequest after session start")
+			s.emit(ctx, EventError, map[string]any{"message": "received ExecuteRequest after session start"})
 			if err := sendError(s.stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INTERNAL, "ExecuteRequest only valid as first message"); err != nil {
 				return err
 			}
 
 		case *agentdv1.RunRequest_Heartbeat:
-			s.log.DebugContext(ctx, "received heartbeat")
 			if err := s.handleHeartbeat(r.Heartbeat); err != nil {
 				return err
 			}
 
 		case *agentdv1.RunRequest_ToolCallResponse_:
-			s.log.DebugContext(ctx, "received tool call response", "tool_call_id", r.ToolCallResponse.GetToolCallId())
 			s.handleToolCallResponse(r.ToolCallResponse)
 
 		case *agentdv1.RunRequest_Cancel:
-			s.log.InfoContext(ctx, "received cancel request")
+			s.emit(ctx, EventCancelRequested, nil)
 			s.handleCancel(r.Cancel)
 
 		case *agentdv1.RunRequest_End:
-			s.log.InfoContext(ctx, "received end request")
 			return s.handleEnd(r.End)
 
 		default:
-			s.log.WarnContext(ctx, "received unknown request type", "type", fmt.Sprintf("%T", r))
+			s.emit(ctx, EventError, map[string]any{"message": fmt.Sprintf("received unknown request type: %T", r)})
 			if err := sendError(s.stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INTERNAL, fmt.Sprintf("unknown request type: %T", r)); err != nil {
 				return err
 			}
@@ -385,18 +392,18 @@ func (s *Session) handleEnd(_ *agentdv1.RunRequest_EndRequest) error {
 // DispatchToolCall sends a ToolCallRequest to the client and blocks until the
 // matching ToolCallResponse arrives or the context is cancelled.
 func (s *Session) DispatchToolCall(ctx context.Context, toolCallID, toolName, toolInput string, agentPath []string) (*agentdv1.RunRequest_ToolCallResponse, error) {
-	s.log.InfoContext(ctx, "dispatching tool call",
-		"tool_call_id", toolCallID,
-		"tool_name", toolName,
-		"agent_path", agentPath,
-		"input_len", len(toolInput),
-	)
-
 	ch := make(chan *agentdv1.RunRequest_ToolCallResponse, 1)
 
 	s.mu.Lock()
 	s.pendingTools[toolCallID] = ch
 	s.mu.Unlock()
+
+	s.emit(ctx, EventToolDispatched, map[string]any{
+		"tool_call_id": toolCallID,
+		"tool_name":    toolName,
+		"agent_path":   agentPath,
+		"input_len":    len(toolInput),
+	})
 
 	if err := s.stream.Send(&agentdv1.RunResponse{
 		Response: &agentdv1.RunResponse_ToolCall{
@@ -412,23 +419,37 @@ func (s *Session) DispatchToolCall(ctx context.Context, toolCallID, toolName, to
 		s.mu.Lock()
 		delete(s.pendingTools, toolCallID)
 		s.mu.Unlock()
-		s.log.ErrorContext(ctx, "failed to send tool call request", "tool_call_id", toolCallID, "error", err)
+		s.emit(ctx, EventError, map[string]any{
+			"message":      "failed to send tool call request",
+			"tool_call_id": toolCallID,
+			"error":        err.Error(),
+		})
 		return nil, fmt.Errorf("sending tool call request: %w", err)
 	}
 
 	select {
 	case resp, ok := <-ch:
 		if !ok {
-			s.log.WarnContext(ctx, "session closed while waiting for tool call response", "tool_call_id", toolCallID)
+			s.emit(ctx, EventError, map[string]any{
+				"message":      "session closed while waiting for tool call response",
+				"tool_call_id": toolCallID,
+			})
 			return nil, errors.New("session closed while waiting for tool call response")
 		}
-		s.log.InfoContext(ctx, "tool call response received", "tool_call_id", toolCallID, "tool_name", toolName)
+		s.emit(ctx, EventToolResponse, map[string]any{
+			"tool_call_id": toolCallID,
+			"tool_name":    toolName,
+		})
 		return resp, nil
 	case <-ctx.Done():
 		s.mu.Lock()
 		delete(s.pendingTools, toolCallID)
 		s.mu.Unlock()
-		s.log.WarnContext(ctx, "tool call cancelled", "tool_call_id", toolCallID, "tool_name", toolName)
+		s.emit(ctx, EventError, map[string]any{
+			"message":      "tool call cancelled",
+			"tool_call_id": toolCallID,
+			"tool_name":    toolName,
+		})
 		return nil, ctx.Err()
 	}
 }
@@ -455,7 +476,6 @@ func (s *Session) sendStateSnapshot(state adksession.ReadonlyState) error {
 	for k, v := range state.All() {
 		encoded, err := serializeStateValue(v)
 		if err != nil {
-			s.log.Warn("skipping unserializable state key", "key", k, "error", err)
 			continue
 		}
 		m[k] = encoded
@@ -478,7 +498,6 @@ func (s *Session) sendStateDelta(delta map[string]any) error {
 	for k, v := range delta {
 		encoded, err := serializeStateValue(v)
 		if err != nil {
-			s.log.Warn("skipping unserializable state delta key", "key", k, "error", err)
 			continue
 		}
 		m[k] = encoded
