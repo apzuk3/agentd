@@ -28,11 +28,18 @@ func main() {
 		slog.Warn("no provider API keys configured via environment; clients must supply keys via BYOK headers")
 	}
 
+	emitter := agentd.NewSessionEventEmitter()
+	emitter.Subscribe(agentd.NewSessionLogListener(slog.Default()))
+
+	// TODO: replace with a real AuditStore implementation.
+	emitter.Subscribe(agentd.NewSessionAudit(agentd.NoopAuditStore{}))
+
 	svc := &agentd.Service{
 		GeminiAPIKey:    geminiAPIKey,
 		AnthropicAPIKey: anthropicAPIKey,
 		OpenAIAPIKey:    openaiAPIKey,
 		TavilyAPIKey:    tavilyAPIKey,
+		EventEmitter:    emitter,
 	}
 
 	mux := http.NewServeMux()
