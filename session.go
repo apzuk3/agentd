@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"connectrpc.com/connect"
 	"google.golang.org/adk/agent"
@@ -26,7 +25,7 @@ type Session struct {
 	openaiAPIKey    string
 	tavilyAPIKey    string
 	stream          *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]
-	emitter         *SessionEventEmitter
+	plugins         *PluginChain
 
 	mu           sync.Mutex
 	pendingTools map[string]chan *agentdv1.RunRequest_ToolCallResponse
@@ -36,16 +35,16 @@ type Session struct {
 	usage      usageSummary
 }
 
-func (s *Session) emit(ctx context.Context, eventType SessionEventType, data map[string]any) {
-	if s.emitter == nil {
-		return
+// currentUsage returns a snapshot of the cumulative token usage.
+func (s *Session) currentUsage() UsageInfo {
+	return UsageInfo{
+		PromptTokens:     s.usage.promptTokens.Load(),
+		CompletionTokens: s.usage.completionTokens.Load(),
+		CachedTokens:     s.usage.cachedTokens.Load(),
+		ThoughtsTokens:   s.usage.thoughtsTokens.Load(),
+		TotalTokens:      s.usage.totalTokens.Load(),
+		LLMCalls:         s.usage.llmCalls.Load(),
 	}
-	s.emitter.Emit(ctx, SessionEvent{
-		Type:      eventType,
-		Timestamp: time.Now(),
-		SessionID: s.id,
-		Data:      data,
-	})
 }
 
 type usageSummary struct {
@@ -79,6 +78,7 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 
 	s := &Session{
 		stream:       stream,
+		plugins:      NewPluginChain(),
 		pendingTools: make(map[string]chan *agentdv1.RunRequest_ToolCallResponse),
 		cancel:       cancel,
 		agentPaths:   make(map[string][]string),
@@ -101,12 +101,14 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 
 	s.id = adkSession.Session.ID()
 
-	s.emit(ctx, EventSessionStarted, map[string]any{
-		"root_agent":   exec.GetAgent().GetName(),
-		"tool_count":   len(exec.GetTools()),
-		"user_prompt":  exec.GetUserPrompt(),
-		"requested_id": exec.GetSessionId(),
-	})
+	if err := s.plugins.OnSessionStart(ctx, SessionStartInfo{
+		SessionID:  s.id,
+		RootAgent:  exec.GetAgent().GetName(),
+		ToolCount:  len(exec.GetTools()),
+		UserPrompt: exec.GetUserPrompt(),
+	}); err != nil {
+		return fmt.Errorf("plugin rejected session start: %w", err)
+	}
 
 	if err := stream.Send(&agentdv1.RunResponse{
 		Response: &agentdv1.RunResponse_Execute{
@@ -115,12 +117,12 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 			},
 		},
 	}); err != nil {
-		s.emit(ctx, EventError, map[string]any{"message": "failed to send execute response", "error": err.Error()})
+		s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to send execute response", Err: err})
 		return err
 	}
 
 	if exec.GetAgent() == nil {
-		s.emit(ctx, EventError, map[string]any{"message": "agent definition is missing"})
+		s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "agent definition is missing"})
 		if sendErr := sendError(stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INVALID_AGENT_TREE, "agent definition is required"); sendErr != nil {
 			return sendErr
 		}
@@ -138,7 +140,7 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 
 	rootAgent, err := createAgent(runCtx, exec.GetAgent(), s, s.geminiAPIKey, s.anthropicAPIKey, s.openaiAPIKey, nil, s.agentPaths, toolCatalog, builtinCfg)
 	if err != nil {
-		s.emit(ctx, EventError, map[string]any{"message": "failed to build agent tree", "error": err.Error()})
+		s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to build agent tree", Err: err})
 		if sendErr := sendError(stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INVALID_AGENT_TREE, err.Error()); sendErr != nil {
 			return sendErr
 		}
@@ -146,7 +148,7 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 	}
 
 	if err := s.sendStateSnapshot(adkSession.Session.State()); err != nil {
-		s.emit(ctx, EventError, map[string]any{"message": "failed to send initial state", "error": err.Error()})
+		s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to send initial state", Err: err})
 		return fmt.Errorf("sending initial state: %w", err)
 	}
 
@@ -156,20 +158,18 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 		SessionService: sessionService,
 	}
 
-	if s.emitter != nil {
-		p, pluginErr := newSessionEventPlugin(s.id, s.emitter)
-		if pluginErr != nil {
-			s.emit(ctx, EventError, map[string]any{"message": "failed to create event plugin", "error": pluginErr.Error()})
-			return fmt.Errorf("creating event plugin: %w", pluginErr)
-		}
-		runnerCfg.PluginConfig = runner.PluginConfig{
-			Plugins: []*plugin.Plugin{p},
-		}
+	p, pluginErr := newSessionPluginBridge(s.id, s.plugins, s.currentUsage)
+	if pluginErr != nil {
+		s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to create plugin bridge", Err: pluginErr})
+		return fmt.Errorf("creating plugin bridge: %w", pluginErr)
+	}
+	runnerCfg.PluginConfig = runner.PluginConfig{
+		Plugins: []*plugin.Plugin{p},
 	}
 
 	r, err := runner.New(runnerCfg)
 	if err != nil {
-		s.emit(ctx, EventError, map[string]any{"message": "failed to create runner", "error": err.Error()})
+		s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to create runner", Err: err})
 		return fmt.Errorf("creating runner: %w", err)
 	}
 
@@ -183,21 +183,20 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 	cancel()
 	runnerErr := <-runnerDone
 
-	s.emit(ctx, EventSessionEnded, map[string]any{
-		"prompt_tokens":     s.usage.promptTokens.Load(),
-		"completion_tokens": s.usage.completionTokens.Load(),
-		"cached_tokens":     s.usage.cachedTokens.Load(),
-		"thoughts_tokens":   s.usage.thoughtsTokens.Load(),
-		"total_tokens":      s.usage.totalTokens.Load(),
-		"llm_calls":         s.usage.llmCalls.Load(),
-		"loop_error":        loopErr,
-		"runner_error":      runnerErr,
+	var sessionErr error
+	if loopErr != nil {
+		sessionErr = loopErr
+	} else {
+		sessionErr = runnerErr
+	}
+
+	s.plugins.OnSessionEnd(ctx, SessionEndInfo{
+		SessionID: s.id,
+		Usage:     s.currentUsage(),
+		Err:       sessionErr,
 	})
 
-	if loopErr != nil {
-		return loopErr
-	}
-	return runnerErr
+	return sessionErr
 }
 
 // runAgent drives the ADK runner, iterating over events and streaming
@@ -215,7 +214,7 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 			if ctx.Err() != nil {
 				break
 			}
-			s.emit(ctx, EventError, map[string]any{"message": "runner event error", "error": err.Error()})
+			s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "runner event error", Err: err})
 			lastErr = err
 			continue
 		}
@@ -233,12 +232,8 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 		}
 
 		if len(event.Actions.StateDelta) > 0 {
-			s.emit(ctx, EventStateChange, map[string]any{
-				"agent":     event.Author,
-				"key_count": len(event.Actions.StateDelta),
-			})
 			if err := s.sendStateDelta(event.Actions.StateDelta); err != nil {
-				s.emit(ctx, EventError, map[string]any{"message": "failed to send state delta", "error": err.Error()})
+				s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to send state delta", Err: err})
 				return fmt.Errorf("sending state delta: %w", err)
 			}
 		}
@@ -262,12 +257,13 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 
 			isFinal := !event.Partial && event.IsFinalResponse()
 
-			s.emit(ctx, EventOutputChunk, map[string]any{
-				"agent":       event.Author,
-				"agent_path":  agentPath,
-				"is_thought":  part.Thought,
-				"is_final":    isFinal,
-				"content_len": len(part.Text),
+			s.plugins.OnOutputChunk(ctx, OutputChunkInfo{
+				SessionID:  s.id,
+				AgentName:  event.Author,
+				AgentPath:  agentPath,
+				IsThought:  part.Thought,
+				IsFinal:    isFinal,
+				ContentLen: len(part.Text),
 			})
 
 			if err := s.stream.Send(&agentdv1.RunResponse{
@@ -281,7 +277,7 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 					},
 				},
 			}); err != nil {
-				s.emit(ctx, EventError, map[string]any{"message": "failed to send output chunk", "error": err.Error()})
+				s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to send output chunk", Err: err})
 				return fmt.Errorf("sending output chunk: %w", err)
 			}
 		}
@@ -322,7 +318,7 @@ func (s *Session) loop(ctx context.Context) error {
 
 		switch r := req.GetRequest().(type) {
 		case *agentdv1.RunRequest_Execute:
-			s.emit(ctx, EventError, map[string]any{"message": "received ExecuteRequest after session start"})
+			s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "received ExecuteRequest after session start"})
 			if err := sendError(s.stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INTERNAL, "ExecuteRequest only valid as first message"); err != nil {
 				return err
 			}
@@ -336,14 +332,13 @@ func (s *Session) loop(ctx context.Context) error {
 			s.handleToolCallResponse(r.ToolCallResponse)
 
 		case *agentdv1.RunRequest_Cancel:
-			s.emit(ctx, EventCancelRequested, nil)
 			s.handleCancel(r.Cancel)
 
 		case *agentdv1.RunRequest_End:
 			return s.handleEnd(r.End)
 
 		default:
-			s.emit(ctx, EventError, map[string]any{"message": fmt.Sprintf("received unknown request type: %T", r)})
+			s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: fmt.Sprintf("received unknown request type: %T", r)})
 			if err := sendError(s.stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INTERNAL, fmt.Sprintf("unknown request type: %T", r)); err != nil {
 				return err
 			}
@@ -398,11 +393,12 @@ func (s *Session) DispatchToolCall(ctx context.Context, toolCallID, toolName, to
 	s.pendingTools[toolCallID] = ch
 	s.mu.Unlock()
 
-	s.emit(ctx, EventToolDispatched, map[string]any{
-		"tool_call_id": toolCallID,
-		"tool_name":    toolName,
-		"agent_path":   agentPath,
-		"input_len":    len(toolInput),
+	s.plugins.OnToolDispatched(ctx, ToolDispatchInfo{
+		SessionID:  s.id,
+		ToolCallID: toolCallID,
+		ToolName:   toolName,
+		AgentPath:  agentPath,
+		InputLen:   len(toolInput),
 	})
 
 	if err := s.stream.Send(&agentdv1.RunResponse{
@@ -419,10 +415,10 @@ func (s *Session) DispatchToolCall(ctx context.Context, toolCallID, toolName, to
 		s.mu.Lock()
 		delete(s.pendingTools, toolCallID)
 		s.mu.Unlock()
-		s.emit(ctx, EventError, map[string]any{
-			"message":      "failed to send tool call request",
-			"tool_call_id": toolCallID,
-			"error":        err.Error(),
+		s.plugins.OnError(ctx, ErrorInfo{
+			SessionID: s.id,
+			Message:   "failed to send tool call request",
+			Err:       err,
 		})
 		return nil, fmt.Errorf("sending tool call request: %w", err)
 	}
@@ -430,25 +426,26 @@ func (s *Session) DispatchToolCall(ctx context.Context, toolCallID, toolName, to
 	select {
 	case resp, ok := <-ch:
 		if !ok {
-			s.emit(ctx, EventError, map[string]any{
-				"message":      "session closed while waiting for tool call response",
-				"tool_call_id": toolCallID,
+			s.plugins.OnError(ctx, ErrorInfo{
+				SessionID: s.id,
+				Message:   "session closed while waiting for tool call response",
 			})
 			return nil, errors.New("session closed while waiting for tool call response")
 		}
-		s.emit(ctx, EventToolResponse, map[string]any{
-			"tool_call_id": toolCallID,
-			"tool_name":    toolName,
+		s.plugins.OnToolResponse(ctx, ToolResponseInfo{
+			SessionID:  s.id,
+			ToolCallID: toolCallID,
+			ToolName:   toolName,
 		})
 		return resp, nil
 	case <-ctx.Done():
 		s.mu.Lock()
 		delete(s.pendingTools, toolCallID)
 		s.mu.Unlock()
-		s.emit(ctx, EventError, map[string]any{
-			"message":      "tool call cancelled",
-			"tool_call_id": toolCallID,
-			"tool_name":    toolName,
+		s.plugins.OnError(ctx, ErrorInfo{
+			SessionID: s.id,
+			Message:   "tool call cancelled",
+			Err:       ctx.Err(),
 		})
 		return nil, ctx.Err()
 	}

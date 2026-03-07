@@ -1,9 +1,6 @@
 package agentd
 
 import (
-	"context"
-	"time"
-
 	"google.golang.org/genai"
 
 	"google.golang.org/adk/agent"
@@ -13,110 +10,120 @@ import (
 	"google.golang.org/adk/tool"
 )
 
-// newSessionEventPlugin creates an ADK plugin that bridges ADK lifecycle
-// callbacks into SessionEvents emitted through the given emitter.
-func newSessionEventPlugin(sessionID string, emitter *SessionEventEmitter) (*plugin.Plugin, error) {
-	emit := func(ctx context.Context, eventType SessionEventType, data map[string]any) {
-		emitter.Emit(ctx, SessionEvent{
-			Type:      eventType,
-			Timestamp: time.Now(),
-			SessionID: sessionID,
-			Data:      data,
-		})
-	}
-
+// newSessionPluginBridge creates an ADK plugin that delegates every ADK
+// lifecycle callback to the given PluginChain. Gate methods propagate errors
+// back to the ADK runner so it can short-circuit operations (e.g. block a
+// tool call or halt after exceeding a token budget).
+//
+// usageFn is called to obtain the cumulative session usage at the time of a
+// model call; it is typically bound to Session.currentUsage.
+func newSessionPluginBridge(sessionID string, chain *PluginChain, usageFn func() UsageInfo) (*plugin.Plugin, error) {
 	return plugin.New(plugin.Config{
-		Name: "session_event_bridge",
+		Name: "session_plugin_bridge",
 
 		OnUserMessageCallback: func(ctx agent.InvocationContext, content *genai.Content) (*genai.Content, error) {
-			var text string
+			var textLen int
 			if content != nil {
 				for _, p := range content.Parts {
 					if p.Text != "" {
-						text = p.Text
+						textLen = len(p.Text)
 						break
 					}
 				}
 			}
-			emit(ctx, EventUserMessage, map[string]any{
-				"agent":       ctx.Agent().Name(),
-				"content_len": len(text),
+			chain.OnUserMessage(ctx, UserMessageInfo{
+				SessionID:  sessionID,
+				AgentName:  ctx.Agent().Name(),
+				ContentLen: textLen,
 			})
 			return nil, nil
 		},
 
 		BeforeAgentCallback: func(ctx agent.CallbackContext) (*genai.Content, error) {
-			emit(ctx, EventAgentStarted, map[string]any{
-				"agent": ctx.AgentName(),
-			})
+			if err := chain.BeforeAgent(ctx, AgentInfo{
+				SessionID: sessionID,
+				AgentName: ctx.AgentName(),
+			}); err != nil {
+				return nil, err
+			}
 			return nil, nil
 		},
 
 		AfterAgentCallback: func(ctx agent.CallbackContext) (*genai.Content, error) {
-			emit(ctx, EventAgentEnded, map[string]any{
-				"agent": ctx.AgentName(),
+			chain.AfterAgent(ctx, AgentInfo{
+				SessionID: sessionID,
+				AgentName: ctx.AgentName(),
 			})
 			return nil, nil
 		},
 
 		BeforeModelCallback: func(ctx agent.CallbackContext, req *model.LLMRequest) (*model.LLMResponse, error) {
-			emit(ctx, EventModelRequest, map[string]any{
-				"agent": ctx.AgentName(),
-				"model": req.Model,
-			})
+			if err := chain.BeforeModelCall(ctx, ModelCallInfo{
+				SessionID:       sessionID,
+				AgentName:       ctx.AgentName(),
+				Model:           req.Model,
+				CumulativeUsage: usageFn(),
+			}); err != nil {
+				return nil, err
+			}
 			return nil, nil
 		},
 
 		AfterModelCallback: func(ctx agent.CallbackContext, resp *model.LLMResponse, respErr error) (*model.LLMResponse, error) {
-			data := map[string]any{
-				"agent": ctx.AgentName(),
+			info := ModelCallResult{
+				SessionID:       sessionID,
+				AgentName:       ctx.AgentName(),
+				CumulativeUsage: usageFn(),
+				Err:             respErr,
 			}
 			if resp != nil && resp.UsageMetadata != nil {
-				data["prompt_tokens"] = resp.UsageMetadata.PromptTokenCount
-				data["completion_tokens"] = resp.UsageMetadata.CandidatesTokenCount
-				data["total_tokens"] = resp.UsageMetadata.TotalTokenCount
+				info.PromptTokens = int32(resp.UsageMetadata.PromptTokenCount)
+				info.CompletionTokens = int32(resp.UsageMetadata.CandidatesTokenCount)
+				info.TotalTokens = int32(resp.UsageMetadata.TotalTokenCount)
 			}
-			if respErr != nil {
-				data["error"] = respErr.Error()
+			if err := chain.AfterModelCall(ctx, info); err != nil {
+				return nil, err
 			}
-			emit(ctx, EventModelResponse, data)
 			return nil, nil
 		},
 
 		OnModelErrorCallback: func(ctx agent.CallbackContext, req *model.LLMRequest, err error) (*model.LLMResponse, error) {
-			emit(ctx, EventModelError, map[string]any{
-				"agent": ctx.AgentName(),
-				"model": req.Model,
-				"error": err.Error(),
+			chain.OnError(ctx, ErrorInfo{
+				SessionID: sessionID,
+				Message:   "model error on " + req.Model,
+				Err:       err,
 			})
 			return nil, nil
 		},
 
 		BeforeToolCallback: func(ctx tool.Context, t tool.Tool, args map[string]any) (map[string]any, error) {
-			emit(ctx, EventToolStarted, map[string]any{
-				"agent":     ctx.AgentName(),
-				"tool_name": t.Name(),
+			if err := chain.BeforeToolCall(ctx, ToolCallInfo{
+				SessionID: sessionID,
+				ToolName:  t.Name(),
+				AgentName: ctx.AgentName(),
+				Args:      args,
+			}); err != nil {
+				return nil, err
+			}
+			return nil, nil
+		},
+
+		AfterToolCallback: func(ctx tool.Context, t tool.Tool, args, result map[string]any, toolErr error) (map[string]any, error) {
+			chain.AfterToolCall(ctx, ToolCallResult{
+				SessionID: sessionID,
+				ToolName:  t.Name(),
+				AgentName: ctx.AgentName(),
+				Result:    result,
+				Err:       toolErr,
 			})
 			return nil, nil
 		},
 
-		AfterToolCallback: func(ctx tool.Context, t tool.Tool, args, result map[string]any, err error) (map[string]any, error) {
-			data := map[string]any{
-				"agent":     ctx.AgentName(),
-				"tool_name": t.Name(),
-			}
-			if err != nil {
-				data["error"] = err.Error()
-			}
-			emit(ctx, EventToolCompleted, data)
-			return nil, nil
-		},
-
 		OnToolErrorCallback: func(ctx tool.Context, t tool.Tool, args map[string]any, err error) (map[string]any, error) {
-			emit(ctx, EventToolError, map[string]any{
-				"agent":     ctx.AgentName(),
-				"tool_name": t.Name(),
-				"error":     err.Error(),
+			chain.OnError(ctx, ErrorInfo{
+				SessionID: sessionID,
+				Message:   "tool error on " + t.Name(),
+				Err:       err,
 			})
 			return nil, nil
 		},
