@@ -13,19 +13,19 @@ import (
 type AuditEntryType string
 
 const (
-	AuditSessionStarted  AuditEntryType = "session_started"
-	AuditSessionEnded    AuditEntryType = "session_ended"
-	AuditAgentStarted    AuditEntryType = "agent_started"
-	AuditAgentEnded      AuditEntryType = "agent_ended"
-	AuditModelRequest    AuditEntryType = "model_request"
-	AuditModelResponse   AuditEntryType = "model_response"
-	AuditToolStarted     AuditEntryType = "tool_started"
-	AuditToolCompleted   AuditEntryType = "tool_completed"
-	AuditToolDispatched  AuditEntryType = "tool_dispatched"
-	AuditToolResponse    AuditEntryType = "tool_response"
-	AuditOutputChunk     AuditEntryType = "output_chunk"
-	AuditUserMessage     AuditEntryType = "user_message"
-	AuditError           AuditEntryType = "error"
+	AuditSessionStarted AuditEntryType = "session_started"
+	AuditSessionEnded   AuditEntryType = "session_ended"
+	AuditAgentStarted   AuditEntryType = "agent_started"
+	AuditAgentEnded     AuditEntryType = "agent_ended"
+	AuditModelRequest   AuditEntryType = "model_request"
+	AuditModelResponse  AuditEntryType = "model_response"
+	AuditToolStarted    AuditEntryType = "tool_started"
+	AuditToolCompleted  AuditEntryType = "tool_completed"
+	AuditToolDispatched AuditEntryType = "tool_dispatched"
+	AuditToolResponse   AuditEntryType = "tool_response"
+	AuditOutputChunk    AuditEntryType = "output_chunk"
+	AuditUserMessage    AuditEntryType = "user_message"
+	AuditError          AuditEntryType = "error"
 )
 
 // AuditEntry is a flat JSON-serializable record stored for each session event.
@@ -199,10 +199,10 @@ func (NoopAuditStore) Store(context.Context, AuditEntry) error { return nil }
 
 // auditEntryRow is the GORM model for the audit_entries table.
 type auditEntryRow struct {
-	ID        uint           `gorm:"primaryKey;autoIncrement"`
-	SessionID string         `gorm:"index;not null"`
-	Type      AuditEntryType `gorm:"not null"`
-	Timestamp time.Time      `gorm:"not null"`
+	ID        uint            `gorm:"primaryKey;autoIncrement"`
+	SessionID string          `gorm:"index;not null"`
+	Type      AuditEntryType  `gorm:"not null"`
+	Timestamp time.Time       `gorm:"not null"`
 	Data      json.RawMessage `gorm:"type:text"`
 }
 
