@@ -26,8 +26,18 @@ func WithTavilyAPIKey(key string) SessionOption {
 	}
 }
 
-func WithEventEmitter(emitter *SessionEventEmitter) SessionOption {
+// WithPlugin registers a single SessionPlugin with the session's plugin chain.
+func WithPlugin(p SessionPlugin) SessionOption {
 	return func(s *Session) {
-		s.emitter = emitter
+		s.plugins.Register(p)
+	}
+}
+
+// WithPlugins registers multiple SessionPlugins with the session's plugin chain.
+func WithPlugins(plugins ...SessionPlugin) SessionOption {
+	return func(s *Session) {
+		for _, p := range plugins {
+			s.plugins.Register(p)
+		}
 	}
 }

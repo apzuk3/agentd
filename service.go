@@ -19,7 +19,7 @@ type Service struct {
 	OpenAIAPIKey    string
 	TavilyAPIKey    string
 
-	EventEmitter *SessionEventEmitter
+	Plugins []SessionPlugin
 }
 
 func (s *Service) Run(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]) error {
@@ -40,8 +40,8 @@ func (s *Service) Run(ctx context.Context, stream *connect.BidiStream[agentdv1.R
 		WithTavilyAPIKey(keys.TavilyAPIKey),
 	}
 
-	if s.EventEmitter != nil {
-		opts = append(opts, WithEventEmitter(s.EventEmitter))
+	if len(s.Plugins) > 0 {
+		opts = append(opts, WithPlugins(s.Plugins...))
 	}
 
 	return NewSession(ctx, stream, opts...)
