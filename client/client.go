@@ -8,6 +8,7 @@ import (
 	"iter"
 	"maps"
 	"net"
+	"strings"
 	"net/http"
 	"sync"
 	"time"
@@ -287,6 +288,14 @@ type Error struct {
 	Retryable bool
 }
 
+// Result is returned by the synchronous Run method and contains the
+// aggregated output from a completed agent session.
+type Result struct {
+	Output       string
+	State        map[string]string
+	UsageSummary *agentdv1.UsageSummary
+}
+
 func errorEvent(format string, args ...any) *Event {
 	return &Event{
 		Error: &Error{
@@ -296,11 +305,11 @@ func errorEvent(format string, args ...any) *Event {
 	}
 }
 
-// Run opens a bidirectional stream to the server, sends the agent tree and
-// user prompt, and returns an iterator that yields events. Tool calls and
+// RunAsync opens a bidirectional stream to the server, sends the agent tree
+// and user prompt, and returns an iterator that yields events. Tool calls and
 // heartbeats are handled internally. Breaking out of the iterator cancels
 // the session.
-func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt string, opts ...RunOption) iter.Seq2[*Event, error] {
+func (c *Client) RunAsync(ctx context.Context, agent *agentdv1.Agent, userPrompt string, opts ...RunOption) iter.Seq2[*Event, error] {
 	var rc runConfig
 	for _, o := range opts {
 		o(&rc)
@@ -499,6 +508,35 @@ func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt stri
 			}
 		}
 	}
+}
+
+// Run executes the agent synchronously, blocking until the session completes,
+// and returns the aggregated result. It uses RunAsync internally.
+func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt string, opts ...RunOption) (*Result, error) {
+	var buf strings.Builder
+	state := make(map[string]string)
+	var usage *agentdv1.UsageSummary
+
+	for ev, _ := range c.RunAsync(ctx, agent, userPrompt, opts...) {
+		switch {
+		case ev.Error != nil:
+			return nil, fmt.Errorf("agent error (code %v): %s", ev.Error.Code, ev.Error.Message)
+		case ev.OutputChunk != nil:
+			if !ev.OutputChunk.IsThought {
+				buf.WriteString(ev.OutputChunk.Content)
+			}
+		case ev.StateUpdate != nil:
+			maps.Copy(state, ev.StateUpdate.State)
+		case ev.End != nil:
+			usage = ev.End.UsageSummary
+		}
+	}
+
+	return &Result{
+		Output:       buf.String(),
+		State:        state,
+		UsageSummary: usage,
+	}, nil
 }
 
 // headerInterceptor injects per-run HTTP headers into the outgoing request.

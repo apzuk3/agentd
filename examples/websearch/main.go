@@ -24,7 +24,7 @@ func main() {
 		},
 	}
 
-	iter := clnt.Run(context.Background(), agent, "What are the latest developments in Go 1.26?")
+	iter := clnt.RunAsync(context.Background(), agent, "What are the latest developments in Go 1.26?")
 	for event, err := range iter {
 		if err != nil {
 			log.Fatalf("failed to run agent: %v", err)

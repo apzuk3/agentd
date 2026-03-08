@@ -87,7 +87,7 @@ func main() {
 		},
 	}
 
-	iter := agentdClient.Run(context.Background(), agent, "is agentd.run available?")
+	iter := agentdClient.RunAsync(context.Background(), agent, "is agentd.run available?")
 	for event, err := range iter {
 		if err != nil {
 			log.Fatalf("failed to run agent: %v", err)
