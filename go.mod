@@ -14,6 +14,7 @@ require (
 	google.golang.org/adk v0.5.0
 	google.golang.org/genai v1.47.0
 	google.golang.org/protobuf v1.36.11
+	gorm.io/gorm v1.31.1
 )
 
 require (
@@ -59,7 +60,6 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/grpc v1.77.0 // indirect
-	gorm.io/gorm v1.31.1 // indirect
 	rsc.io/omap v1.2.0 // indirect
 	rsc.io/ordered v1.1.1 // indirect
 )
