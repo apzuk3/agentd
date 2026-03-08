@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/apzuk3/agentd/client"
+	"github.com/apzuk3/agentd/pkg/client"
 	agentdv1 "github.com/apzuk3/agentd/gen/proto/go/agentd/v1"
 )
 

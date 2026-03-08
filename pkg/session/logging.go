@@ -1,15 +1,17 @@
-package agentd
+package session
 
 import (
 	"context"
 	"log/slog"
+
+	"github.com/apzuk3/agentd"
 )
 
 // LogPlugin is a SessionPlugin that logs every lifecycle event via slog.
 // Register it with a PluginChain to get structured logging for the full
 // session lifecycle.
 type LogPlugin struct {
-	BasePlugin
+	agentd.BasePlugin
 	log *slog.Logger
 }
 
@@ -22,7 +24,7 @@ func NewLogPlugin(logger *slog.Logger) *LogPlugin {
 	return &LogPlugin{log: logger}
 }
 
-func (l *LogPlugin) OnSessionStart(ctx context.Context, info SessionStartInfo) error {
+func (l *LogPlugin) OnSessionStart(ctx context.Context, info agentd.SessionStartInfo) error {
 	l.log.InfoContext(ctx, "session started",
 		"session_id", info.SessionID,
 		"root_agent", info.RootAgent,
@@ -31,7 +33,7 @@ func (l *LogPlugin) OnSessionStart(ctx context.Context, info SessionStartInfo) e
 	return nil
 }
 
-func (l *LogPlugin) OnSessionEnd(ctx context.Context, info SessionEndInfo) {
+func (l *LogPlugin) OnSessionEnd(ctx context.Context, info agentd.SessionEndInfo) {
 	l.log.InfoContext(ctx, "session ended",
 		"session_id", info.SessionID,
 		"prompt_tokens", info.Usage.PromptTokens,
@@ -44,7 +46,7 @@ func (l *LogPlugin) OnSessionEnd(ctx context.Context, info SessionEndInfo) {
 	)
 }
 
-func (l *LogPlugin) BeforeAgent(ctx context.Context, info AgentInfo) error {
+func (l *LogPlugin) BeforeAgent(ctx context.Context, info agentd.AgentInfo) error {
 	l.log.DebugContext(ctx, "agent started",
 		"session_id", info.SessionID,
 		"agent", info.AgentName,
@@ -52,14 +54,14 @@ func (l *LogPlugin) BeforeAgent(ctx context.Context, info AgentInfo) error {
 	return nil
 }
 
-func (l *LogPlugin) AfterAgent(ctx context.Context, info AgentInfo) {
+func (l *LogPlugin) AfterAgent(ctx context.Context, info agentd.AgentInfo) {
 	l.log.DebugContext(ctx, "agent ended",
 		"session_id", info.SessionID,
 		"agent", info.AgentName,
 	)
 }
 
-func (l *LogPlugin) BeforeModelCall(ctx context.Context, info ModelCallInfo) error {
+func (l *LogPlugin) BeforeModelCall(ctx context.Context, info agentd.ModelCallInfo) error {
 	l.log.DebugContext(ctx, "model request",
 		"session_id", info.SessionID,
 		"agent", info.AgentName,
@@ -68,7 +70,7 @@ func (l *LogPlugin) BeforeModelCall(ctx context.Context, info ModelCallInfo) err
 	return nil
 }
 
-func (l *LogPlugin) AfterModelCall(ctx context.Context, info ModelCallResult) error {
+func (l *LogPlugin) AfterModelCall(ctx context.Context, info agentd.ModelCallResult) error {
 	l.log.DebugContext(ctx, "model response",
 		"session_id", info.SessionID,
 		"agent", info.AgentName,
@@ -79,7 +81,7 @@ func (l *LogPlugin) AfterModelCall(ctx context.Context, info ModelCallResult) er
 	return nil
 }
 
-func (l *LogPlugin) BeforeToolCall(ctx context.Context, info ToolCallInfo) error {
+func (l *LogPlugin) BeforeToolCall(ctx context.Context, info agentd.ToolCallInfo) error {
 	l.log.DebugContext(ctx, "tool started",
 		"session_id", info.SessionID,
 		"agent", info.AgentName,
@@ -88,7 +90,7 @@ func (l *LogPlugin) BeforeToolCall(ctx context.Context, info ToolCallInfo) error
 	return nil
 }
 
-func (l *LogPlugin) AfterToolCall(ctx context.Context, info ToolCallResult) {
+func (l *LogPlugin) AfterToolCall(ctx context.Context, info agentd.ToolCallResult) {
 	if info.Err != nil {
 		l.log.ErrorContext(ctx, "tool error",
 			"session_id", info.SessionID,
@@ -105,7 +107,7 @@ func (l *LogPlugin) AfterToolCall(ctx context.Context, info ToolCallResult) {
 	)
 }
 
-func (l *LogPlugin) OnToolDispatched(ctx context.Context, info ToolDispatchInfo) {
+func (l *LogPlugin) OnToolDispatched(ctx context.Context, info agentd.ToolDispatchInfo) {
 	l.log.InfoContext(ctx, "tool dispatched",
 		"session_id", info.SessionID,
 		"tool_call_id", info.ToolCallID,
@@ -115,7 +117,7 @@ func (l *LogPlugin) OnToolDispatched(ctx context.Context, info ToolDispatchInfo)
 	)
 }
 
-func (l *LogPlugin) OnToolResponse(ctx context.Context, info ToolResponseInfo) {
+func (l *LogPlugin) OnToolResponse(ctx context.Context, info agentd.ToolResponseInfo) {
 	l.log.InfoContext(ctx, "tool response received",
 		"session_id", info.SessionID,
 		"tool_call_id", info.ToolCallID,
@@ -123,7 +125,7 @@ func (l *LogPlugin) OnToolResponse(ctx context.Context, info ToolResponseInfo) {
 	)
 }
 
-func (l *LogPlugin) OnOutputChunk(ctx context.Context, info OutputChunkInfo) {
+func (l *LogPlugin) OnOutputChunk(ctx context.Context, info agentd.OutputChunkInfo) {
 	l.log.DebugContext(ctx, "output chunk",
 		"session_id", info.SessionID,
 		"agent", info.AgentName,
@@ -133,7 +135,7 @@ func (l *LogPlugin) OnOutputChunk(ctx context.Context, info OutputChunkInfo) {
 	)
 }
 
-func (l *LogPlugin) OnUserMessage(ctx context.Context, info UserMessageInfo) {
+func (l *LogPlugin) OnUserMessage(ctx context.Context, info agentd.UserMessageInfo) {
 	l.log.DebugContext(ctx, "user message",
 		"session_id", info.SessionID,
 		"agent", info.AgentName,
@@ -141,7 +143,7 @@ func (l *LogPlugin) OnUserMessage(ctx context.Context, info UserMessageInfo) {
 	)
 }
 
-func (l *LogPlugin) OnError(ctx context.Context, info ErrorInfo) {
+func (l *LogPlugin) OnError(ctx context.Context, info agentd.ErrorInfo) {
 	l.log.ErrorContext(ctx, "session error",
 		"session_id", info.SessionID,
 		"message", info.Message,
@@ -149,4 +151,4 @@ func (l *LogPlugin) OnError(ctx context.Context, info ErrorInfo) {
 	)
 }
 
-var _ SessionPlugin = (*LogPlugin)(nil)
+var _ agentd.SessionPlugin = (*LogPlugin)(nil)

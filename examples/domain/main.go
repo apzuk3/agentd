@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/apzuk3/agentd/client"
+	"github.com/apzuk3/agentd/pkg/client"
 	agentdv1 "github.com/apzuk3/agentd/gen/proto/go/agentd/v1"
 )
 
@@ -57,24 +57,20 @@ func checkDomainAvailability(domain string) (bool, error) {
 }
 
 func main() {
-	agentdClient := client.New("http://localhost:8080")
+	agentdClient := client.New("http://localhost:8080",
+		client.MustTool("domainnamechecker", "Checks if a domain name is available", func(ctx context.Context, input DomainNameCheckerInput) (any, error) {
+			slog.Info("Checking domain name", "domain_name", input.DomainName)
 
-	err := client.AddTool(agentdClient, "domainnamechecker", "Checks if a domain name is available", func(ctx context.Context, input DomainNameCheckerInput) (any, error) {
-		slog.Info("Checking domain name", "domain_name", input.DomainName)
+			available, err := checkDomainAvailability(input.DomainName)
+			if err != nil {
+				return nil, fmt.Errorf("checking domain availability: %w", err)
+			}
 
-		available, err := checkDomainAvailability(input.DomainName)
-		if err != nil {
-			return nil, fmt.Errorf("checking domain availability: %w", err)
-		}
-
-		return DomainNameCheckerOutput{
-			Available: available,
-		}, nil
-	})
-
-	if err != nil {
-		log.Fatalf("failed to add tool: %v", err)
-	}
+			return DomainNameCheckerOutput{
+				Available: available,
+			}, nil
+		}),
+	)
 
 	agent := &agentdv1.Agent{
 		Name:        "domainnamechecker",

@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/apzuk3/agentd/client"
+	"github.com/apzuk3/agentd/pkg/client"
 	agentdv1 "github.com/apzuk3/agentd/gen/proto/go/agentd/v1"
 )
 
@@ -41,13 +41,13 @@ type GreetOutput struct {
 }
 
 func main() {
-	clnt := client.New("http://localhost:8080")
-
-	// Register a tool — the handler runs on the client, keeping data private.
-	// Use concrete struct types so AddTool[T] can generate the JSON schema.
-	client.AddTool(clnt, "greet", "Returns a greeting", func(ctx context.Context, input GreetInput) (any, error) {
-		return GreetOutput{Greeting: "Hello, " + input.Name + "!"}, nil
-	})
+	clnt := client.New("http://localhost:8080",
+		// Register a tool — the handler runs on the client, keeping data private.
+		// The input type is inferred from the function signature.
+		client.MustTool("greet", "Returns a greeting", func(ctx context.Context, input GreetInput) (any, error) {
+			return GreetOutput{Greeting: "Hello, " + input.Name + "!"}, nil
+		}),
+	)
 
 	// Define an agent that can use the tool.
 	agent := &agentdv1.Agent{

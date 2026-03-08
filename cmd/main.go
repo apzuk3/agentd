@@ -11,6 +11,7 @@ import (
 
 	"github.com/apzuk3/agentd"
 	"github.com/apzuk3/agentd/gen/proto/go/agentd/v1/agentdv1connect"
+	"github.com/apzuk3/agentd/pkg/session"
 )
 
 func main() {
@@ -34,8 +35,8 @@ func main() {
 		OpenAIAPIKey:    openaiAPIKey,
 		TavilyAPIKey:    tavilyAPIKey,
 		Plugins: []agentd.SessionPlugin{
-			agentd.NewLogPlugin(slog.Default()),
-			agentd.NewAuditPlugin(agentd.NoopAuditStore{}),
+			session.NewLogPlugin(slog.Default()),
+			session.NewAuditPlugin(session.NoopAuditStore{}),
 		},
 	}
 

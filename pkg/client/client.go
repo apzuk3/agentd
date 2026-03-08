@@ -8,8 +8,9 @@ import (
 	"iter"
 	"maps"
 	"net"
-	"strings"
 	"net/http"
+	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -89,15 +90,41 @@ func New(baseURL string, opts ...Option) *Client {
 	return c
 }
 
-// AddTool registers a tool whose input schema is automatically generated from T.
-// T must be a concrete struct (not any/interface{}); use json tags for field
-// names and the "jsonschema" struct tag for property descriptions.
-// The handler fn receives the parsed input and returns a result that is
-// JSON-marshaled back to the server.
-func AddTool[T any](c *Client, name, description string, fn func(context.Context, T) (any, error)) error {
-	schema, err := jsonschema.For[T](nil)
+var (
+	contextType = reflect.TypeFor[context.Context]()
+	errorType   = reflect.TypeFor[error]()
+)
+
+// AddTool registers a tool whose input schema is inferred from fn's signature.
+// fn must be a function with the signature func(context.Context, T) (R, error)
+// where T is a concrete struct; use json tags for field names and the
+// "jsonschema" struct tag for property descriptions. The return value R is
+// JSON-marshaled back to the server (strings are sent as-is).
+func (c *Client) AddTool(name, description string, fn any) error {
+	fnVal := reflect.ValueOf(fn)
+	fnType := fnVal.Type()
+
+	if fnType.Kind() != reflect.Func {
+		return fmt.Errorf("AddTool %q: fn must be a function, got %T", name, fn)
+	}
+	if fnType.NumIn() != 2 {
+		return fmt.Errorf("AddTool %q: fn must accept exactly 2 parameters (context.Context, T), got %d", name, fnType.NumIn())
+	}
+	if fnType.NumOut() != 2 {
+		return fmt.Errorf("AddTool %q: fn must return exactly 2 values (result, error), got %d", name, fnType.NumOut())
+	}
+	if !fnType.In(0).Implements(contextType) {
+		return fmt.Errorf("AddTool %q: first parameter must be context.Context, got %s", name, fnType.In(0))
+	}
+	if !fnType.Out(1).Implements(errorType) {
+		return fmt.Errorf("AddTool %q: second return value must implement error, got %s", name, fnType.Out(1))
+	}
+
+	inputType := fnType.In(1)
+
+	schema, err := jsonschema.ForType(inputType, nil)
 	if err != nil {
-		return fmt.Errorf("failed to infer input schema for tool %q: %w (T must be a concrete struct, not any/interface{})", name, err)
+		return fmt.Errorf("failed to infer input schema for tool %q: %w (input must be a concrete struct)", name, err)
 	}
 
 	b, err := json.Marshal(schema)
@@ -119,16 +146,17 @@ func AddTool[T any](c *Client, name, description string, fn func(context.Context
 	c.tools[name] = &registeredTool{
 		proto: toolProto,
 		handler: func(ctx context.Context, input string) (string, error) {
-			var args T
+			argPtr := reflect.New(inputType)
 			if input != "" {
-				if err := json.Unmarshal([]byte(input), &args); err != nil {
+				if err := json.Unmarshal([]byte(input), argPtr.Interface()); err != nil {
 					return "", fmt.Errorf("unmarshaling tool input: %w", err)
 				}
 			}
-			result, err := fn(ctx, args)
-			if err != nil {
-				return "", err
+			results := fnVal.Call([]reflect.Value{reflect.ValueOf(ctx), argPtr.Elem()})
+			if !results[1].IsNil() {
+				return "", results[1].Interface().(error)
 			}
+			result := results[0].Interface()
 			switch v := result.(type) {
 			case string:
 				return v, nil
@@ -142,6 +170,17 @@ func AddTool[T any](c *Client, name, description string, fn func(context.Context
 		},
 	}
 	return nil
+}
+
+// MustTool returns an Option that registers a tool during client construction.
+// It panics if the tool definition is invalid. See [Client.AddTool] for fn
+// signature requirements.
+func MustTool(name, description string, fn any) Option {
+	return func(c *Client) {
+		if err := c.AddTool(name, description, fn); err != nil {
+			panic(fmt.Sprintf("MustTool: %v", err))
+		}
+	}
 }
 
 // resolveTools walks the agent tree, collects all tool_names from LlmAgents,

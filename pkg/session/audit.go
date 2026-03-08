@@ -1,4 +1,4 @@
-package agentd
+package session
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+
+	"github.com/apzuk3/agentd"
 )
 
 // AuditEntryType identifies the kind of audit record.
@@ -47,7 +49,7 @@ type AuditStore interface {
 // AuditPlugin is a SessionPlugin that serialises each lifecycle event into
 // an AuditEntry and passes it to an AuditStore for persistence.
 type AuditPlugin struct {
-	BasePlugin
+	agentd.BasePlugin
 	store AuditStore
 }
 
@@ -65,7 +67,7 @@ func (a *AuditPlugin) storeEntry(ctx context.Context, typ AuditEntryType, sessio
 	})
 }
 
-func (a *AuditPlugin) OnSessionStart(ctx context.Context, info SessionStartInfo) error {
+func (a *AuditPlugin) OnSessionStart(ctx context.Context, info agentd.SessionStartInfo) error {
 	a.storeEntry(ctx, AuditSessionStarted, info.SessionID, map[string]any{
 		"root_agent":  info.RootAgent,
 		"tool_count":  info.ToolCount,
@@ -74,7 +76,7 @@ func (a *AuditPlugin) OnSessionStart(ctx context.Context, info SessionStartInfo)
 	return nil
 }
 
-func (a *AuditPlugin) OnSessionEnd(ctx context.Context, info SessionEndInfo) {
+func (a *AuditPlugin) OnSessionEnd(ctx context.Context, info agentd.SessionEndInfo) {
 	data := map[string]any{
 		"prompt_tokens":     info.Usage.PromptTokens,
 		"completion_tokens": info.Usage.CompletionTokens,
@@ -89,20 +91,20 @@ func (a *AuditPlugin) OnSessionEnd(ctx context.Context, info SessionEndInfo) {
 	a.storeEntry(ctx, AuditSessionEnded, info.SessionID, data)
 }
 
-func (a *AuditPlugin) BeforeAgent(ctx context.Context, info AgentInfo) error {
+func (a *AuditPlugin) BeforeAgent(ctx context.Context, info agentd.AgentInfo) error {
 	a.storeEntry(ctx, AuditAgentStarted, info.SessionID, map[string]any{
 		"agent": info.AgentName,
 	})
 	return nil
 }
 
-func (a *AuditPlugin) AfterAgent(ctx context.Context, info AgentInfo) {
+func (a *AuditPlugin) AfterAgent(ctx context.Context, info agentd.AgentInfo) {
 	a.storeEntry(ctx, AuditAgentEnded, info.SessionID, map[string]any{
 		"agent": info.AgentName,
 	})
 }
 
-func (a *AuditPlugin) BeforeModelCall(ctx context.Context, info ModelCallInfo) error {
+func (a *AuditPlugin) BeforeModelCall(ctx context.Context, info agentd.ModelCallInfo) error {
 	a.storeEntry(ctx, AuditModelRequest, info.SessionID, map[string]any{
 		"agent": info.AgentName,
 		"model": info.Model,
@@ -110,7 +112,7 @@ func (a *AuditPlugin) BeforeModelCall(ctx context.Context, info ModelCallInfo) e
 	return nil
 }
 
-func (a *AuditPlugin) AfterModelCall(ctx context.Context, info ModelCallResult) error {
+func (a *AuditPlugin) AfterModelCall(ctx context.Context, info agentd.ModelCallResult) error {
 	data := map[string]any{
 		"agent":             info.AgentName,
 		"prompt_tokens":     info.PromptTokens,
@@ -124,7 +126,7 @@ func (a *AuditPlugin) AfterModelCall(ctx context.Context, info ModelCallResult) 
 	return nil
 }
 
-func (a *AuditPlugin) BeforeToolCall(ctx context.Context, info ToolCallInfo) error {
+func (a *AuditPlugin) BeforeToolCall(ctx context.Context, info agentd.ToolCallInfo) error {
 	a.storeEntry(ctx, AuditToolStarted, info.SessionID, map[string]any{
 		"agent":     info.AgentName,
 		"tool_name": info.ToolName,
@@ -132,7 +134,7 @@ func (a *AuditPlugin) BeforeToolCall(ctx context.Context, info ToolCallInfo) err
 	return nil
 }
 
-func (a *AuditPlugin) AfterToolCall(ctx context.Context, info ToolCallResult) {
+func (a *AuditPlugin) AfterToolCall(ctx context.Context, info agentd.ToolCallResult) {
 	data := map[string]any{
 		"agent":     info.AgentName,
 		"tool_name": info.ToolName,
@@ -143,7 +145,7 @@ func (a *AuditPlugin) AfterToolCall(ctx context.Context, info ToolCallResult) {
 	a.storeEntry(ctx, AuditToolCompleted, info.SessionID, data)
 }
 
-func (a *AuditPlugin) OnToolDispatched(ctx context.Context, info ToolDispatchInfo) {
+func (a *AuditPlugin) OnToolDispatched(ctx context.Context, info agentd.ToolDispatchInfo) {
 	a.storeEntry(ctx, AuditToolDispatched, info.SessionID, map[string]any{
 		"tool_call_id": info.ToolCallID,
 		"tool_name":    info.ToolName,
@@ -152,14 +154,14 @@ func (a *AuditPlugin) OnToolDispatched(ctx context.Context, info ToolDispatchInf
 	})
 }
 
-func (a *AuditPlugin) OnToolResponse(ctx context.Context, info ToolResponseInfo) {
+func (a *AuditPlugin) OnToolResponse(ctx context.Context, info agentd.ToolResponseInfo) {
 	a.storeEntry(ctx, AuditToolResponse, info.SessionID, map[string]any{
 		"tool_call_id": info.ToolCallID,
 		"tool_name":    info.ToolName,
 	})
 }
 
-func (a *AuditPlugin) OnOutputChunk(ctx context.Context, info OutputChunkInfo) {
+func (a *AuditPlugin) OnOutputChunk(ctx context.Context, info agentd.OutputChunkInfo) {
 	a.storeEntry(ctx, AuditOutputChunk, info.SessionID, map[string]any{
 		"agent":       info.AgentName,
 		"is_thought":  info.IsThought,
@@ -168,14 +170,14 @@ func (a *AuditPlugin) OnOutputChunk(ctx context.Context, info OutputChunkInfo) {
 	})
 }
 
-func (a *AuditPlugin) OnUserMessage(ctx context.Context, info UserMessageInfo) {
+func (a *AuditPlugin) OnUserMessage(ctx context.Context, info agentd.UserMessageInfo) {
 	a.storeEntry(ctx, AuditUserMessage, info.SessionID, map[string]any{
 		"agent":       info.AgentName,
 		"content_len": info.ContentLen,
 	})
 }
 
-func (a *AuditPlugin) OnError(ctx context.Context, info ErrorInfo) {
+func (a *AuditPlugin) OnError(ctx context.Context, info agentd.ErrorInfo) {
 	data := map[string]any{
 		"message": info.Message,
 	}
@@ -239,7 +241,7 @@ func (s *DatabaseAuditStore) Store(ctx context.Context, entry AuditEntry) error 
 }
 
 var (
-	_ SessionPlugin = (*AuditPlugin)(nil)
-	_ AuditStore    = NoopAuditStore{}
-	_ AuditStore    = (*DatabaseAuditStore)(nil)
+	_ agentd.SessionPlugin = (*AuditPlugin)(nil)
+	_ AuditStore           = NoopAuditStore{}
+	_ AuditStore           = (*DatabaseAuditStore)(nil)
 )
