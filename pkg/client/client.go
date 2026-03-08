@@ -95,6 +95,71 @@ var (
 	errorType   = reflect.TypeFor[error]()
 )
 
+// Model name constants for use with LlmAgent.Model. These are the supported
+// model identifiers for each provider; use the string values directly when
+// constructing agent definitions. Model availability may change; consult each
+// provider's documentation for current offerings.
+const (
+	// ——— Gemini (Google) ———
+	// Gemini 2.5: most advanced, best price-performance.
+	ModelGemini25Pro        = "gemini-2.5-pro"
+	ModelGemini25Flash      = "gemini-2.5-flash"
+	ModelGemini25FlashLite  = "gemini-2.5-flash-lite"
+	// Gemini 3: preview, next-generation.
+	ModelGemini31ProPreview     = "gemini-3.1-pro-preview"
+	ModelGemini3FlashPreview    = "gemini-3-flash-preview"
+	ModelGemini31FlashLitePreview = "gemini-3.1-flash-lite-preview"
+	// Gemini 2.0: legacy (retiring June 2026).
+	ModelGemini20Flash      = "gemini-2.0-flash"
+	ModelGemini20FlashLite  = "gemini-2.0-flash-lite"
+	// Gemini 1.5: stable older generation.
+	ModelGemini15Pro        = "gemini-1.5-pro"
+	ModelGemini15Flash      = "gemini-1.5-flash"
+	ModelGemini15FlashLite  = "gemini-1.5-flash-lite"
+
+	// ——— Claude (Anthropic) ———
+	// Claude 4: latest frontier models.
+	ModelClaudeOpus46   = "claude-opus-4-6"
+	ModelClaudeSonnet46 = "claude-sonnet-4-6"
+	ModelClaudeHaiku45  = "claude-haiku-4-5"
+	// Claude 3.5: previous generation.
+	ModelClaude35Sonnet = "claude-3-5-sonnet-20241022"
+	ModelClaude35Haiku  = "claude-3-5-haiku-20241022"
+	// Claude 3: legacy.
+	ModelClaude3Opus   = "claude-3-opus-20240229"
+	ModelClaude3Sonnet = "claude-3-sonnet-20240229"
+	ModelClaude3Haiku  = "claude-3-haiku-20240307"
+
+	// ——— OpenAI ———
+	// GPT-5: flagship and reasoning.
+	ModelGPT54       = "gpt-5.4"
+	ModelGPT54Pro    = "gpt-5.4-pro"
+	ModelGPT5Mini    = "gpt-5-mini"
+	ModelGPT5Nano    = "gpt-5-nano"
+	ModelGPT5        = "gpt-5"
+	ModelGPT5Pro     = "gpt-5-pro"
+	ModelGPT52       = "gpt-5.2"
+	ModelGPT51       = "gpt-5.1"
+	// GPT-4: smart non-reasoning.
+	ModelGPT41       = "gpt-4.1"
+	ModelGPT41Mini   = "gpt-4.1-mini"
+	ModelGPT41Nano   = "gpt-4.1-nano"
+	ModelGPT4o       = "gpt-4o"
+	ModelGPT4oMini   = "gpt-4o-mini"
+	ModelGPT4Turbo   = "gpt-4-turbo"
+	ModelGPT4        = "gpt-4"
+	// Reasoning (o-series).
+	ModelO3         = "o3"
+	ModelO3Pro      = "o3-pro"
+	ModelO3Mini     = "o3-mini"
+	ModelO4Mini     = "o4-mini"
+	ModelO1         = "o1"
+	ModelO1Pro      = "o1-pro"
+	ModelO1Mini     = "o1-mini"
+	// Legacy.
+	ModelGPT35Turbo = "gpt-3.5-turbo"
+)
+
 // AddTool registers a tool whose input schema is inferred from fn's signature.
 // fn must be a function with the signature func(context.Context, T) (R, error)
 // where T is a concrete struct; use json tags for field names and the
