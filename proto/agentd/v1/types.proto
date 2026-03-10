@@ -47,6 +47,7 @@ message LlmAgent {
     repeated Agent sub_agents = 3;
     string instruction = 4;
     repeated string builtin_tools = 5;
+    string output_key = 6;
 }
 
 message SequentialAgent {

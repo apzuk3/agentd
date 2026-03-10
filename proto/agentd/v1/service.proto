@@ -5,6 +5,7 @@ package agentd.v1;
 option go_package = "github.com/apzuk3/agentd/gen/proto/go/agentd/v1;agentdv1";
 
 import "agentd/v1/types.proto";
+import "google/protobuf/struct.proto";
 
 service Agentd {
   rpc Run(stream RunRequest) returns (stream RunResponse);
@@ -16,6 +17,7 @@ message RunRequest {
     optional string session_id = 2;
     string user_prompt = 3;
     repeated Tool tools = 4;
+    google.protobuf.Struct initial_state = 5;
   }
 
   message HeartbeatRequest {
@@ -30,6 +32,7 @@ message RunRequest {
       string output = 4;
       string error = 5;
     }
+    google.protobuf.Struct state_delta = 6;
   }
 
   message EndRequest {
@@ -92,7 +95,7 @@ message RunResponse {
 
   message StateUpdate {
     string session_id = 1;
-    map<string, string> state = 2; // key-value pairs; values are JSON-encoded
+    google.protobuf.Struct state_delta = 2;
   }
 
   oneof response {

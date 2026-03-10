@@ -108,7 +108,6 @@ The `Run` RPC is a single bidirectional stream. Client and server exchange messa
 - `HeartbeatResponse` — heartbeat ack
 - `ToolCallRequest` — ask the client to execute a tool with given input, includes `session_id` and `agent_path` for attribution
 - `OutputChunk` — stream a chunk of LLM-generated text, tagged with `agent_path`; `last = true` signals the specific agent is done producing output; `is_thought = true` indicates model thinking content rather than final response
-- `StateUpdate` — stream a state snapshot or incremental delta; the client automatically merges these updates.
 - `ErrorResponse` — a structured error with `ErrorCode`, human-readable `message`, and `retryable` flag
 - `EndResponse` — session ended; `completed = true` when the agent tree finished naturally, `false` for client-initiated ends; includes `UsageSummary`
 
@@ -119,10 +118,8 @@ Client                           Server
   │                                │
   │─── ExecuteRequest ───────────► │  (agent tree, optional session_id)
   │◄── ExecuteResponse ──────────  │  (session_id assigned)
-  │◄── StateUpdate (snapshot) ──── │  (initial state sync)
   │                                │
   │◄── OutputChunk [root, planner] │  (planner streams, last=false)
-  │◄── StateUpdate (delta) ─────── │  (planner updates state)
   │◄── ToolCallRequest ──────────  │  (session_id, tool_call_id)
   │─── ToolCallResponse ─────────► │  (oneof output/error)
   │◄── OutputChunk [root, planner] │  (planner continues, last=true)

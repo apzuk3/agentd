@@ -2,7 +2,6 @@ package agentd
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -14,6 +13,7 @@ import (
 	"google.golang.org/adk/runner"
 	adksession "google.golang.org/adk/session"
 	"google.golang.org/genai"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	agentdv1 "github.com/apzuk3/agentd/gen/proto/go/agentd/v1"
 )
@@ -90,10 +90,16 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 
 	sessionService := adksession.InMemoryService()
 
+	var initialState map[string]any
+	if s := exec.GetInitialState(); s != nil {
+		initialState = s.AsMap()
+	}
+
 	adkSession, err := sessionService.Create(runCtx, &adksession.CreateRequest{
 		AppName:   "agentd",
 		UserID:    "user",
 		SessionID: exec.GetSessionId(),
+		State:     initialState,
 	})
 	if err != nil {
 		return fmt.Errorf("creating ADK session: %w", err)
@@ -145,11 +151,6 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 			return sendErr
 		}
 		return fmt.Errorf("building agent tree: %w", err)
-	}
-
-	if err := s.sendStateSnapshot(adkSession.Session.State()); err != nil {
-		s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to send initial state", Err: err})
-		return fmt.Errorf("sending initial state: %w", err)
 	}
 
 	runnerCfg := runner.Config{
@@ -232,9 +233,18 @@ func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, 
 		}
 
 		if len(event.Actions.StateDelta) > 0 {
-			if err := s.sendStateDelta(event.Actions.StateDelta); err != nil {
-				s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to send state delta", Err: err})
-				return fmt.Errorf("sending state delta: %w", err)
+			if delta, err := structpb.NewStruct(event.Actions.StateDelta); err == nil {
+				if err := s.stream.Send(&agentdv1.RunResponse{
+					Response: &agentdv1.RunResponse_StateUpdate_{
+						StateUpdate: &agentdv1.RunResponse_StateUpdate{
+							SessionId:  s.id,
+							StateDelta: delta,
+						},
+					},
+				}); err != nil {
+					s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to send state update", Err: err})
+					return fmt.Errorf("sending state update: %w", err)
+				}
 			}
 		}
 
@@ -458,58 +468,6 @@ func (s *Session) closeAllPending() {
 		close(ch)
 		delete(s.pendingTools, id)
 	}
-}
-
-func serializeStateValue(v any) (string, error) {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
-}
-
-func (s *Session) sendStateSnapshot(state adksession.ReadonlyState) error {
-	m := make(map[string]string)
-	for k, v := range state.All() {
-		encoded, err := serializeStateValue(v)
-		if err != nil {
-			continue
-		}
-		m[k] = encoded
-	}
-	if len(m) == 0 {
-		return nil
-	}
-	return s.stream.Send(&agentdv1.RunResponse{
-		Response: &agentdv1.RunResponse_StateUpdate_{
-			StateUpdate: &agentdv1.RunResponse_StateUpdate{
-				SessionId: s.id,
-				State:     m,
-			},
-		},
-	})
-}
-
-func (s *Session) sendStateDelta(delta map[string]any) error {
-	m := make(map[string]string, len(delta))
-	for k, v := range delta {
-		encoded, err := serializeStateValue(v)
-		if err != nil {
-			continue
-		}
-		m[k] = encoded
-	}
-	if len(m) == 0 {
-		return nil
-	}
-	return s.stream.Send(&agentdv1.RunResponse{
-		Response: &agentdv1.RunResponse_StateUpdate_{
-			StateUpdate: &agentdv1.RunResponse_StateUpdate{
-				SessionId: s.id,
-				State:     m,
-			},
-		},
-	})
 }
 
 func sendError(stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse], sessionID string, code agentdv1.ErrorCode, msg string) error {

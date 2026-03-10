@@ -94,6 +94,12 @@ func createTool(protoTool *agentdv1.Tool, sess *Session, agentPath []string) (to
 			return nil, err
 		}
 
+		if sd := resp.GetStateDelta(); sd != nil {
+			for k, v := range sd.AsMap() {
+				ctx.Actions().StateDelta[k] = v
+			}
+		}
+
 		switch r := resp.GetResult().(type) {
 		case *agentdv1.RunRequest_ToolCallResponse_Output:
 			var result map[string]any
@@ -201,6 +207,7 @@ func createLLMAgent(
 		Tools:       tools,
 		SubAgents:   subAgents,
 		Instruction: llm.GetInstruction(),
+		OutputKey:   llm.GetOutputKey(),
 	})
 }
 

@@ -9,6 +9,7 @@ package agentdv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -319,6 +320,7 @@ type RunRequest_ExecuteRequest struct {
 	SessionId     *string                `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`
 	UserPrompt    string                 `protobuf:"bytes,3,opt,name=user_prompt,json=userPrompt,proto3" json:"user_prompt,omitempty"`
 	Tools         []*Tool                `protobuf:"bytes,4,rep,name=tools,proto3" json:"tools,omitempty"`
+	InitialState  *structpb.Struct       `protobuf:"bytes,5,opt,name=initial_state,json=initialState,proto3" json:"initial_state,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -381,6 +383,13 @@ func (x *RunRequest_ExecuteRequest) GetTools() []*Tool {
 	return nil
 }
 
+func (x *RunRequest_ExecuteRequest) GetInitialState() *structpb.Struct {
+	if x != nil {
+		return x.InitialState
+	}
+	return nil
+}
+
 type RunRequest_HeartbeatRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
@@ -435,6 +444,7 @@ type RunRequest_ToolCallResponse struct {
 	//	*RunRequest_ToolCallResponse_Output
 	//	*RunRequest_ToolCallResponse_Error
 	Result        isRunRequest_ToolCallResponse_Result `protobuf_oneof:"result"`
+	StateDelta    *structpb.Struct                     `protobuf:"bytes,6,opt,name=state_delta,json=stateDelta,proto3" json:"state_delta,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -513,6 +523,13 @@ func (x *RunRequest_ToolCallResponse) GetError() string {
 		}
 	}
 	return ""
+}
+
+func (x *RunRequest_ToolCallResponse) GetStateDelta() *structpb.Struct {
+	if x != nil {
+		return x.StateDelta
+	}
+	return nil
 }
 
 type isRunRequest_ToolCallResponse_Result interface {
@@ -1014,7 +1031,7 @@ func (x *RunResponse_EndResponse) GetCompleted() bool {
 type RunResponse_StateUpdate struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	State         map[string]string      `protobuf:"bytes,2,rep,name=state,proto3" json:"state,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // key-value pairs; values are JSON-encoded
+	StateDelta    *structpb.Struct       `protobuf:"bytes,2,opt,name=state_delta,json=stateDelta,proto3" json:"state_delta,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1056,9 +1073,9 @@ func (x *RunResponse_StateUpdate) GetSessionId() string {
 	return ""
 }
 
-func (x *RunResponse_StateUpdate) GetState() map[string]string {
+func (x *RunResponse_StateUpdate) GetStateDelta() *structpb.Struct {
 	if x != nil {
-		return x.State
+		return x.StateDelta
 	}
 	return nil
 }
@@ -1067,25 +1084,26 @@ var File_agentd_v1_service_proto protoreflect.FileDescriptor
 
 const file_agentd_v1_service_proto_rawDesc = "" +
 	"\n" +
-	"\x17agentd/v1/service.proto\x12\tagentd.v1\x1a\x15agentd/v1/types.proto\"\xc3\a\n" +
+	"\x17agentd/v1/service.proto\x12\tagentd.v1\x1a\x15agentd/v1/types.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xbb\b\n" +
 	"\n" +
 	"RunRequest\x12@\n" +
 	"\aexecute\x18\x01 \x01(\v2$.agentd.v1.RunRequest.ExecuteRequestH\x00R\aexecute\x12F\n" +
 	"\theartbeat\x18\x02 \x01(\v2&.agentd.v1.RunRequest.HeartbeatRequestH\x00R\theartbeat\x12V\n" +
 	"\x12tool_call_response\x18\x03 \x01(\v2&.agentd.v1.RunRequest.ToolCallResponseH\x00R\x10toolCallResponse\x124\n" +
 	"\x03end\x18\x04 \x01(\v2 .agentd.v1.RunRequest.EndRequestH\x00R\x03end\x12=\n" +
-	"\x06cancel\x18\x05 \x01(\v2#.agentd.v1.RunRequest.CancelRequestH\x00R\x06cancel\x1a\xb3\x01\n" +
+	"\x06cancel\x18\x05 \x01(\v2#.agentd.v1.RunRequest.CancelRequestH\x00R\x06cancel\x1a\xf1\x01\n" +
 	"\x0eExecuteRequest\x12&\n" +
 	"\x05agent\x18\x01 \x01(\v2\x10.agentd.v1.AgentR\x05agent\x12\"\n" +
 	"\n" +
 	"session_id\x18\x02 \x01(\tH\x00R\tsessionId\x88\x01\x01\x12\x1f\n" +
 	"\vuser_prompt\x18\x03 \x01(\tR\n" +
 	"userPrompt\x12%\n" +
-	"\x05tools\x18\x04 \x03(\v2\x0f.agentd.v1.ToolR\x05toolsB\r\n" +
+	"\x05tools\x18\x04 \x03(\v2\x0f.agentd.v1.ToolR\x05tools\x12<\n" +
+	"\rinitial_state\x18\x05 \x01(\v2\x17.google.protobuf.StructR\finitialStateB\r\n" +
 	"\v_session_id\x1a1\n" +
 	"\x10HeartbeatRequest\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x1a\xac\x01\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x1a\xe6\x01\n" +
 	"\x10ToolCallResponse\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12 \n" +
@@ -1093,7 +1111,9 @@ const file_agentd_v1_service_proto_rawDesc = "" +
 	"toolCallId\x12\x1b\n" +
 	"\ttool_name\x18\x03 \x01(\tR\btoolName\x12\x18\n" +
 	"\x06output\x18\x04 \x01(\tH\x00R\x06output\x12\x16\n" +
-	"\x05error\x18\x05 \x01(\tH\x00R\x05errorB\b\n" +
+	"\x05error\x18\x05 \x01(\tH\x00R\x05error\x128\n" +
+	"\vstate_delta\x18\x06 \x01(\v2\x17.google.protobuf.StructR\n" +
+	"stateDeltaB\b\n" +
 	"\x06result\x1aS\n" +
 	"\n" +
 	"EndRequest\x12\x1d\n" +
@@ -1107,7 +1127,8 @@ const file_agentd_v1_service_proto_rawDesc = "" +
 	"\ftool_call_id\x18\x02 \x01(\tH\x00R\n" +
 	"toolCallId\x88\x01\x01B\x0f\n" +
 	"\r_tool_call_idB\t\n" +
-	"\arequest\"\x9b\v\n" +
+	"\arequest\"\xd5\n" +
+	"\n" +
 	"\vRunResponse\x12B\n" +
 	"\aexecute\x18\x01 \x01(\v2&.agentd.v1.RunResponse.ExecuteResponseH\x00R\aexecute\x12H\n" +
 	"\theartbeat\x18\x02 \x01(\v2(.agentd.v1.RunResponse.HeartbeatResponseH\x00R\theartbeat\x12E\n" +
@@ -1153,15 +1174,12 @@ const file_agentd_v1_service_proto_rawDesc = "" +
 	"\x06reason\x18\x02 \x01(\tH\x00R\x06reason\x88\x01\x01\x12<\n" +
 	"\rusage_summary\x18\x03 \x01(\v2\x17.agentd.v1.UsageSummaryR\fusageSummary\x12\x1c\n" +
 	"\tcompleted\x18\x04 \x01(\bR\tcompletedB\t\n" +
-	"\a_reason\x1a\xab\x01\n" +
+	"\a_reason\x1af\n" +
 	"\vStateUpdate\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12C\n" +
-	"\x05state\x18\x02 \x03(\v2-.agentd.v1.RunResponse.StateUpdate.StateEntryR\x05state\x1a8\n" +
-	"\n" +
-	"StateEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x128\n" +
+	"\vstate_delta\x18\x02 \x01(\v2\x17.google.protobuf.StructR\n" +
+	"stateDeltaB\n" +
 	"\n" +
 	"\bresponse2B\n" +
 	"\x06Agentd\x128\n" +
@@ -1179,7 +1197,7 @@ func file_agentd_v1_service_proto_rawDescGZIP() []byte {
 	return file_agentd_v1_service_proto_rawDescData
 }
 
-var file_agentd_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_agentd_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_agentd_v1_service_proto_goTypes = []any{
 	(*RunRequest)(nil),                    // 0: agentd.v1.RunRequest
 	(*RunResponse)(nil),                   // 1: agentd.v1.RunResponse
@@ -1195,9 +1213,9 @@ var file_agentd_v1_service_proto_goTypes = []any{
 	(*RunResponse_ErrorResponse)(nil),     // 11: agentd.v1.RunResponse.ErrorResponse
 	(*RunResponse_EndResponse)(nil),       // 12: agentd.v1.RunResponse.EndResponse
 	(*RunResponse_StateUpdate)(nil),       // 13: agentd.v1.RunResponse.StateUpdate
-	nil,                                   // 14: agentd.v1.RunResponse.StateUpdate.StateEntry
-	(*Agent)(nil),                         // 15: agentd.v1.Agent
-	(*Tool)(nil),                          // 16: agentd.v1.Tool
+	(*Agent)(nil),                         // 14: agentd.v1.Agent
+	(*Tool)(nil),                          // 15: agentd.v1.Tool
+	(*structpb.Struct)(nil),               // 16: google.protobuf.Struct
 	(ErrorCode)(0),                        // 17: agentd.v1.ErrorCode
 	(*UsageSummary)(nil),                  // 18: agentd.v1.UsageSummary
 }
@@ -1214,18 +1232,20 @@ var file_agentd_v1_service_proto_depIdxs = []int32{
 	12, // 9: agentd.v1.RunResponse.end:type_name -> agentd.v1.RunResponse.EndResponse
 	10, // 10: agentd.v1.RunResponse.output_chunk:type_name -> agentd.v1.RunResponse.OutputChunk
 	13, // 11: agentd.v1.RunResponse.state_update:type_name -> agentd.v1.RunResponse.StateUpdate
-	15, // 12: agentd.v1.RunRequest.ExecuteRequest.agent:type_name -> agentd.v1.Agent
-	16, // 13: agentd.v1.RunRequest.ExecuteRequest.tools:type_name -> agentd.v1.Tool
-	17, // 14: agentd.v1.RunResponse.ErrorResponse.code:type_name -> agentd.v1.ErrorCode
-	18, // 15: agentd.v1.RunResponse.EndResponse.usage_summary:type_name -> agentd.v1.UsageSummary
-	14, // 16: agentd.v1.RunResponse.StateUpdate.state:type_name -> agentd.v1.RunResponse.StateUpdate.StateEntry
-	0,  // 17: agentd.v1.Agentd.Run:input_type -> agentd.v1.RunRequest
-	1,  // 18: agentd.v1.Agentd.Run:output_type -> agentd.v1.RunResponse
-	18, // [18:19] is the sub-list for method output_type
-	17, // [17:18] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	14, // 12: agentd.v1.RunRequest.ExecuteRequest.agent:type_name -> agentd.v1.Agent
+	15, // 13: agentd.v1.RunRequest.ExecuteRequest.tools:type_name -> agentd.v1.Tool
+	16, // 14: agentd.v1.RunRequest.ExecuteRequest.initial_state:type_name -> google.protobuf.Struct
+	16, // 15: agentd.v1.RunRequest.ToolCallResponse.state_delta:type_name -> google.protobuf.Struct
+	17, // 16: agentd.v1.RunResponse.ErrorResponse.code:type_name -> agentd.v1.ErrorCode
+	18, // 17: agentd.v1.RunResponse.EndResponse.usage_summary:type_name -> agentd.v1.UsageSummary
+	16, // 18: agentd.v1.RunResponse.StateUpdate.state_delta:type_name -> google.protobuf.Struct
+	0,  // 19: agentd.v1.Agentd.Run:input_type -> agentd.v1.RunRequest
+	1,  // 20: agentd.v1.Agentd.Run:output_type -> agentd.v1.RunResponse
+	20, // [20:21] is the sub-list for method output_type
+	19, // [19:20] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_agentd_v1_service_proto_init() }
@@ -1264,7 +1284,7 @@ func file_agentd_v1_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agentd_v1_service_proto_rawDesc), len(file_agentd_v1_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

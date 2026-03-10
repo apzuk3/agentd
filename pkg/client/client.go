@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"iter"
-	"maps"
 	"net"
 	"net/http"
 	"reflect"
@@ -18,29 +17,40 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/jsonschema-go/jsonschema"
 	"golang.org/x/net/http2"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	agentdv1 "github.com/apzuk3/agentd/gen/proto/go/agentd/v1"
 	"github.com/apzuk3/agentd/gen/proto/go/agentd/v1/agentdv1connect"
 )
 
-type contextKey struct{}
+// ToolContext is passed to tool handlers that need to read or modify ADK
+// session state. Use *ToolContext as the first parameter of a tool function
+// instead of context.Context to enable state operations.
+type ToolContext struct {
+	context.Context
+	mu    sync.Mutex
+	state map[string]any
+}
 
-var stateKey contextKey
+// SetState writes a key-value pair into the session state delta. The delta is
+// sent to the server alongside the tool response and applied to the ADK session.
+func (tc *ToolContext) SetState(key string, value any) {
+	tc.mu.Lock()
+	tc.state[key] = value
+	tc.mu.Unlock()
+}
 
-// GetState retrieves the current ADK session state from the context.
-// This is populated automatically during tool execution.
-// The returned map is a copy; modifying it does not affect the session state.
-func GetState(ctx context.Context) map[string]string {
-	v := ctx.Value(stateKey)
-	if v == nil {
-		return nil
-	}
-	return v.(map[string]string)
+// GetState retrieves a value previously set via SetState within this tool call.
+func (tc *ToolContext) GetState(key string) (any, bool) {
+	tc.mu.Lock()
+	v, ok := tc.state[key]
+	tc.mu.Unlock()
+	return v, ok
 }
 
 type registeredTool struct {
 	proto   *agentdv1.Tool
-	handler func(ctx context.Context, input string) (string, error)
+	handler func(ctx context.Context, input string) (string, map[string]any, error)
 }
 
 // Client manages tool registrations and communicates with an agentd server.
@@ -91,8 +101,9 @@ func New(baseURL string, opts ...Option) *Client {
 }
 
 var (
-	contextType = reflect.TypeFor[context.Context]()
-	errorType   = reflect.TypeFor[error]()
+	contextType        = reflect.TypeFor[context.Context]()
+	errorType          = reflect.TypeFor[error]()
+	toolContextPtrType = reflect.TypeFor[*ToolContext]()
 )
 
 // Model name constants for use with LlmAgent.Model. These are the supported
@@ -161,8 +172,12 @@ const (
 )
 
 // AddTool registers a tool whose input schema is inferred from fn's signature.
-// fn must be a function with the signature func(context.Context, T) (R, error)
-// where T is a concrete struct; use json tags for field names and the
+// fn must be a function with the signature:
+//
+//	func(context.Context, T) (R, error)       — stateless tool
+//	func(*client.ToolContext, T) (R, error)   — stateful tool (can call SetState)
+//
+// T must be a concrete struct; use json tags for field names and the
 // "jsonschema" struct tag for property descriptions. The return value R is
 // JSON-marshaled back to the server (strings are sent as-is).
 func (c *Client) AddTool(name, description string, fn any) error {
@@ -173,13 +188,15 @@ func (c *Client) AddTool(name, description string, fn any) error {
 		return fmt.Errorf("AddTool %q: fn must be a function, got %T", name, fn)
 	}
 	if fnType.NumIn() != 2 {
-		return fmt.Errorf("AddTool %q: fn must accept exactly 2 parameters (context.Context, T), got %d", name, fnType.NumIn())
+		return fmt.Errorf("AddTool %q: fn must accept exactly 2 parameters (context.Context or *ToolContext, T), got %d", name, fnType.NumIn())
 	}
 	if fnType.NumOut() != 2 {
 		return fmt.Errorf("AddTool %q: fn must return exactly 2 values (result, error), got %d", name, fnType.NumOut())
 	}
-	if !fnType.In(0).Implements(contextType) {
-		return fmt.Errorf("AddTool %q: first parameter must be context.Context, got %s", name, fnType.In(0))
+
+	usesToolContext := fnType.In(0) == toolContextPtrType
+	if !usesToolContext && !fnType.In(0).Implements(contextType) {
+		return fmt.Errorf("AddTool %q: first parameter must be context.Context or *ToolContext, got %s", name, fnType.In(0))
 	}
 	if !fnType.Out(1).Implements(errorType) {
 		return fmt.Errorf("AddTool %q: second return value must implement error, got %s", name, fnType.Out(1))
@@ -210,27 +227,40 @@ func (c *Client) AddTool(name, description string, fn any) error {
 
 	c.tools[name] = &registeredTool{
 		proto: toolProto,
-		handler: func(ctx context.Context, input string) (string, error) {
+		handler: func(ctx context.Context, input string) (string, map[string]any, error) {
 			argPtr := reflect.New(inputType)
 			if input != "" {
 				if err := json.Unmarshal([]byte(input), argPtr.Interface()); err != nil {
-					return "", fmt.Errorf("unmarshaling tool input: %w", err)
+					return "", nil, fmt.Errorf("unmarshaling tool input: %w", err)
 				}
 			}
-			results := fnVal.Call([]reflect.Value{reflect.ValueOf(ctx), argPtr.Elem()})
+
+			var results []reflect.Value
+			var stateDelta map[string]any
+
+			if usesToolContext {
+				tc := &ToolContext{Context: ctx, state: make(map[string]any)}
+				results = fnVal.Call([]reflect.Value{reflect.ValueOf(tc), argPtr.Elem()})
+				if len(tc.state) > 0 {
+					stateDelta = tc.state
+				}
+			} else {
+				results = fnVal.Call([]reflect.Value{reflect.ValueOf(ctx), argPtr.Elem()})
+			}
+
 			if !results[1].IsNil() {
-				return "", results[1].Interface().(error)
+				return "", stateDelta, results[1].Interface().(error)
 			}
 			result := results[0].Interface()
 			switch v := result.(type) {
 			case string:
-				return v, nil
+				return v, stateDelta, nil
 			default:
 				b, err := json.Marshal(v)
 				if err != nil {
-					return "", fmt.Errorf("marshaling tool result: %w", err)
+					return "", stateDelta, fmt.Errorf("marshaling tool result: %w", err)
 				}
-				return string(b), nil
+				return string(b), stateDelta, nil
 			}
 		},
 	}
@@ -310,13 +340,20 @@ func (c *Client) resolveTools(agent *agentdv1.Agent) ([]*agentdv1.Tool, error) {
 type RunOption func(*runConfig)
 
 type runConfig struct {
-	sessionID string
-	headers   http.Header
+	sessionID    string
+	headers      http.Header
+	initialState any
 }
 
 // WithSessionID resumes an existing session instead of creating a new one.
 func WithSessionID(id string) RunOption {
 	return func(rc *runConfig) { rc.sessionID = id }
+}
+
+// WithInitialState seeds the ADK session state before the agent starts.
+// state can be a map[string]any or any struct with json tags.
+func WithInitialState(state any) RunOption {
+	return func(rc *runConfig) { rc.initialState = state }
 }
 
 // BYOK header names mirroring the server-side constants. Clients use the
@@ -367,18 +404,17 @@ type Event struct {
 	End         *End
 }
 
+// StateUpdate carries a state delta streamed from the server whenever ADK
+// session state changes (via tool calls, output_key, etc.).
+type StateUpdate struct {
+	Delta map[string]any
+}
+
 type OutputChunk struct {
 	AgentPath []string
 	Content   string
 	Last      bool
 	IsThought bool
-}
-
-// StateUpdate carries a snapshot or incremental delta of the ADK session state.
-// Values are JSON-encoded strings; use [json.Unmarshal] to decode them into
-// your application types.
-type StateUpdate struct {
-	State map[string]string
 }
 
 type End struct {
@@ -396,7 +432,7 @@ type Error struct {
 // aggregated output from a completed agent session.
 type Result struct {
 	Output       string
-	State        map[string]string
+	FinalState   map[string]any
 	UsageSummary *agentdv1.UsageSummary
 }
 
@@ -406,6 +442,26 @@ func errorEvent(format string, args ...any) *Event {
 			Code:    agentdv1.ErrorCode_ERROR_CODE_INTERNAL,
 			Message: fmt.Sprintf(format, args...),
 		},
+	}
+}
+
+func toStructPB(v any) (*structpb.Struct, error) {
+	if v == nil {
+		return nil, nil
+	}
+	switch s := v.(type) {
+	case map[string]any:
+		return structpb.NewStruct(s)
+	default:
+		b, err := json.Marshal(v)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling state: %w", err)
+		}
+		var m map[string]any
+		if err := json.Unmarshal(b, &m); err != nil {
+			return nil, fmt.Errorf("state must marshal to a JSON object: %w", err)
+		}
+		return structpb.NewStruct(m)
 	}
 }
 
@@ -424,6 +480,16 @@ func (c *Client) RunAsync(ctx context.Context, agent *agentdv1.Agent, userPrompt
 		if err != nil {
 			yield(errorEvent("%v", err), nil)
 			return
+		}
+
+		var initialStatePB *structpb.Struct
+		if rc.initialState != nil {
+			s, err := toStructPB(rc.initialState)
+			if err != nil {
+				yield(errorEvent("invalid initial state: %v", err), nil)
+				return
+			}
+			initialStatePB = s
 		}
 
 		opts := append([]connect.ClientOption{}, c.connectOpts...)
@@ -446,9 +512,10 @@ func (c *Client) RunAsync(ctx context.Context, agent *agentdv1.Agent, userPrompt
 		execReq := &agentdv1.RunRequest{
 			Request: &agentdv1.RunRequest_Execute{
 				Execute: &agentdv1.RunRequest_ExecuteRequest{
-					Agent:      agent,
-					UserPrompt: userPrompt,
-					Tools:      toolCatalog,
+					Agent:        agent,
+					UserPrompt:   userPrompt,
+					Tools:        toolCatalog,
+					InitialState: initialStatePB,
 				},
 			},
 		}
@@ -473,7 +540,6 @@ func (c *Client) RunAsync(ctx context.Context, agent *agentdv1.Agent, userPrompt
 			return
 		}
 		sessionID := execResp.GetSessionId()
-		currentState := make(map[string]string)
 
 		var sendMu sync.Mutex
 
@@ -534,11 +600,7 @@ func (c *Client) RunAsync(ctx context.Context, agent *agentdv1.Agent, userPrompt
 					continue
 				}
 
-				stateCopy := make(map[string]string, len(currentState))
-				maps.Copy(stateCopy, currentState)
-				toolCtx := context.WithValue(streamCtx, stateKey, stateCopy)
-
-				output, execErr := rt.handler(toolCtx, tc.GetToolInput())
+				output, stateDelta, execErr := rt.handler(streamCtx, tc.GetToolInput())
 				tcResp := &agentdv1.RunRequest_ToolCallResponse{
 					SessionId:  sessionID,
 					ToolCallId: tc.GetToolCallId(),
@@ -548,6 +610,11 @@ func (c *Client) RunAsync(ctx context.Context, agent *agentdv1.Agent, userPrompt
 					tcResp.Result = &agentdv1.RunRequest_ToolCallResponse_Error{Error: execErr.Error()}
 				} else {
 					tcResp.Result = &agentdv1.RunRequest_ToolCallResponse_Output{Output: output}
+				}
+				if len(stateDelta) > 0 {
+					if sdPB, err := structpb.NewStruct(stateDelta); err == nil {
+						tcResp.StateDelta = sdPB
+					}
 				}
 
 				sendMu.Lock()
@@ -583,6 +650,14 @@ func (c *Client) RunAsync(ctx context.Context, agent *agentdv1.Agent, userPrompt
 					return
 				}
 
+			case *agentdv1.RunResponse_StateUpdate_:
+				su := r.StateUpdate
+				if !yield(&Event{
+					StateUpdate: &StateUpdate{Delta: su.GetStateDelta().AsMap()},
+				}, nil) {
+					return
+				}
+
 			case *agentdv1.RunResponse_End:
 				end := r.End
 				yield(&Event{
@@ -592,17 +667,6 @@ func (c *Client) RunAsync(ctx context.Context, agent *agentdv1.Agent, userPrompt
 					},
 				}, nil)
 				return
-
-			case *agentdv1.RunResponse_StateUpdate_:
-				su := r.StateUpdate
-				maps.Copy(currentState, su.GetState())
-				if !yield(&Event{
-					StateUpdate: &StateUpdate{
-						State: su.GetState(),
-					},
-				}, nil) {
-					return
-				}
 
 			case *agentdv1.RunResponse_Heartbeat:
 				// Internal bookkeeping, not yielded.
@@ -618,8 +682,8 @@ func (c *Client) RunAsync(ctx context.Context, agent *agentdv1.Agent, userPrompt
 // and returns the aggregated result. It uses RunAsync internally.
 func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt string, opts ...RunOption) (*Result, error) {
 	var buf strings.Builder
-	state := make(map[string]string)
 	var usage *agentdv1.UsageSummary
+	finalState := make(map[string]any)
 
 	for ev, _ := range c.RunAsync(ctx, agent, userPrompt, opts...) {
 		switch {
@@ -630,7 +694,9 @@ func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt stri
 				buf.WriteString(ev.OutputChunk.Content)
 			}
 		case ev.StateUpdate != nil:
-			maps.Copy(state, ev.StateUpdate.State)
+			for k, v := range ev.StateUpdate.Delta {
+				finalState[k] = v
+			}
 		case ev.End != nil:
 			usage = ev.End.UsageSummary
 		}
@@ -638,7 +704,7 @@ func (c *Client) Run(ctx context.Context, agent *agentdv1.Agent, userPrompt stri
 
 	return &Result{
 		Output:       buf.String(),
-		State:        state,
+		FinalState:   finalState,
 		UsageSummary: usage,
 	}, nil
 }
