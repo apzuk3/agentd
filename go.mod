@@ -9,6 +9,7 @@ require (
 	github.com/Alcova-AI/adk-anthropic-go v0.1.11
 	github.com/anthropics/anthropic-sdk-go v1.24.0
 	github.com/byebyebruce/adk-go-openai v0.0.0-20251208092515-f5b0ac07643e
+	github.com/expr-lang/expr v1.17.8
 	github.com/google/jsonschema-go v0.4.2
 	golang.org/x/net v0.47.0
 	google.golang.org/adk v0.5.0
@@ -25,7 +26,6 @@ require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/expr-lang/expr v1.17.8 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
