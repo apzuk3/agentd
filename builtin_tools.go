@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/expr-lang/expr"
+	"github.com/google/jsonschema-go/jsonschema"
 	"google.golang.org/adk/tool"
 	"google.golang.org/adk/tool/functiontool"
-
-	"github.com/google/jsonschema-go/jsonschema"
 )
 
 // BuiltinToolFactory creates an ADK tool.Tool from server-side configuration.
@@ -24,7 +24,113 @@ type BuiltinToolConfig struct {
 }
 
 var builtinFactories = map[string]BuiltinToolFactory{
-	"web_search": newWebSearchTool,
+	"web_search":   newWebSearchTool,
+	"exit_loop":    newLoopBreakerTool,
+	"calculator":   newCalculatorTool,
+	"current_time": newCurrentTimeTool,
+}
+
+func newLoopBreakerTool(cfg *BuiltinToolConfig) (tool.Tool, error) {
+	return functiontool.New(functiontool.Config{
+		Name:        "loop_breaker",
+		Description: "Call this tool ONLY when the task is complete or you need to exit the current loop. Signals the loop agent to terminate iterations and proceed. Use when: the goal has been achieved, further iterations add no value, or you've hit a stopping condition.",
+	}, func(ctx tool.Context, args map[string]any) (map[string]any, error) {
+		ctx.Actions().Escalate = true
+		ctx.Actions().SkipSummarization = true
+		return map[string]any{
+			"status":  "loop_exited",
+			"message": "Loop terminated successfully. The agent will proceed to the next step.",
+		}, nil
+	})
+}
+
+// --- calculator ---
+
+type calculatorInput struct {
+	Expression string `json:"expression" jsonschema:"description=Math expression to evaluate (e.g. 2+3*4, 100/5, 2^10). Supports + - * / % and ^ for exponentiation."`
+}
+
+func newCalculatorTool(cfg *BuiltinToolConfig) (tool.Tool, error) {
+	schema, err := jsonschema.For[calculatorInput](nil)
+	if err != nil {
+		return nil, fmt.Errorf("generating calculator input schema: %w", err)
+	}
+	return functiontool.New(
+		functiontool.Config{
+			Name:        "calculator",
+			Description: "Evaluate a math expression. Use for arithmetic: addition (+), subtraction (-), multiplication (*), division (/), modulus (%), exponentiation (^). Example: 2+3*4, 100/5, 2^10.",
+			InputSchema: schema,
+		},
+		func(ctx tool.Context, args map[string]any) (map[string]any, error) {
+			exprStr, _ := args["expression"].(string)
+			if exprStr == "" {
+				return nil, fmt.Errorf("expression is required")
+			}
+			result, err := evaluateMath(exprStr)
+			if err != nil {
+				return nil, fmt.Errorf("calculator: %w", err)
+			}
+			return map[string]any{
+				"result": result,
+			}, nil
+		},
+	)
+}
+
+func evaluateMath(exprStr string) (float64, error) {
+	program, err := expr.Compile(exprStr, expr.AsFloat64())
+	if err != nil {
+		return 0, err
+	}
+	output, err := expr.Run(program, nil)
+	if err != nil {
+		return 0, err
+	}
+	f, ok := output.(float64)
+	if !ok {
+		return 0, fmt.Errorf("expected numeric result, got %T", output)
+	}
+	return f, nil
+}
+
+// --- current_time ---
+
+type currentTimeInput struct {
+	Timezone string `json:"timezone,omitempty" jsonschema:"description=IANA timezone (e.g. America/New_York, Europe/London). Omit for UTC."`
+}
+
+func newCurrentTimeTool(cfg *BuiltinToolConfig) (tool.Tool, error) {
+	schema, err := jsonschema.For[currentTimeInput](nil)
+	if err != nil {
+		return nil, fmt.Errorf("generating current_time input schema: %w", err)
+	}
+	return functiontool.New(
+		functiontool.Config{
+			Name:        "current_time",
+			Description: "Get the current date and time. Use when the agent needs to know 'now'. Optionally specify a timezone (e.g. America/New_York); defaults to UTC.",
+			InputSchema: schema,
+		},
+		func(ctx tool.Context, args map[string]any) (map[string]any, error) {
+			now := time.Now()
+			loc := time.UTC
+			if tz, ok := args["timezone"].(string); ok && tz != "" {
+				var err error
+				loc, err = time.LoadLocation(tz)
+				if err != nil {
+					return nil, fmt.Errorf("invalid timezone %q: %w", tz, err)
+				}
+				now = now.In(loc)
+			}
+			return map[string]any{
+				"iso8601":  now.Format(time.RFC3339),
+				"unix":     now.Unix(),
+				"date":     now.Format("2006-01-02"),
+				"time":     now.Format("15:04:05"),
+				"timezone": loc.String(),
+				"weekday":  now.Weekday().String(),
+			}, nil
+		},
+	)
 }
 
 // ResolveBuiltinTool looks up a built-in tool by name and creates it. Returns
