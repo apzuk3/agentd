@@ -35,7 +35,6 @@ func main() {
 		OpenAIAPIKey:    openaiAPIKey,
 		TavilyAPIKey:    tavilyAPIKey,
 		Plugins: []agentd.SessionPlugin{
-			session.NewLogPlugin(slog.Default()),
 			session.NewAuditPlugin(session.NoopAuditStore{}),
 		},
 	}
