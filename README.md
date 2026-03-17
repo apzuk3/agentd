@@ -77,6 +77,46 @@ func main() {
 
 See [`examples/`](examples/) for more complete examples.
 
+## MCP (remote tool discovery)
+
+`agentd` keeps tool execution on the client. MCP fits naturally by letting the
+client discover and proxy tools from remote MCP servers before each run.
+
+```go
+clnt := client.New("http://localhost:8080")
+
+agent := &agentdv1.Agent{
+	Name: "assistant",
+	AgentType: &agentdv1.Agent_Llm{
+		Llm: &agentdv1.LlmAgent{
+			Model: client.ModelGemini25Flash,
+			Instruction: "Use tools when needed.",
+		},
+	},
+}
+
+result, err := clnt.Run(context.Background(), agent, "Find docs about ConnectRPC streaming",
+	client.WithMCPServer(client.MCPServerConfig{
+		Name:       "docs",
+		URL:        "https://mcp.example.com",
+		ToolPrefix: "docs", // tools become docs.<tool_name>
+		// AutoAttach defaults to true, so discovered tools are appended to all LLM agents.
+	}),
+)
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Println(result.Output)
+```
+
+### How it works
+
+- The client calls MCP `initialize`, `tools/list`, and registers each discovered tool.
+- Tool calls are still executed on the client side; handlers proxy to MCP `tools/call`.
+- Discovered tools are exposed through the same `ToolCallRequest`/`ToolCallResponse` flow.
+- Tool names can be namespaced with `ToolPrefix` to avoid collisions.
+
 ## Architecture overview
 
 ```

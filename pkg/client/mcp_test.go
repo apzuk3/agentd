@@ -1,0 +1,119 @@
+package client
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"reflect"
+	"testing"
+
+	agentdv1 "github.com/apzuk3/agentd/gen/proto/go/agentd/v1"
+)
+
+func TestAddMCPServer_DiscoversAndCallsTools(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+
+		method, _ := req["method"].(string)
+		switch method {
+		case "initialize":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"jsonrpc": "2.0",
+				"id":      req["id"],
+				"result":  map[string]any{"protocolVersion": "2025-03-26"},
+			})
+		case "notifications/initialized":
+			w.WriteHeader(http.StatusNoContent)
+		case "tools/list":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"jsonrpc": "2.0",
+				"id":      req["id"],
+				"result": map[string]any{
+					"tools": []map[string]any{
+						{
+							"name":        "search",
+							"description": "Search docs",
+							"inputSchema": map[string]any{
+								"type": "object",
+								"properties": map[string]any{
+									"query": map[string]any{"type": "string"},
+								},
+							},
+						},
+					},
+				},
+			})
+		case "tools/call":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"jsonrpc": "2.0",
+				"id":      req["id"],
+				"result": map[string]any{
+					"content": []map[string]any{{"type": "text", "text": "hello from mcp"}},
+				},
+			})
+		default:
+			t.Fatalf("unexpected method: %s", method)
+		}
+	}))
+	defer server.Close()
+
+	c := New("http://localhost:8080", WithHTTPClient(server.Client()))
+	names, err := c.AddMCPServer(context.Background(), MCPServerConfig{
+		Name:       "docs",
+		URL:        server.URL,
+		ToolPrefix: "docs",
+	})
+	if err != nil {
+		t.Fatalf("AddMCPServer returned error: %v", err)
+	}
+
+	if !reflect.DeepEqual(names, []string{"docs.search"}) {
+		t.Fatalf("unexpected names: %#v", names)
+	}
+
+	rt, ok := c.tools["docs.search"]
+	if !ok {
+		t.Fatal("registered MCP tool not found")
+	}
+
+	out, _, err := rt.handler(context.Background(), `{"query":"agentd"}`)
+	if err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if out != "hello from mcp" {
+		t.Fatalf("unexpected handler output: %q", out)
+	}
+}
+
+func TestAttachToolsToAllLlmAgents(t *testing.T) {
+	agent := &agentdv1.Agent{
+		Name: "root",
+		AgentType: &agentdv1.Agent_Llm{Llm: &agentdv1.LlmAgent{
+			ToolNames: []string{"existing"},
+			SubAgents: []*agentdv1.Agent{
+				{
+					Name: "child",
+					AgentType: &agentdv1.Agent_Llm{Llm: &agentdv1.LlmAgent{
+						ToolNames: []string{"child_tool"},
+					}},
+				},
+			},
+		}},
+	}
+
+	AttachToolsToAllLlmAgents(agent, []string{"existing", "mcp.tool"})
+
+	rootTools := agent.GetLlm().GetToolNames()
+	if !reflect.DeepEqual(rootTools, []string{"existing", "mcp.tool"}) {
+		t.Fatalf("unexpected root tools: %#v", rootTools)
+	}
+
+	childTools := agent.GetLlm().GetSubAgents()[0].GetLlm().GetToolNames()
+	if !reflect.DeepEqual(childTools, []string{"child_tool", "existing", "mcp.tool"}) {
+		t.Fatalf("unexpected child tools: %#v", childTools)
+	}
+}
