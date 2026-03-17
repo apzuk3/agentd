@@ -14,8 +14,6 @@ cloud.google.com/go/compute/metadata v0.9.0 h1:pDUj4QMoPejqq20dK0Pg2N4yG9zIkYGdB
 cloud.google.com/go/compute/metadata v0.9.0/go.mod h1:E0bWwX5wTnLPedCKqk3pJmVgCBSM6qQI1yTBdEb3C10=
 connectrpc.com/connect v1.19.1 h1:R5M57z05+90EfEvCY1b7hBxDVOUl45PrtXtAV2fOC14=
 connectrpc.com/connect v1.19.1/go.mod h1:tN20fjdGlewnSFeZxLKb0xwIZ6ozc3OQs2hTXy4du9w=
-github.com/Alcova-AI/adk-anthropic-go v0.1.11 h1:aNzlm9Yl2rbBDuysgEozy4QvK13B1iJsaco9r3suqd0=
-github.com/Alcova-AI/adk-anthropic-go v0.1.11/go.mod h1:4t4jwRci9i5CxReot+mMtIoOn6gKuOguKrR+djlwVmM=
 github.com/anthropics/anthropic-sdk-go v1.24.0 h1:SZQ2U4sknjy0t8g275zOhe/113RIo+Uynguf9YNTfGs=
 github.com/anthropics/anthropic-sdk-go v1.24.0/go.mod h1:WTz31rIUHUHqai2UslPpw5CwXrQP3geYBioRV4WOLvE=
 github.com/antlr4-go/antlr/v4 v4.13.1 h1:SqQKkuVZ+zWkMMNkjy5FZe5mr5WURWnlpmOuzYWrPrQ=

@@ -6,7 +6,6 @@ require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260209202127-80ab13bee0bf.1
 	buf.build/go/protovalidate v1.1.3
 	connectrpc.com/connect v1.19.1
-	github.com/Alcova-AI/adk-anthropic-go v0.1.11
 	github.com/anthropics/anthropic-sdk-go v1.24.0
 	github.com/byebyebruce/adk-go-openai v0.0.0-20251208092515-f5b0ac07643e
 	github.com/expr-lang/expr v1.17.8
