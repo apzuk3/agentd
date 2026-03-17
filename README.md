@@ -77,6 +77,54 @@ func main() {
 
 See [`examples/`](examples/) for more complete examples.
 
+## MCP (remote tool discovery)
+
+`agentd` keeps tool execution on the client. MCP fits naturally by letting the
+client discover and proxy tools from remote MCP servers before each run.
+The Go client MCP integration is implemented with [`mark3labs/mcp-go`](https://github.com/mark3labs/mcp-go).
+
+```go
+clnt := client.New("http://localhost:8080")
+
+agent := &agentdv1.Agent{
+	Name: "assistant",
+	AgentType: &agentdv1.Agent_Llm{
+		Llm: &agentdv1.LlmAgent{
+			Model: client.ModelGemini25Flash,
+			Instruction: "Use tools when needed.",
+			McpAttachments: []*agentdv1.McpAttachment{
+				{
+					McpName:          "docs",
+					IncludeToolNames: []string{"docs.search"},
+				},
+			},
+		},
+	},
+}
+
+result, err := clnt.Run(context.Background(), agent, "Find docs about ConnectRPC streaming",
+	client.WithMCPServer(client.MCPServerConfig{
+		Name:       "docs",
+		URL:        "https://mcp.example.com",
+		ToolPrefix: "docs", // tools become docs.<tool_name>
+	}),
+)
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Println(result.Output)
+```
+
+### How it works
+
+- The client calls MCP `initialize`, `tools/list`, and registers each discovered tool.
+- Tool calls are still executed on the client side; handlers proxy to MCP `tools/call`.
+- Discovered tools are exposed through the same `ToolCallRequest`/`ToolCallResponse` flow.
+- Tool names can be namespaced with `ToolPrefix` to avoid collisions.
+- MCP tools are attached per-agent via `LlmAgent.mcp_attachments` (matching `MCPServerConfig.Name`).
+- `mcp_attachments.include_tool_names` lets an agent opt into only a subset of MCP tools.
+
 ## Architecture overview
 
 ```

@@ -113,20 +113,20 @@ var (
 const (
 	// ——— Gemini (Google) ———
 	// Gemini 2.5: most advanced, best price-performance.
-	ModelGemini25Pro        = "gemini-2.5-pro"
-	ModelGemini25Flash      = "gemini-2.5-flash"
-	ModelGemini25FlashLite  = "gemini-2.5-flash-lite"
+	ModelGemini25Pro       = "gemini-2.5-pro"
+	ModelGemini25Flash     = "gemini-2.5-flash"
+	ModelGemini25FlashLite = "gemini-2.5-flash-lite"
 	// Gemini 3: preview, next-generation.
-	ModelGemini31ProPreview     = "gemini-3.1-pro-preview"
-	ModelGemini3FlashPreview    = "gemini-3-flash-preview"
+	ModelGemini31ProPreview       = "gemini-3.1-pro-preview"
+	ModelGemini3FlashPreview      = "gemini-3-flash-preview"
 	ModelGemini31FlashLitePreview = "gemini-3.1-flash-lite-preview"
 	// Gemini 2.0: legacy (retiring June 2026).
-	ModelGemini20Flash      = "gemini-2.0-flash"
-	ModelGemini20FlashLite  = "gemini-2.0-flash-lite"
+	ModelGemini20Flash     = "gemini-2.0-flash"
+	ModelGemini20FlashLite = "gemini-2.0-flash-lite"
 	// Gemini 1.5: stable older generation.
-	ModelGemini15Pro        = "gemini-1.5-pro"
-	ModelGemini15Flash      = "gemini-1.5-flash"
-	ModelGemini15FlashLite  = "gemini-1.5-flash-lite"
+	ModelGemini15Pro       = "gemini-1.5-pro"
+	ModelGemini15Flash     = "gemini-1.5-flash"
+	ModelGemini15FlashLite = "gemini-1.5-flash-lite"
 
 	// ——— Claude (Anthropic) ———
 	// Claude 4: latest frontier models.
@@ -143,30 +143,30 @@ const (
 
 	// ——— OpenAI ———
 	// GPT-5: flagship and reasoning.
-	ModelGPT54       = "gpt-5.4"
-	ModelGPT54Pro    = "gpt-5.4-pro"
-	ModelGPT5Mini    = "gpt-5-mini"
-	ModelGPT5Nano    = "gpt-5-nano"
-	ModelGPT5        = "gpt-5"
-	ModelGPT5Pro     = "gpt-5-pro"
-	ModelGPT52       = "gpt-5.2"
-	ModelGPT51       = "gpt-5.1"
+	ModelGPT54    = "gpt-5.4"
+	ModelGPT54Pro = "gpt-5.4-pro"
+	ModelGPT5Mini = "gpt-5-mini"
+	ModelGPT5Nano = "gpt-5-nano"
+	ModelGPT5     = "gpt-5"
+	ModelGPT5Pro  = "gpt-5-pro"
+	ModelGPT52    = "gpt-5.2"
+	ModelGPT51    = "gpt-5.1"
 	// GPT-4: smart non-reasoning.
-	ModelGPT41       = "gpt-4.1"
-	ModelGPT41Mini   = "gpt-4.1-mini"
-	ModelGPT41Nano   = "gpt-4.1-nano"
-	ModelGPT4o       = "gpt-4o"
-	ModelGPT4oMini   = "gpt-4o-mini"
-	ModelGPT4Turbo   = "gpt-4-turbo"
-	ModelGPT4        = "gpt-4"
+	ModelGPT41     = "gpt-4.1"
+	ModelGPT41Mini = "gpt-4.1-mini"
+	ModelGPT41Nano = "gpt-4.1-nano"
+	ModelGPT4o     = "gpt-4o"
+	ModelGPT4oMini = "gpt-4o-mini"
+	ModelGPT4Turbo = "gpt-4-turbo"
+	ModelGPT4      = "gpt-4"
 	// Reasoning (o-series).
-	ModelO3         = "o3"
-	ModelO3Pro      = "o3-pro"
-	ModelO3Mini     = "o3-mini"
-	ModelO4Mini     = "o4-mini"
-	ModelO1         = "o1"
-	ModelO1Pro      = "o1-pro"
-	ModelO1Mini     = "o1-mini"
+	ModelO3     = "o3"
+	ModelO3Pro  = "o3-pro"
+	ModelO3Mini = "o3-mini"
+	ModelO4Mini = "o4-mini"
+	ModelO1     = "o1"
+	ModelO1Pro  = "o1-pro"
+	ModelO1Mini = "o1-mini"
 	// Legacy.
 	ModelGPT35Turbo = "gpt-3.5-turbo"
 )
@@ -343,6 +343,7 @@ type runConfig struct {
 	sessionID    string
 	headers      http.Header
 	initialState any
+	mcpServers   []MCPServerConfig
 }
 
 // WithSessionID resumes an existing session instead of creating a new one.
@@ -354,6 +355,17 @@ func WithSessionID(id string) RunOption {
 // state can be a map[string]any or any struct with json tags.
 func WithInitialState(state any) RunOption {
 	return func(rc *runConfig) { rc.initialState = state }
+}
+
+// WithMCPServer adds a remote MCP server whose tools are discovered before the
+// run starts and proxied through this client.
+func WithMCPServer(cfg MCPServerConfig) RunOption {
+	return func(rc *runConfig) { rc.mcpServers = append(rc.mcpServers, cfg) }
+}
+
+// WithMCPServers adds multiple remote MCP servers for this run.
+func WithMCPServers(cfgs ...MCPServerConfig) RunOption {
+	return func(rc *runConfig) { rc.mcpServers = append(rc.mcpServers, cfgs...) }
 }
 
 // BYOK header names mirroring the server-side constants. Clients use the
@@ -476,6 +488,29 @@ func (c *Client) RunAsync(ctx context.Context, agent *agentdv1.Agent, userPrompt
 	}
 
 	return func(yield func(*Event, error) bool) {
+		discoveredMCPTools := map[string][]string{}
+		if len(rc.mcpServers) > 0 {
+			for _, server := range rc.mcpServers {
+				serverName, err := resolveMCPServerName(server)
+				if err != nil {
+					yield(errorEvent("invalid MCP server config: %v", err), nil)
+					return
+				}
+
+				names, err := c.AddMCPServer(ctx, server)
+				if err != nil {
+					yield(errorEvent("discovering MCP tools from %q: %v", serverName, err), nil)
+					return
+				}
+				discoveredMCPTools[serverName] = names
+			}
+
+			if err := AttachDiscoveredMCPToolsByAgent(agent, discoveredMCPTools); err != nil {
+				yield(errorEvent("%v", err), nil)
+				return
+			}
+		}
+
 		toolCatalog, err := c.resolveTools(agent)
 		if err != nil {
 			yield(errorEvent("%v", err), nil)
