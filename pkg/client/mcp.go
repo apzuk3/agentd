@@ -26,14 +26,9 @@ type MCPServerConfig struct {
 	ToolPrefix     string
 	Headers        map[string]string
 	RequestTimeout time.Duration
-	AutoAttach     *bool
-}
-
-func shouldAutoAttachMCPTools(cfg MCPServerConfig) bool {
-	if cfg.AutoAttach == nil {
-		return true
-	}
-	return *cfg.AutoAttach
+	// Deprecated: global auto-attach is no longer applied.
+	// Use LlmAgent.mcp_names to attach MCPs per agent.
+	AutoAttach *bool
 }
 
 type mcpBridge struct {
@@ -44,14 +39,14 @@ type mcpBridge struct {
 // AddMCPServer discovers tools from a remote MCP server and registers proxy
 // handlers so they can be called by agentd via the normal tool dispatch flow.
 func (c *Client) AddMCPServer(ctx context.Context, cfg MCPServerConfig) ([]string, error) {
-	resolvedURL, err := validateMCPServerURL(cfg.URL)
+	serverName, err := resolveMCPServerName(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	name := cfg.Name
-	if name == "" {
-		name = defaultMCPServerName(resolvedURL)
+	resolvedURL, err := validateMCPServerURL(cfg.URL)
+	if err != nil {
+		return nil, err
 	}
 
 	timeout := cfg.RequestTimeout
@@ -71,7 +66,7 @@ func (c *Client) AddMCPServer(ctx context.Context, cfg MCPServerConfig) ([]strin
 
 	prefix := strings.TrimSpace(cfg.ToolPrefix)
 	if prefix == "" {
-		prefix = strings.TrimSpace(name)
+		prefix = strings.TrimSpace(serverName)
 	}
 
 	names := make([]string, 0, len(tools))
@@ -87,7 +82,7 @@ func (c *Client) AddMCPServer(ctx context.Context, cfg MCPServerConfig) ([]strin
 
 		desc := strings.TrimSpace(t.Description)
 		if desc == "" {
-			desc = "MCP tool proxied from " + name
+			desc = "MCP tool proxied from " + serverName
 		}
 
 		schema, err := mcpToolInputSchema(t)
@@ -125,6 +120,77 @@ func (c *Client) AddMCPServer(ctx context.Context, cfg MCPServerConfig) ([]strin
 	}
 
 	return names, nil
+}
+
+// AttachDiscoveredMCPToolsByAgent appends discovered MCP tool names to each LLM
+// agent based on its llm.mcp_names list.
+func AttachDiscoveredMCPToolsByAgent(agent *agentdv1.Agent, discovered map[string][]string) error {
+	if agent == nil || len(discovered) == 0 {
+		return nil
+	}
+
+	var walk func(a *agentdv1.Agent) error
+	walk = func(a *agentdv1.Agent) error {
+		if a == nil {
+			return nil
+		}
+
+		switch {
+		case a.GetLlm() != nil:
+			llm := a.GetLlm()
+			if len(llm.GetMcpNames()) > 0 {
+				seen := make(map[string]bool, len(llm.GetToolNames()))
+				for _, n := range llm.GetToolNames() {
+					seen[n] = true
+				}
+
+				for _, mcpName := range llm.GetMcpNames() {
+					if strings.TrimSpace(mcpName) == "" {
+						continue
+					}
+					tools, ok := discovered[mcpName]
+					if !ok {
+						return fmt.Errorf("MCP %q referenced by agent %q is not configured for this run", mcpName, a.GetName())
+					}
+					for _, toolName := range tools {
+						if toolName == "" || seen[toolName] {
+							continue
+						}
+						llm.ToolNames = append(llm.ToolNames, toolName)
+						seen[toolName] = true
+					}
+				}
+			}
+
+			for _, sub := range llm.GetSubAgents() {
+				if err := walk(sub); err != nil {
+					return err
+				}
+			}
+		case a.GetSequential() != nil:
+			for _, sub := range a.GetSequential().GetAgents() {
+				if err := walk(sub); err != nil {
+					return err
+				}
+			}
+		case a.GetParallel() != nil:
+			for _, sub := range a.GetParallel().GetAgents() {
+				if err := walk(sub); err != nil {
+					return err
+				}
+			}
+		case a.GetLoop() != nil:
+			for _, sub := range a.GetLoop().GetAgents() {
+				if err := walk(sub); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	}
+
+	return walk(agent)
 }
 
 // AttachToolsToAllLlmAgents appends tool names to each LLM agent in the tree.
@@ -287,6 +353,17 @@ func defaultMCPServerName(rawURL string) string {
 		return "mcp"
 	}
 	return host
+}
+
+func resolveMCPServerName(cfg MCPServerConfig) (string, error) {
+	if strings.TrimSpace(cfg.Name) != "" {
+		return strings.TrimSpace(cfg.Name), nil
+	}
+	resolvedURL, err := validateMCPServerURL(cfg.URL)
+	if err != nil {
+		return "", err
+	}
+	return defaultMCPServerName(resolvedURL), nil
 }
 
 func deriveHTTPClient(base any) *http.Client {

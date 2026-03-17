@@ -488,16 +488,26 @@ func (c *Client) RunAsync(ctx context.Context, agent *agentdv1.Agent, userPrompt
 	}
 
 	return func(yield func(*Event, error) bool) {
+		discoveredMCPTools := map[string][]string{}
 		if len(rc.mcpServers) > 0 {
 			for _, server := range rc.mcpServers {
-				names, err := c.AddMCPServer(ctx, server)
+				serverName, err := resolveMCPServerName(server)
 				if err != nil {
-					yield(errorEvent("discovering MCP tools from %q: %v", server.Name, err), nil)
+					yield(errorEvent("invalid MCP server config: %v", err), nil)
 					return
 				}
-				if shouldAutoAttachMCPTools(server) {
-					AttachToolsToAllLlmAgents(agent, names)
+
+				names, err := c.AddMCPServer(ctx, server)
+				if err != nil {
+					yield(errorEvent("discovering MCP tools from %q: %v", serverName, err), nil)
+					return
 				}
+				discoveredMCPTools[serverName] = names
+			}
+
+			if err := AttachDiscoveredMCPToolsByAgent(agent, discoveredMCPTools); err != nil {
+				yield(errorEvent("%v", err), nil)
+				return
 			}
 		}
 

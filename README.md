@@ -92,6 +92,7 @@ agent := &agentdv1.Agent{
 		Llm: &agentdv1.LlmAgent{
 			Model: client.ModelGemini25Flash,
 			Instruction: "Use tools when needed.",
+			McpNames: []string{"docs"}, // attach the MCP named "docs" to this agent only
 		},
 	},
 }
@@ -101,7 +102,6 @@ result, err := clnt.Run(context.Background(), agent, "Find docs about ConnectRPC
 		Name:       "docs",
 		URL:        "https://mcp.example.com",
 		ToolPrefix: "docs", // tools become docs.<tool_name>
-		// AutoAttach defaults to true, so discovered tools are appended to all LLM agents.
 	}),
 )
 if err != nil {
@@ -117,6 +117,7 @@ fmt.Println(result.Output)
 - Tool calls are still executed on the client side; handlers proxy to MCP `tools/call`.
 - Discovered tools are exposed through the same `ToolCallRequest`/`ToolCallResponse` flow.
 - Tool names can be namespaced with `ToolPrefix` to avoid collisions.
+- MCP tools are attached per-agent via `LlmAgent.mcp_names` (matching `MCPServerConfig.Name`).
 
 ## Architecture overview
 

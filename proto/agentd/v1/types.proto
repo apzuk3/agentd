@@ -48,6 +48,9 @@ message LlmAgent {
     string instruction = 4;
     repeated string builtin_tools = 5;
     string output_key = 6;
+    // MCP server names to attach to this agent (matches client MCPServerConfig.Name).
+    // For each listed MCP, all discovered tools from that MCP are appended to tool_names.
+    repeated string mcp_names = 7;
 }
 
 message SequentialAgent {

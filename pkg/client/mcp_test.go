@@ -92,31 +92,53 @@ func TestAddMCPServer_DiscoversAndCallsTools(t *testing.T) {
 	}
 }
 
-func TestAttachToolsToAllLlmAgents(t *testing.T) {
+func TestAttachDiscoveredMCPToolsByAgent(t *testing.T) {
 	agent := &agentdv1.Agent{
 		Name: "root",
 		AgentType: &agentdv1.Agent_Llm{Llm: &agentdv1.LlmAgent{
 			ToolNames: []string{"existing"},
+			McpNames:  []string{"docs"},
 			SubAgents: []*agentdv1.Agent{
 				{
 					Name: "child",
 					AgentType: &agentdv1.Agent_Llm{Llm: &agentdv1.LlmAgent{
 						ToolNames: []string{"child_tool"},
+						McpNames:  []string{"github"},
 					}},
 				},
 			},
 		}},
 	}
 
-	AttachToolsToAllLlmAgents(agent, []string{"existing", "mcp.tool"})
+	err := AttachDiscoveredMCPToolsByAgent(agent, map[string][]string{
+		"docs":   {"docs.search", "docs.read"},
+		"github": {"gh.list_prs"},
+	})
+	if err != nil {
+		t.Fatalf("AttachDiscoveredMCPToolsByAgent returned error: %v", err)
+	}
 
 	rootTools := agent.GetLlm().GetToolNames()
-	if !reflect.DeepEqual(rootTools, []string{"existing", "mcp.tool"}) {
+	if !reflect.DeepEqual(rootTools, []string{"existing", "docs.search", "docs.read"}) {
 		t.Fatalf("unexpected root tools: %#v", rootTools)
 	}
 
 	childTools := agent.GetLlm().GetSubAgents()[0].GetLlm().GetToolNames()
-	if !reflect.DeepEqual(childTools, []string{"child_tool", "existing", "mcp.tool"}) {
+	if !reflect.DeepEqual(childTools, []string{"child_tool", "gh.list_prs"}) {
 		t.Fatalf("unexpected child tools: %#v", childTools)
+	}
+}
+
+func TestAttachDiscoveredMCPToolsByAgent_UnknownMCP(t *testing.T) {
+	agent := &agentdv1.Agent{
+		Name: "root",
+		AgentType: &agentdv1.Agent_Llm{Llm: &agentdv1.LlmAgent{
+			McpNames: []string{"missing"},
+		}},
+	}
+
+	err := AttachDiscoveredMCPToolsByAgent(agent, map[string][]string{"docs": {"docs.search"}})
+	if err == nil {
+		t.Fatal("expected error for unknown MCP attachment")
 	}
 }
