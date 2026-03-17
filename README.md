@@ -81,6 +81,7 @@ See [`examples/`](examples/) for more complete examples.
 
 `agentd` keeps tool execution on the client. MCP fits naturally by letting the
 client discover and proxy tools from remote MCP servers before each run.
+The Go client MCP integration is implemented with [`mark3labs/mcp-go`](https://github.com/mark3labs/mcp-go).
 
 ```go
 clnt := client.New("http://localhost:8080")

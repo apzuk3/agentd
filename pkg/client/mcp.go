@@ -1,19 +1,18 @@
 package client
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
-	"connectrpc.com/connect"
+	mcpclient "github.com/mark3labs/mcp-go/client"
+	mcptransport "github.com/mark3labs/mcp-go/client/transport"
+	"github.com/mark3labs/mcp-go/mcp"
 
 	agentdv1 "github.com/apzuk3/agentd/gen/proto/go/agentd/v1"
 )
@@ -37,41 +36,9 @@ func shouldAutoAttachMCPTools(cfg MCPServerConfig) bool {
 	return *cfg.AutoAttach
 }
 
-type mcpClient struct {
-	httpClient connect.HTTPClient
-	url        string
-	headers    map[string]string
-	idCounter  int64
-}
-
-type mcpRPCRequest struct {
-	JSONRPC string `json:"jsonrpc"`
-	ID      any    `json:"id,omitempty"`
-	Method  string `json:"method"`
-	Params  any    `json:"params,omitempty"`
-}
-
-type mcpRPCError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Data    any    `json:"data,omitempty"`
-}
-
-type mcpRPCResponse struct {
-	JSONRPC string       `json:"jsonrpc"`
-	ID      any          `json:"id,omitempty"`
-	Result  any          `json:"result,omitempty"`
-	Error   *mcpRPCError `json:"error,omitempty"`
-}
-
-type mcpTool struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	InputSchema map[string]any `json:"inputSchema"`
-}
-
-type mcpToolsListResult struct {
-	Tools []mcpTool `json:"tools"`
+type mcpBridge struct {
+	client         *mcpclient.Client
+	requestTimeout time.Duration
 }
 
 // AddMCPServer discovers tools from a remote MCP server and registers proxy
@@ -92,17 +59,12 @@ func (c *Client) AddMCPServer(ctx context.Context, cfg MCPServerConfig) ([]strin
 		timeout = defaultMCPRequestTimeout
 	}
 
-	mc := &mcpClient{
-		httpClient: c.httpClient,
-		url:        resolvedURL,
-		headers:    cfg.Headers,
+	bridge, err := newMCPBridge(ctx, c.httpClient, resolvedURL, cfg.Headers, timeout)
+	if err != nil {
+		return nil, err
 	}
 
-	if err := mc.initialize(ctx, timeout); err != nil {
-		return nil, fmt.Errorf("initialize: %w", err)
-	}
-
-	tools, err := mc.listTools(ctx, timeout)
+	tools, err := bridge.listTools(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("tools/list: %w", err)
 	}
@@ -114,7 +76,7 @@ func (c *Client) AddMCPServer(ctx context.Context, cfg MCPServerConfig) ([]strin
 
 	names := make([]string, 0, len(tools))
 	for _, t := range tools {
-		if t.Name == "" {
+		if strings.TrimSpace(t.Name) == "" {
 			continue
 		}
 
@@ -128,7 +90,11 @@ func (c *Client) AddMCPServer(ctx context.Context, cfg MCPServerConfig) ([]strin
 			desc = "MCP tool proxied from " + name
 		}
 
-		inputSchemaJSON, err := marshalMCPInputSchema(t.InputSchema)
+		schema, err := mcpToolInputSchema(t)
+		if err != nil {
+			return nil, fmt.Errorf("tool %q schema: %w", t.Name, err)
+		}
+		inputSchemaJSON, err := marshalMCPInputSchema(schema)
 		if err != nil {
 			return nil, fmt.Errorf("tool %q schema: %w", t.Name, err)
 		}
@@ -147,7 +113,7 @@ func (c *Client) AddMCPServer(ctx context.Context, cfg MCPServerConfig) ([]strin
 				if err != nil {
 					return "", nil, err
 				}
-				result, err := mc.callTool(callCtx, timeout, remoteName, args)
+				result, err := bridge.callTool(callCtx, remoteName, args)
 				if err != nil {
 					return "", nil, err
 				}
@@ -211,6 +177,89 @@ func AttachToolsToAllLlmAgents(agent *agentdv1.Agent, toolNames []string) {
 	walk(agent)
 }
 
+func newMCPBridge(ctx context.Context, baseHTTPClient any, rawURL string, headers map[string]string, timeout time.Duration) (*mcpBridge, error) {
+	transportOpts := []mcptransport.StreamableHTTPCOption{}
+	if len(headers) > 0 {
+		transportOpts = append(transportOpts, mcptransport.WithHTTPHeaders(cloneStringMap(headers)))
+	}
+
+	hc := deriveHTTPClient(baseHTTPClient)
+	if hc != nil {
+		transportOpts = append(transportOpts, mcptransport.WithHTTPBasicClient(hc))
+	}
+	if timeout > 0 {
+		transportOpts = append(transportOpts, mcptransport.WithHTTPTimeout(timeout))
+	}
+
+	client, err := mcpclient.NewStreamableHttpClient(rawURL, transportOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("creating mcp client: %w", err)
+	}
+
+	initCtx := ctx
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		initCtx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+
+	if err := client.Start(initCtx); err != nil {
+		_ = client.Close()
+		return nil, fmt.Errorf("starting mcp client: %w", err)
+	}
+
+	_, err = client.Initialize(initCtx, mcp.InitializeRequest{
+		Params: mcp.InitializeParams{
+			ProtocolVersion: mcp.LATEST_PROTOCOL_VERSION,
+			Capabilities:    mcp.ClientCapabilities{},
+			ClientInfo: mcp.Implementation{
+				Name:    "agentd-go-client",
+				Version: "0.1.0",
+			},
+		},
+	})
+	if err != nil {
+		_ = client.Close()
+		return nil, fmt.Errorf("initialize: %w", err)
+	}
+
+	return &mcpBridge{
+		client:         client,
+		requestTimeout: timeout,
+	}, nil
+}
+
+func (m *mcpBridge) listTools(ctx context.Context) ([]mcp.Tool, error) {
+	callCtx := ctx
+	if m.requestTimeout > 0 {
+		var cancel context.CancelFunc
+		callCtx, cancel = context.WithTimeout(ctx, m.requestTimeout)
+		defer cancel()
+	}
+
+	res, err := m.client.ListTools(callCtx, mcp.ListToolsRequest{})
+	if err != nil {
+		return nil, err
+	}
+	return res.Tools, nil
+}
+
+func (m *mcpBridge) callTool(ctx context.Context, name string, args map[string]any) (*mcp.CallToolResult, error) {
+	callCtx := ctx
+	if m.requestTimeout > 0 {
+		var cancel context.CancelFunc
+		callCtx, cancel = context.WithTimeout(ctx, m.requestTimeout)
+		defer cancel()
+	}
+
+	return m.client.CallTool(callCtx, mcp.CallToolRequest{
+		Params: mcp.CallToolParams{
+			Name:      name,
+			Arguments: args,
+		},
+	})
+}
+
 func validateMCPServerURL(raw string) (string, error) {
 	if strings.TrimSpace(raw) == "" {
 		return "", errors.New("URL is required")
@@ -240,165 +289,44 @@ func defaultMCPServerName(rawURL string) string {
 	return host
 }
 
-func (m *mcpClient) initialize(ctx context.Context, timeout time.Duration) error {
-	_, err := m.request(ctx, timeout, "initialize", map[string]any{
-		"protocolVersion": "2025-03-26",
-		"capabilities":    map[string]any{},
-		"clientInfo": map[string]any{
-			"name":    "agentd-go-client",
-			"version": "0.1.0",
-		},
-	})
-	if err != nil {
-		return err
+func deriveHTTPClient(base any) *http.Client {
+	hc, ok := base.(*http.Client)
+	if !ok || hc == nil {
+		return &http.Client{}
 	}
-	return m.notify(ctx, timeout, "notifications/initialized", map[string]any{})
+	clone := *hc
+	return &clone
 }
 
-func (m *mcpClient) listTools(ctx context.Context, timeout time.Duration) ([]mcpTool, error) {
-	raw, err := m.request(ctx, timeout, "tools/list", map[string]any{})
-	if err != nil {
-		return nil, err
-	}
-
-	b, err := json.Marshal(raw)
-	if err != nil {
-		return nil, err
-	}
-	var res mcpToolsListResult
-	if err := json.Unmarshal(b, &res); err != nil {
-		return nil, fmt.Errorf("decoding tools/list response: %w", err)
-	}
-	return res.Tools, nil
-}
-
-func (m *mcpClient) callTool(ctx context.Context, timeout time.Duration, name string, args map[string]any) (map[string]any, error) {
-	raw, err := m.request(ctx, timeout, "tools/call", map[string]any{
-		"name":      name,
-		"arguments": args,
-	})
-	if err != nil {
-		return nil, err
-	}
-	rm, ok := raw.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("invalid tools/call result type %T", raw)
-	}
-	return rm, nil
-}
-
-func (m *mcpClient) request(ctx context.Context, timeout time.Duration, method string, params any) (any, error) {
-	m.idCounter++
-	id := strconv.FormatInt(m.idCounter, 10)
-
-	payload, err := json.Marshal(mcpRPCRequest{
-		JSONRPC: "2.0",
-		ID:      id,
-		Method:  method,
-		Params:  params,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := m.post(ctx, timeout, payload)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.Error != nil {
-		return nil, fmt.Errorf("mcp error (%d): %s", resp.Error.Code, resp.Error.Message)
-	}
-	return resp.Result, nil
-}
-
-func (m *mcpClient) notify(ctx context.Context, timeout time.Duration, method string, params any) error {
-	payload, err := json.Marshal(mcpRPCRequest{
-		JSONRPC: "2.0",
-		Method:  method,
-		Params:  params,
-	})
-	if err != nil {
-		return err
-	}
-	_, err = m.post(ctx, timeout, payload)
-	return err
-}
-
-func (m *mcpClient) post(ctx context.Context, timeout time.Duration, payload []byte) (*mcpRPCResponse, error) {
-	callCtx := ctx
-	if timeout > 0 {
-		var cancel context.CancelFunc
-		callCtx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
-	}
-
-	req, err := http.NewRequestWithContext(callCtx, http.MethodPost, m.url, bytes.NewReader(payload))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json, text/event-stream")
-	for k, v := range m.headers {
-		req.Header.Set(k, v)
-	}
-
-	hc := m.httpClient
-	if hc == nil {
-		hc = http.DefaultClient
-	}
-
-	httpResp, err := hc.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer httpResp.Body.Close()
-
-	body, err := io.ReadAll(httpResp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if httpResp.StatusCode >= 400 {
-		return nil, fmt.Errorf("http %d: %s", httpResp.StatusCode, strings.TrimSpace(string(body)))
-	}
-
-	msg := extractJSONRPCMessage(body)
-	if len(msg) == 0 {
-		return &mcpRPCResponse{}, nil
-	}
-
-	var rpcResp mcpRPCResponse
-	if err := json.Unmarshal(msg, &rpcResp); err != nil {
-		return nil, fmt.Errorf("decoding json-rpc response: %w", err)
-	}
-	return &rpcResp, nil
-}
-
-func extractJSONRPCMessage(body []byte) []byte {
-	trimmed := bytes.TrimSpace(body)
-	if len(trimmed) == 0 {
+func cloneStringMap(src map[string]string) map[string]string {
+	if len(src) == 0 {
 		return nil
 	}
+	dst := make(map[string]string, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
 
-	if bytes.HasPrefix(trimmed, []byte("data:")) {
-		lines := strings.Split(string(trimmed), "\n")
-		var combined strings.Builder
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if !strings.HasPrefix(line, "data:") {
-				continue
-			}
-			payload := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-			if payload == "" || payload == "[DONE]" {
-				continue
-			}
-			combined.WriteString(payload)
+func mcpToolInputSchema(tool mcp.Tool) (map[string]any, error) {
+	if len(tool.RawInputSchema) > 0 {
+		var schema map[string]any
+		if err := json.Unmarshal(tool.RawInputSchema, &schema); err != nil {
+			return nil, err
 		}
-		return []byte(combined.String())
+		return schema, nil
 	}
 
-	return trimmed
+	b, err := json.Marshal(tool.InputSchema)
+	if err != nil {
+		return nil, err
+	}
+	var schema map[string]any
+	if err := json.Unmarshal(b, &schema); err != nil {
+		return nil, err
+	}
+	return schema, nil
 }
 
 func marshalMCPInputSchema(schema map[string]any) (string, error) {
@@ -426,29 +354,30 @@ func decodeMCPToolInput(input string) (map[string]any, error) {
 	return args, nil
 }
 
-func normalizeMCPToolResult(result map[string]any) (string, map[string]any, error) {
-	if sc, ok := result["structuredContent"]; ok {
-		b, err := json.Marshal(sc)
+func normalizeMCPToolResult(result *mcp.CallToolResult) (string, map[string]any, error) {
+	if result == nil {
+		return "", nil, errors.New("empty MCP tool result")
+	}
+
+	textOutput := textFromMCPContent(result.Content)
+
+	if result.IsError {
+		if textOutput == "" {
+			textOutput = "MCP tool returned an error"
+		}
+		return "", nil, errors.New(textOutput)
+	}
+
+	if result.StructuredContent != nil {
+		b, err := json.Marshal(result.StructuredContent)
 		if err != nil {
 			return "", nil, fmt.Errorf("encoding structuredContent: %w", err)
 		}
 		return string(b), nil, nil
 	}
 
-	if content, ok := result["content"].([]any); ok {
-		var parts []string
-		for _, item := range content {
-			m, ok := item.(map[string]any)
-			if !ok {
-				continue
-			}
-			if text, ok := m["text"].(string); ok && text != "" {
-				parts = append(parts, text)
-			}
-		}
-		if len(parts) > 0 {
-			return strings.Join(parts, "\n"), nil, nil
-		}
+	if textOutput != "" {
+		return textOutput, nil, nil
 	}
 
 	b, err := json.Marshal(result)
@@ -456,4 +385,16 @@ func normalizeMCPToolResult(result map[string]any) (string, map[string]any, erro
 		return "", nil, fmt.Errorf("encoding MCP result: %w", err)
 	}
 	return string(b), nil, nil
+}
+
+func textFromMCPContent(content []mcp.Content) string {
+	parts := make([]string, 0, len(content))
+	for _, c := range content {
+		if txt, ok := mcp.AsTextContent(c); ok {
+			if t := strings.TrimSpace(txt.Text); t != "" {
+				parts = append(parts, t)
+			}
+		}
+	}
+	return strings.Join(parts, "\n")
 }

@@ -13,6 +13,8 @@ import (
 
 func TestAddMCPServer_DiscoversAndCallsTools(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
 		var req map[string]any
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Fatalf("decode request: %v", err)
@@ -27,7 +29,8 @@ func TestAddMCPServer_DiscoversAndCallsTools(t *testing.T) {
 				"result":  map[string]any{"protocolVersion": "2025-03-26"},
 			})
 		case "notifications/initialized":
-			w.WriteHeader(http.StatusNoContent)
+			w.WriteHeader(http.StatusAccepted)
+			_, _ = w.Write([]byte(`{"jsonrpc":"2.0","result":{}}`))
 		case "tools/list":
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"jsonrpc": "2.0",
