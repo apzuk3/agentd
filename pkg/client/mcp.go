@@ -123,7 +123,9 @@ func (c *Client) AddMCPServer(ctx context.Context, cfg MCPServerConfig) ([]strin
 }
 
 // AttachDiscoveredMCPToolsByAgent appends discovered MCP tool names to each LLM
-// agent based on its llm.mcp_names list.
+// agent based on its llm.mcp_names and llm.mcp_attachments lists.
+// mcp_names attaches all discovered tools for the MCP.
+// mcp_attachments can optionally limit attached tools via include_tool_names.
 func AttachDiscoveredMCPToolsByAgent(agent *agentdv1.Agent, discovered map[string][]string) error {
 	if agent == nil || len(discovered) == 0 {
 		return nil
@@ -138,20 +140,28 @@ func AttachDiscoveredMCPToolsByAgent(agent *agentdv1.Agent, discovered map[strin
 		switch {
 		case a.GetLlm() != nil:
 			llm := a.GetLlm()
-			if len(llm.GetMcpNames()) > 0 {
-				seen := make(map[string]bool, len(llm.GetToolNames()))
-				for _, n := range llm.GetToolNames() {
-					seen[n] = true
+			seen := make(map[string]bool, len(llm.GetToolNames()))
+			for _, n := range llm.GetToolNames() {
+				seen[n] = true
+			}
+
+			for _, mcpName := range llm.GetMcpNames() {
+				if err := appendAllMCPToolsForAgent(llm, a.GetName(), mcpName, discovered, seen); err != nil {
+					return err
+				}
+			}
+
+			for _, attachment := range llm.GetMcpAttachments() {
+				mcpName := strings.TrimSpace(attachment.GetMcpName())
+				if mcpName == "" {
+					continue
+				}
+				tools, ok := discovered[mcpName]
+				if !ok {
+					return fmt.Errorf("MCP %q referenced by agent %q is not configured for this run", mcpName, a.GetName())
 				}
 
-				for _, mcpName := range llm.GetMcpNames() {
-					if strings.TrimSpace(mcpName) == "" {
-						continue
-					}
-					tools, ok := discovered[mcpName]
-					if !ok {
-						return fmt.Errorf("MCP %q referenced by agent %q is not configured for this run", mcpName, a.GetName())
-					}
+				if len(attachment.GetIncludeToolNames()) == 0 {
 					for _, toolName := range tools {
 						if toolName == "" || seen[toolName] {
 							continue
@@ -159,6 +169,26 @@ func AttachDiscoveredMCPToolsByAgent(agent *agentdv1.Agent, discovered map[strin
 						llm.ToolNames = append(llm.ToolNames, toolName)
 						seen[toolName] = true
 					}
+					continue
+				}
+
+				available := make(map[string]bool, len(tools))
+				for _, t := range tools {
+					available[t] = true
+				}
+				for _, included := range attachment.GetIncludeToolNames() {
+					toolName := strings.TrimSpace(included)
+					if toolName == "" {
+						continue
+					}
+					if !available[toolName] {
+						return fmt.Errorf("MCP tool %q is not provided by MCP %q for agent %q", toolName, mcpName, a.GetName())
+					}
+					if seen[toolName] {
+						continue
+					}
+					llm.ToolNames = append(llm.ToolNames, toolName)
+					seen[toolName] = true
 				}
 			}
 
@@ -191,6 +221,25 @@ func AttachDiscoveredMCPToolsByAgent(agent *agentdv1.Agent, discovered map[strin
 	}
 
 	return walk(agent)
+}
+
+func appendAllMCPToolsForAgent(llm *agentdv1.LlmAgent, agentName, mcpName string, discovered map[string][]string, seen map[string]bool) error {
+	mcpName = strings.TrimSpace(mcpName)
+	if mcpName == "" {
+		return nil
+	}
+	tools, ok := discovered[mcpName]
+	if !ok {
+		return fmt.Errorf("MCP %q referenced by agent %q is not configured for this run", mcpName, agentName)
+	}
+	for _, toolName := range tools {
+		if toolName == "" || seen[toolName] {
+			continue
+		}
+		llm.ToolNames = append(llm.ToolNames, toolName)
+		seen[toolName] = true
+	}
+	return nil
 }
 
 // AttachToolsToAllLlmAgents appends tool names to each LLM agent in the tree.

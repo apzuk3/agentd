@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agentd/v1/types.proto.
  */
 export const file_agentd_v1_types: GenFile = /*@__PURE__*/
-  fileDesc("ChVhZ2VudGQvdjEvdHlwZXMucHJvdG8SCWFnZW50ZC52MSKLAQoEVG9vbBI5CgRuYW1lGAEgASgJQiu6SChyJhABGEAyIF5bQS1aYS16X11bQS1aYS16MC05Xy46LV17MCw2M30kEhwKC2Rlc2NyaXB0aW9uGAIgASgJQge6SARyAhABEhkKDGlucHV0X3NjaGVtYRgDIAEoCUgAiAEBQg8KDV9pbnB1dF9zY2hlbWEi4gEKBUFnZW50EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSIgoDbGxtGAMgASgLMhMuYWdlbnRkLnYxLkxsbUFnZW50SAASMAoKc2VxdWVudGlhbBgEIAEoCzIaLmFnZW50ZC52MS5TZXF1ZW50aWFsQWdlbnRIABIsCghwYXJhbGxlbBgFIAEoCzIYLmFnZW50ZC52MS5QYXJhbGxlbEFnZW50SAASJAoEbG9vcBgGIAEoCzIULmFnZW50ZC52MS5Mb29wQWdlbnRIAEIMCgphZ2VudF90eXBlIqYBCghMbG1BZ2VudBINCgVtb2RlbBgBIAEoCRISCgp0b29sX25hbWVzGAIgAygJEiQKCnN1Yl9hZ2VudHMYAyADKAsyEC5hZ2VudGQudjEuQWdlbnQSEwoLaW5zdHJ1Y3Rpb24YBCABKAkSFQoNYnVpbHRpbl90b29scxgFIAMoCRISCgpvdXRwdXRfa2V5GAYgASgJEhEKCW1jcF9uYW1lcxgHIAMoCSIzCg9TZXF1ZW50aWFsQWdlbnQSIAoGYWdlbnRzGAEgAygLMhAuYWdlbnRkLnYxLkFnZW50IjEKDVBhcmFsbGVsQWdlbnQSIAoGYWdlbnRzGAEgAygLMhAuYWdlbnRkLnYxLkFnZW50IkUKCUxvb3BBZ2VudBIgCgZhZ2VudHMYASADKAsyEC5hZ2VudGQudjEuQWdlbnQSFgoObWF4X2l0ZXJhdGlvbnMYAiABKA0ihAEKClRva2VuVXNhZ2USFQoNcHJvbXB0X3Rva2VucxgBIAEoBRIZChFjb21wbGV0aW9uX3Rva2VucxgCIAEoBRIVCg1jYWNoZWRfdG9rZW5zGAMgASgFEhcKD3Rob3VnaHRzX3Rva2VucxgEIAEoBRIUCgx0b3RhbF90b2tlbnMYBSABKAUiZQoMVXNhZ2VTdW1tYXJ5EioKC3RvdGFsX3VzYWdlGAEgASgLMhUuYWdlbnRkLnYxLlRva2VuVXNhZ2USEQoJbGxtX2NhbGxzGAIgASgFEhYKDmVzdGltYXRlZF9jb3N0GAMgASgBKvgBCglFcnJvckNvZGUSGgoWRVJST1JfQ09ERV9VTlNQRUNJRklFRBAAEhcKE0VSUk9SX0NPREVfSU5URVJOQUwQARIhCh1FUlJPUl9DT0RFX0lOVkFMSURfQUdFTlRfVFJFRRACEhsKF0VSUk9SX0NPREVfUkFURV9MSU1JVEVEEAMSGgoWRVJST1JfQ09ERV9BVVRIX0ZBSUxFRBAEEiAKHEVSUk9SX0NPREVfU0VTU0lPTl9OT1RfRk9VTkQQBRIgChxFUlJPUl9DT0RFX01PREVMX1VOQVZBSUxBQkxFEAYSFgoSRVJST1JfQ09ERV9USU1FT1VUEAdCOlo4Z2l0aHViLmNvbS9hcHp1azMvYWdlbnRkL2dlbi9wcm90by9nby9hZ2VudGQvdjE7YWdlbnRkdjFiBnByb3RvMw", [file_buf_validate_validate]);
+  fileDesc("ChVhZ2VudGQvdjEvdHlwZXMucHJvdG8SCWFnZW50ZC52MSKLAQoEVG9vbBI5CgRuYW1lGAEgASgJQiu6SChyJhABGEAyIF5bQS1aYS16X11bQS1aYS16MC05Xy46LV17MCw2M30kEhwKC2Rlc2NyaXB0aW9uGAIgASgJQge6SARyAhABEhkKDGlucHV0X3NjaGVtYRgDIAEoCUgAiAEBQg8KDV9pbnB1dF9zY2hlbWEi4gEKBUFnZW50EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSIgoDbGxtGAMgASgLMhMuYWdlbnRkLnYxLkxsbUFnZW50SAASMAoKc2VxdWVudGlhbBgEIAEoCzIaLmFnZW50ZC52MS5TZXF1ZW50aWFsQWdlbnRIABIsCghwYXJhbGxlbBgFIAEoCzIYLmFnZW50ZC52MS5QYXJhbGxlbEFnZW50SAASJAoEbG9vcBgGIAEoCzIULmFnZW50ZC52MS5Mb29wQWdlbnRIAEIMCgphZ2VudF90eXBlIj0KDU1jcEF0dGFjaG1lbnQSEAoIbWNwX25hbWUYASABKAkSGgoSaW5jbHVkZV90b29sX25hbWVzGAIgAygJItkBCghMbG1BZ2VudBINCgVtb2RlbBgBIAEoCRISCgp0b29sX25hbWVzGAIgAygJEiQKCnN1Yl9hZ2VudHMYAyADKAsyEC5hZ2VudGQudjEuQWdlbnQSEwoLaW5zdHJ1Y3Rpb24YBCABKAkSFQoNYnVpbHRpbl90b29scxgFIAMoCRISCgpvdXRwdXRfa2V5GAYgASgJEhEKCW1jcF9uYW1lcxgHIAMoCRIxCg9tY3BfYXR0YWNobWVudHMYCCADKAsyGC5hZ2VudGQudjEuTWNwQXR0YWNobWVudCIzCg9TZXF1ZW50aWFsQWdlbnQSIAoGYWdlbnRzGAEgAygLMhAuYWdlbnRkLnYxLkFnZW50IjEKDVBhcmFsbGVsQWdlbnQSIAoGYWdlbnRzGAEgAygLMhAuYWdlbnRkLnYxLkFnZW50IkUKCUxvb3BBZ2VudBIgCgZhZ2VudHMYASADKAsyEC5hZ2VudGQudjEuQWdlbnQSFgoObWF4X2l0ZXJhdGlvbnMYAiABKA0ihAEKClRva2VuVXNhZ2USFQoNcHJvbXB0X3Rva2VucxgBIAEoBRIZChFjb21wbGV0aW9uX3Rva2VucxgCIAEoBRIVCg1jYWNoZWRfdG9rZW5zGAMgASgFEhcKD3Rob3VnaHRzX3Rva2VucxgEIAEoBRIUCgx0b3RhbF90b2tlbnMYBSABKAUiZQoMVXNhZ2VTdW1tYXJ5EioKC3RvdGFsX3VzYWdlGAEgASgLMhUuYWdlbnRkLnYxLlRva2VuVXNhZ2USEQoJbGxtX2NhbGxzGAIgASgFEhYKDmVzdGltYXRlZF9jb3N0GAMgASgBKvgBCglFcnJvckNvZGUSGgoWRVJST1JfQ09ERV9VTlNQRUNJRklFRBAAEhcKE0VSUk9SX0NPREVfSU5URVJOQUwQARIhCh1FUlJPUl9DT0RFX0lOVkFMSURfQUdFTlRfVFJFRRACEhsKF0VSUk9SX0NPREVfUkFURV9MSU1JVEVEEAMSGgoWRVJST1JfQ09ERV9BVVRIX0ZBSUxFRBAEEiAKHEVSUk9SX0NPREVfU0VTU0lPTl9OT1RfRk9VTkQQBRIgChxFUlJPUl9DT0RFX01PREVMX1VOQVZBSUxBQkxFEAYSFgoSRVJST1JfQ09ERV9USU1FT1VUEAdCOlo4Z2l0aHViLmNvbS9hcHp1azMvYWdlbnRkL2dlbi9wcm90by9nby9hZ2VudGQvdjE7YWdlbnRkdjFiBnByb3RvMw", [file_buf_validate_validate]);
 
 /**
  * @generated from message agentd.v1.Tool
@@ -95,6 +95,33 @@ export const AgentSchema: GenMessage<Agent> = /*@__PURE__*/
   messageDesc(file_agentd_v1_types, 1);
 
 /**
+ * @generated from message agentd.v1.McpAttachment
+ */
+export type McpAttachment = Message<"agentd.v1.McpAttachment"> & {
+  /**
+   * MCP server name to attach (matches client MCPServerConfig.Name).
+   *
+   * @generated from field: string mcp_name = 1;
+   */
+  mcpName: string;
+
+  /**
+   * Optional subset of discovered MCP tools to attach for this agent.
+   * Empty means attach all discovered tools from mcp_name.
+   *
+   * @generated from field: repeated string include_tool_names = 2;
+   */
+  includeToolNames: string[];
+};
+
+/**
+ * Describes the message agentd.v1.McpAttachment.
+ * Use `create(McpAttachmentSchema)` to create a new message.
+ */
+export const McpAttachmentSchema: GenMessage<McpAttachment> = /*@__PURE__*/
+  messageDesc(file_agentd_v1_types, 2);
+
+/**
  * @generated from message agentd.v1.LlmAgent
  */
 export type LlmAgent = Message<"agentd.v1.LlmAgent"> & {
@@ -135,6 +162,13 @@ export type LlmAgent = Message<"agentd.v1.LlmAgent"> & {
    * @generated from field: repeated string mcp_names = 7;
    */
   mcpNames: string[];
+
+  /**
+   * Per-agent MCP attachments with optional include filters.
+   *
+   * @generated from field: repeated agentd.v1.McpAttachment mcp_attachments = 8;
+   */
+  mcpAttachments: McpAttachment[];
 };
 
 /**
@@ -142,7 +176,7 @@ export type LlmAgent = Message<"agentd.v1.LlmAgent"> & {
  * Use `create(LlmAgentSchema)` to create a new message.
  */
 export const LlmAgentSchema: GenMessage<LlmAgent> = /*@__PURE__*/
-  messageDesc(file_agentd_v1_types, 2);
+  messageDesc(file_agentd_v1_types, 3);
 
 /**
  * @generated from message agentd.v1.SequentialAgent
@@ -159,7 +193,7 @@ export type SequentialAgent = Message<"agentd.v1.SequentialAgent"> & {
  * Use `create(SequentialAgentSchema)` to create a new message.
  */
 export const SequentialAgentSchema: GenMessage<SequentialAgent> = /*@__PURE__*/
-  messageDesc(file_agentd_v1_types, 3);
+  messageDesc(file_agentd_v1_types, 4);
 
 /**
  * @generated from message agentd.v1.ParallelAgent
@@ -176,7 +210,7 @@ export type ParallelAgent = Message<"agentd.v1.ParallelAgent"> & {
  * Use `create(ParallelAgentSchema)` to create a new message.
  */
 export const ParallelAgentSchema: GenMessage<ParallelAgent> = /*@__PURE__*/
-  messageDesc(file_agentd_v1_types, 4);
+  messageDesc(file_agentd_v1_types, 5);
 
 /**
  * @generated from message agentd.v1.LoopAgent
@@ -200,7 +234,7 @@ export type LoopAgent = Message<"agentd.v1.LoopAgent"> & {
  * Use `create(LoopAgentSchema)` to create a new message.
  */
 export const LoopAgentSchema: GenMessage<LoopAgent> = /*@__PURE__*/
-  messageDesc(file_agentd_v1_types, 5);
+  messageDesc(file_agentd_v1_types, 6);
 
 /**
  * TokenUsage holds per-event or cumulative token counts.
@@ -243,7 +277,7 @@ export type TokenUsage = Message<"agentd.v1.TokenUsage"> & {
  * Use `create(TokenUsageSchema)` to create a new message.
  */
 export const TokenUsageSchema: GenMessage<TokenUsage> = /*@__PURE__*/
-  messageDesc(file_agentd_v1_types, 6);
+  messageDesc(file_agentd_v1_types, 7);
 
 /**
  * UsageSummary is the final billing summary for a session.
@@ -278,7 +312,7 @@ export type UsageSummary = Message<"agentd.v1.UsageSummary"> & {
  * Use `create(UsageSummarySchema)` to create a new message.
  */
 export const UsageSummarySchema: GenMessage<UsageSummary> = /*@__PURE__*/
-  messageDesc(file_agentd_v1_types, 7);
+  messageDesc(file_agentd_v1_types, 8);
 
 /**
  * @generated from enum agentd.v1.ErrorCode

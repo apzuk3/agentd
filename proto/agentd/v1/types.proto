@@ -41,6 +41,14 @@ message Agent {
     }
 }
 
+message McpAttachment {
+    // MCP server name to attach (matches client MCPServerConfig.Name).
+    string mcp_name = 1;
+    // Optional subset of discovered MCP tools to attach for this agent.
+    // Empty means attach all discovered tools from mcp_name.
+    repeated string include_tool_names = 2;
+}
+
 message LlmAgent {
     string model = 1;
     repeated string tool_names = 2;
@@ -51,6 +59,8 @@ message LlmAgent {
     // MCP server names to attach to this agent (matches client MCPServerConfig.Name).
     // For each listed MCP, all discovered tools from that MCP are appended to tool_names.
     repeated string mcp_names = 7;
+    // Per-agent MCP attachments with optional include filters.
+    repeated McpAttachment mcp_attachments = 8;
 }
 
 message SequentialAgent {

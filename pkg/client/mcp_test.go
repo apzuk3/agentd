@@ -142,3 +142,51 @@ func TestAttachDiscoveredMCPToolsByAgent_UnknownMCP(t *testing.T) {
 		t.Fatal("expected error for unknown MCP attachment")
 	}
 }
+
+func TestAttachDiscoveredMCPToolsByAgent_WithIncludeToolNames(t *testing.T) {
+	agent := &agentdv1.Agent{
+		Name: "root",
+		AgentType: &agentdv1.Agent_Llm{Llm: &agentdv1.LlmAgent{
+			McpAttachments: []*agentdv1.McpAttachment{
+				{
+					McpName:          "github",
+					IncludeToolNames: []string{"gh.list_prs"},
+				},
+			},
+		}},
+	}
+
+	err := AttachDiscoveredMCPToolsByAgent(agent, map[string][]string{
+		"github": {"gh.list_prs", "gh.create_issue"},
+	})
+	if err != nil {
+		t.Fatalf("AttachDiscoveredMCPToolsByAgent returned error: %v", err)
+	}
+
+	got := agent.GetLlm().GetToolNames()
+	want := []string{"gh.list_prs"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected tools: got=%#v want=%#v", got, want)
+	}
+}
+
+func TestAttachDiscoveredMCPToolsByAgent_UnknownIncludedTool(t *testing.T) {
+	agent := &agentdv1.Agent{
+		Name: "root",
+		AgentType: &agentdv1.Agent_Llm{Llm: &agentdv1.LlmAgent{
+			McpAttachments: []*agentdv1.McpAttachment{
+				{
+					McpName:          "github",
+					IncludeToolNames: []string{"gh.not_there"},
+				},
+			},
+		}},
+	}
+
+	err := AttachDiscoveredMCPToolsByAgent(agent, map[string][]string{
+		"github": {"gh.list_prs"},
+	})
+	if err == nil {
+		t.Fatal("expected error for unknown included tool")
+	}
+}
