@@ -341,11 +341,8 @@ type LlmAgent struct {
 	Instruction  string                 `protobuf:"bytes,4,opt,name=instruction,proto3" json:"instruction,omitempty"`
 	BuiltinTools []string               `protobuf:"bytes,5,rep,name=builtin_tools,json=builtinTools,proto3" json:"builtin_tools,omitempty"`
 	OutputKey    string                 `protobuf:"bytes,6,opt,name=output_key,json=outputKey,proto3" json:"output_key,omitempty"`
-	// MCP server names to attach to this agent (matches client MCPServerConfig.Name).
-	// For each listed MCP, all discovered tools from that MCP are appended to tool_names.
-	McpNames []string `protobuf:"bytes,7,rep,name=mcp_names,json=mcpNames,proto3" json:"mcp_names,omitempty"`
 	// Per-agent MCP attachments with optional include filters.
-	McpAttachments []*McpAttachment `protobuf:"bytes,8,rep,name=mcp_attachments,json=mcpAttachments,proto3" json:"mcp_attachments,omitempty"`
+	McpAttachments []*McpAttachment `protobuf:"bytes,7,rep,name=mcp_attachments,json=mcpAttachments,proto3" json:"mcp_attachments,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -420,13 +417,6 @@ func (x *LlmAgent) GetOutputKey() string {
 		return x.OutputKey
 	}
 	return ""
-}
-
-func (x *LlmAgent) GetMcpNames() []string {
-	if x != nil {
-		return x.McpNames
-	}
-	return nil
 }
 
 func (x *LlmAgent) GetMcpAttachments() []*McpAttachment {
@@ -737,7 +727,7 @@ const file_agentd_v1_types_proto_rawDesc = "" +
 	"agent_type\"X\n" +
 	"\rMcpAttachment\x12\x19\n" +
 	"\bmcp_name\x18\x01 \x01(\tR\amcpName\x12,\n" +
-	"\x12include_tool_names\x18\x02 \x03(\tR\x10includeToolNames\"\xb6\x02\n" +
+	"\x12include_tool_names\x18\x02 \x03(\tR\x10includeToolNames\"\x99\x02\n" +
 	"\bLlmAgent\x12\x14\n" +
 	"\x05model\x18\x01 \x01(\tR\x05model\x12\x1d\n" +
 	"\n" +
@@ -747,9 +737,8 @@ const file_agentd_v1_types_proto_rawDesc = "" +
 	"\vinstruction\x18\x04 \x01(\tR\vinstruction\x12#\n" +
 	"\rbuiltin_tools\x18\x05 \x03(\tR\fbuiltinTools\x12\x1d\n" +
 	"\n" +
-	"output_key\x18\x06 \x01(\tR\toutputKey\x12\x1b\n" +
-	"\tmcp_names\x18\a \x03(\tR\bmcpNames\x12A\n" +
-	"\x0fmcp_attachments\x18\b \x03(\v2\x18.agentd.v1.McpAttachmentR\x0emcpAttachments\";\n" +
+	"output_key\x18\x06 \x01(\tR\toutputKey\x12A\n" +
+	"\x0fmcp_attachments\x18\a \x03(\v2\x18.agentd.v1.McpAttachmentR\x0emcpAttachments\";\n" +
 	"\x0fSequentialAgent\x12(\n" +
 	"\x06agents\x18\x01 \x03(\v2\x10.agentd.v1.AgentR\x06agents\"9\n" +
 	"\rParallelAgent\x12(\n" +

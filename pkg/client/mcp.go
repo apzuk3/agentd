@@ -123,9 +123,8 @@ func (c *Client) AddMCPServer(ctx context.Context, cfg MCPServerConfig) ([]strin
 }
 
 // AttachDiscoveredMCPToolsByAgent appends discovered MCP tool names to each LLM
-// agent based on its llm.mcp_names and llm.mcp_attachments lists.
-// mcp_names attaches all discovered tools for the MCP.
-// mcp_attachments can optionally limit attached tools via include_tool_names.
+// agent based on its llm.mcp_attachments list.
+// Empty include_tool_names attaches all tools for that MCP attachment.
 func AttachDiscoveredMCPToolsByAgent(agent *agentdv1.Agent, discovered map[string][]string) error {
 	if agent == nil || len(discovered) == 0 {
 		return nil
@@ -145,12 +144,6 @@ func AttachDiscoveredMCPToolsByAgent(agent *agentdv1.Agent, discovered map[strin
 				seen[n] = true
 			}
 
-			for _, mcpName := range llm.GetMcpNames() {
-				if err := appendAllMCPToolsForAgent(llm, a.GetName(), mcpName, discovered, seen); err != nil {
-					return err
-				}
-			}
-
 			for _, attachment := range llm.GetMcpAttachments() {
 				mcpName := strings.TrimSpace(attachment.GetMcpName())
 				if mcpName == "" {
@@ -162,12 +155,8 @@ func AttachDiscoveredMCPToolsByAgent(agent *agentdv1.Agent, discovered map[strin
 				}
 
 				if len(attachment.GetIncludeToolNames()) == 0 {
-					for _, toolName := range tools {
-						if toolName == "" || seen[toolName] {
-							continue
-						}
-						llm.ToolNames = append(llm.ToolNames, toolName)
-						seen[toolName] = true
+					if err := appendAllMCPToolsForAgent(llm, a.GetName(), mcpName, discovered, seen); err != nil {
+						return err
 					}
 					continue
 				}

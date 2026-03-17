@@ -97,13 +97,17 @@ func TestAttachDiscoveredMCPToolsByAgent(t *testing.T) {
 		Name: "root",
 		AgentType: &agentdv1.Agent_Llm{Llm: &agentdv1.LlmAgent{
 			ToolNames: []string{"existing"},
-			McpNames:  []string{"docs"},
+			McpAttachments: []*agentdv1.McpAttachment{
+				{McpName: "docs"},
+			},
 			SubAgents: []*agentdv1.Agent{
 				{
 					Name: "child",
 					AgentType: &agentdv1.Agent_Llm{Llm: &agentdv1.LlmAgent{
 						ToolNames: []string{"child_tool"},
-						McpNames:  []string{"github"},
+						McpAttachments: []*agentdv1.McpAttachment{
+							{McpName: "github"},
+						},
 					}},
 				},
 			},
@@ -133,7 +137,7 @@ func TestAttachDiscoveredMCPToolsByAgent_UnknownMCP(t *testing.T) {
 	agent := &agentdv1.Agent{
 		Name: "root",
 		AgentType: &agentdv1.Agent_Llm{Llm: &agentdv1.LlmAgent{
-			McpNames: []string{"missing"},
+			McpAttachments: []*agentdv1.McpAttachment{{McpName: "missing"}},
 		}},
 	}
 

@@ -122,7 +122,7 @@ fmt.Println(result.Output)
 - Tool calls are still executed on the client side; handlers proxy to MCP `tools/call`.
 - Discovered tools are exposed through the same `ToolCallRequest`/`ToolCallResponse` flow.
 - Tool names can be namespaced with `ToolPrefix` to avoid collisions.
-- MCP tools are attached per-agent via `LlmAgent.mcp_names` or `LlmAgent.mcp_attachments` (matching `MCPServerConfig.Name`).
+- MCP tools are attached per-agent via `LlmAgent.mcp_attachments` (matching `MCPServerConfig.Name`).
 - `mcp_attachments.include_tool_names` lets an agent opt into only a subset of MCP tools.
 
 ## Architecture overview
