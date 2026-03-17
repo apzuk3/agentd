@@ -7,8 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	adkanthropic "github.com/Alcova-AI/adk-anthropic-go"
-	"github.com/anthropics/anthropic-sdk-go"
+	adkanthropic "github.com/apzuk3/agentd/model/anthropic"
 	adkopenai "github.com/byebyebruce/adk-go-openai"
 	"github.com/google/jsonschema-go/jsonschema"
 	"google.golang.org/adk/agent"
@@ -44,8 +43,9 @@ func createModel(ctx context.Context, modelName, geminiAPIKey, anthropicAPIKey, 
 		if anthropicAPIKey == "" {
 			return nil, fmt.Errorf("Anthropic API key is required for model %q; set ANTHROPIC_API_KEY or pass via %s header", modelName, HeaderAnthropicAPIKey)
 		}
-		return adkanthropic.NewModel(ctx, anthropic.Model(modelName), &adkanthropic.Config{
-			APIKey: anthropicAPIKey,
+		return adkanthropic.NewModel(ctx, modelName, &adkanthropic.Config{
+			APIKey:   anthropicAPIKey,
+			Provider: adkanthropic.ProviderAnthropic,
 		})
 	}
 	if isOpenAIModel(modelName) {
