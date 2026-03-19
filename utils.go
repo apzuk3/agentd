@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	adkanthropic "github.com/apzuk3/agentd/model/anthropic"
-	adkopenai "github.com/byebyebruce/adk-go-openai"
+	adkopenai "github.com/apzuk3/agentd/model/openai"
 	"github.com/google/jsonschema-go/jsonschema"
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/agent/llmagent"
@@ -24,7 +24,7 @@ import (
 	agentdv1 "github.com/apzuk3/agentd/gen/proto/go/agentd/v1"
 )
 
-var openAIPrefixes = []string{"gpt-", "o1-", "o3-", "o4-", "chatgpt-"}
+var openAIPrefixes = []string{"gpt-", "o1", "o3", "o4", "chatgpt-"}
 
 func isOpenAIModel(modelName string) bool {
 	for _, prefix := range openAIPrefixes {
@@ -52,7 +52,7 @@ func createModel(ctx context.Context, modelName, geminiAPIKey, anthropicAPIKey, 
 		if openaiAPIKey == "" {
 			return nil, fmt.Errorf("OpenAI API key is required for model %q; set OPENAI_API_KEY or pass via %s header", modelName, HeaderOpenAIAPIKey)
 		}
-		return adkopenai.NewOpenAIModelWithAPIKey(modelName, openaiAPIKey), nil
+		return adkopenai.NewModel(ctx, modelName, &adkopenai.Config{APIKey: openaiAPIKey})
 	}
 	if geminiAPIKey == "" {
 		return nil, fmt.Errorf("Gemini API key is required for model %q; set GEMINI_API_KEY or pass via %s header", modelName, HeaderGeminiAPIKey)

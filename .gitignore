@@ -28,3 +28,6 @@
 
 # OS
 .DS_Store
+
+# Local planning docs
+/docs/

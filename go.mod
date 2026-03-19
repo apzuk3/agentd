@@ -7,10 +7,11 @@ require (
 	buf.build/go/protovalidate v1.1.3
 	connectrpc.com/connect v1.19.1
 	github.com/anthropics/anthropic-sdk-go v1.24.0
-	github.com/byebyebruce/adk-go-openai v0.0.0-20251208092515-f5b0ac07643e
 	github.com/expr-lang/expr v1.17.8
+	github.com/google/go-cmp v0.7.0
 	github.com/google/jsonschema-go v0.4.2
 	github.com/mark3labs/mcp-go v0.45.0
+	github.com/openai/openai-go v1.12.0
 	golang.org/x/net v0.47.0
 	google.golang.org/adk v0.5.0
 	google.golang.org/genai v1.47.0
@@ -32,7 +33,6 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/cel-go v0.27.0 // indirect
-	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/safehtml v0.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -43,7 +43,6 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
-	github.com/sashabaranov/go-openai v1.41.2 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect

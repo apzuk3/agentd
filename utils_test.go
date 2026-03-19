@@ -7,7 +7,7 @@ import (
 )
 
 func TestCreateModel_MissingAnthropicKey(t *testing.T) {
-	_, err := createModel(context.Background(), "claude-3-5-sonnet", "", "", "")
+	_, err := createModel(context.Background(), "claude-sonnet-4-6", "", "", "")
 	if err == nil {
 		t.Fatal("expected error for missing Anthropic key")
 	}
@@ -47,7 +47,7 @@ func TestCreateModel_MissingGeminiKey(t *testing.T) {
 
 func TestCreateModel_KeysNotInErrorDetail(t *testing.T) {
 	secretKey := "sk-super-secret-12345"
-	_, err := createModel(context.Background(), "claude-3-5-sonnet", "", secretKey, "")
+	_, err := createModel(context.Background(), "claude-sonnet-4-6", "", secretKey, "")
 
 	// When a key IS provided but for the wrong provider, the error for the
 	// correct provider should never leak the other provider's key value.
