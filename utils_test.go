@@ -7,7 +7,7 @@ import (
 )
 
 func TestCreateModel_MissingAnthropicKey(t *testing.T) {
-	_, err := createModel(context.Background(), "claude-sonnet-4-6", "", "", "")
+	_, err := createModel(context.Background(), "claude-sonnet-4-6", staticModelKeyDiscoverer{})
 	if err == nil {
 		t.Fatal("expected error for missing Anthropic key")
 	}
@@ -20,7 +20,7 @@ func TestCreateModel_MissingAnthropicKey(t *testing.T) {
 }
 
 func TestCreateModel_MissingOpenAIKey(t *testing.T) {
-	_, err := createModel(context.Background(), "gpt-4o", "", "", "")
+	_, err := createModel(context.Background(), "gpt-4o", staticModelKeyDiscoverer{})
 	if err == nil {
 		t.Fatal("expected error for missing OpenAI key")
 	}
@@ -33,7 +33,7 @@ func TestCreateModel_MissingOpenAIKey(t *testing.T) {
 }
 
 func TestCreateModel_MissingGeminiKey(t *testing.T) {
-	_, err := createModel(context.Background(), "gemini-2.5-flash", "", "", "")
+	_, err := createModel(context.Background(), "gemini-2.5-flash", staticModelKeyDiscoverer{})
 	if err == nil {
 		t.Fatal("expected error for missing Gemini key")
 	}
@@ -47,11 +47,19 @@ func TestCreateModel_MissingGeminiKey(t *testing.T) {
 
 func TestCreateModel_KeysNotInErrorDetail(t *testing.T) {
 	secretKey := "sk-super-secret-12345"
-	_, err := createModel(context.Background(), "claude-sonnet-4-6", "", secretKey, "")
+	_, err := createModel(context.Background(), "claude-sonnet-4-6", staticModelKeyDiscoverer{key: secretKey})
 
 	// When a key IS provided but for the wrong provider, the error for the
 	// correct provider should never leak the other provider's key value.
 	if err != nil && strings.Contains(err.Error(), secretKey) {
 		t.Errorf("error message must not contain raw API key material")
 	}
+}
+
+type staticModelKeyDiscoverer struct {
+	key string
+}
+
+func (d staticModelKeyDiscoverer) APIKeyForModel(string) string {
+	return d.key
 }

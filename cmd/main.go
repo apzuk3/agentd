@@ -30,10 +30,12 @@ func main() {
 	}
 
 	svc := &agentd.Service{
-		GeminiAPIKey:    geminiAPIKey,
-		AnthropicAPIKey: anthropicAPIKey,
-		OpenAIAPIKey:    openaiAPIKey,
-		TavilyAPIKey:    tavilyAPIKey,
+		DefaultProviderKeys: agentd.ProviderKeys{
+			GeminiAPIKey:    geminiAPIKey,
+			AnthropicAPIKey: anthropicAPIKey,
+			OpenAIAPIKey:    openaiAPIKey,
+			TavilyAPIKey:    tavilyAPIKey,
+		},
 		Plugins: []agentd.SessionPlugin{
 			session.NewAuditPlugin(session.NoopAuditStore{}),
 		},

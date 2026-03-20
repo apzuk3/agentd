@@ -14,30 +14,19 @@ var _ agentdv1connect.AgentdHandler = (*Service)(nil)
 type Service struct {
 	agentdv1connect.UnimplementedAgentdHandler
 
-	GeminiAPIKey    string
-	AnthropicAPIKey string
-	OpenAIAPIKey    string
-	TavilyAPIKey    string
+	DefaultProviderKeys ProviderKeys
 
 	Plugins []SessionPlugin
 }
 
 func (s *Service) Run(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]) error {
 	keys := resolveProviderKeys(
-		ProviderKeys{
-			GeminiAPIKey:    s.GeminiAPIKey,
-			AnthropicAPIKey: s.AnthropicAPIKey,
-			OpenAIAPIKey:    s.OpenAIAPIKey,
-			TavilyAPIKey:    s.TavilyAPIKey,
-		},
+		s.DefaultProviderKeys,
 		stream.RequestHeader(),
 	)
 
 	opts := []SessionOption{
-		WithGeminiAPIKey(keys.GeminiAPIKey),
-		WithAnthropicAPIKey(keys.AnthropicAPIKey),
-		WithOpenAIAPIKey(keys.OpenAIAPIKey),
-		WithTavilyAPIKey(keys.TavilyAPIKey),
+		WithProviderKeys(keys),
 	}
 
 	if len(s.Plugins) > 0 {
