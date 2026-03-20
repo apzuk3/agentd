@@ -2,27 +2,33 @@ package agentd
 
 type SessionOption func(*Session)
 
+func WithProviderKeys(keys ProviderKeys) SessionOption {
+	return func(s *Session) {
+		s.providerKeys = keys
+	}
+}
+
 func WithGeminiAPIKey(key string) SessionOption {
 	return func(s *Session) {
-		s.geminiAPIKey = key
+		s.providerKeys.GeminiAPIKey = key
 	}
 }
 
 func WithAnthropicAPIKey(key string) SessionOption {
 	return func(s *Session) {
-		s.anthropicAPIKey = key
+		s.providerKeys.AnthropicAPIKey = key
 	}
 }
 
 func WithOpenAIAPIKey(key string) SessionOption {
 	return func(s *Session) {
-		s.openaiAPIKey = key
+		s.providerKeys.OpenAIAPIKey = key
 	}
 }
 
 func WithTavilyAPIKey(key string) SessionOption {
 	return func(s *Session) {
-		s.tavilyAPIKey = key
+		s.providerKeys.TavilyAPIKey = key
 	}
 }
 

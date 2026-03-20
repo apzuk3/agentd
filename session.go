@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -19,13 +20,10 @@ import (
 )
 
 type Session struct {
-	id              string
-	geminiAPIKey    string
-	anthropicAPIKey string
-	openaiAPIKey    string
-	tavilyAPIKey    string
-	stream          *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]
-	plugins         *PluginChain
+	id           string
+	providerKeys ProviderKeys
+	stream       *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]
+	plugins      *PluginChain
 
 	mu           sync.Mutex
 	pendingTools map[string]chan *agentdv1.RunRequest_ToolCallResponse
@@ -33,6 +31,16 @@ type Session struct {
 	cancel     context.CancelFunc
 	agentPaths map[string][]string
 	usage      usageSummary
+}
+
+func (s *Session) APIKeyForModel(modelName string) string {
+	if strings.HasPrefix(modelName, "claude-") {
+		return s.providerKeys.AnthropicAPIKey
+	}
+	if isOpenAIModel(modelName) {
+		return s.providerKeys.OpenAIAPIKey
+	}
+	return s.providerKeys.GeminiAPIKey
 }
 
 // currentUsage returns a snapshot of the cumulative token usage.
@@ -141,10 +149,10 @@ func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequ
 	}
 
 	builtinCfg := &BuiltinToolConfig{
-		TavilyAPIKey: s.tavilyAPIKey,
+		TavilyAPIKey: s.providerKeys.TavilyAPIKey,
 	}
 
-	rootAgent, err := createAgent(runCtx, exec.GetAgent(), s, s.geminiAPIKey, s.anthropicAPIKey, s.openaiAPIKey, nil, s.agentPaths, toolCatalog, builtinCfg)
+	rootAgent, err := createAgent(runCtx, exec.GetAgent(), s, nil, s.agentPaths, toolCatalog, builtinCfg)
 	if err != nil {
 		s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to build agent tree", Err: err})
 		if sendErr := sendError(stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INVALID_AGENT_TREE, err.Error()); sendErr != nil {
