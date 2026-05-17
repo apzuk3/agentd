@@ -7,103 +7,89 @@ option go_package = "github.com/apzuk3/agentd/gen/proto/go/agentd/v1;agentdv1";
 import "agentd/v1/types.proto";
 import "google/protobuf/struct.proto";
 
-service Agentd {
+service AgentdService {
   rpc Run(stream RunRequest) returns (stream RunResponse);
 }
 
 message RunRequest {
-  message ExecuteRequest {
+  message Run {
     Agent agent = 1;
-    optional string session_id = 2;
-    string user_prompt = 3;
-    repeated Tool tools = 4;
-    google.protobuf.Struct initial_state = 5;
+    string user_id = 2;
+    optional string session_id = 3;
+    string user_prompt = 4;
+    repeated Tool tools = 5;
+    google.protobuf.Struct initial_state = 6;
   }
 
-  message HeartbeatRequest {
-    string session_id = 1;
+  message Heartbeat {
+
   }
 
-  message ToolCallResponse {
+  message ToolcallResult {
     string session_id = 1;
     string tool_call_id = 2;
     string tool_name = 3;
-    oneof result {
-      string output = 4;
-      string error = 5;
-    }
-    google.protobuf.Struct state_delta = 6;
+    optional string result = 4;
+    optional string error = 5;
   }
 
-  message EndRequest {
-    string session_id = 1;
-    optional string reason = 2;
-  }
-
-  message CancelRequest {
-    string session_id = 1;
+  // either cancel tool call or end session
+  message Cancel {
     optional string tool_call_id = 2;
   }
 
   oneof request {
-    ExecuteRequest execute = 1;
-    HeartbeatRequest heartbeat = 2;
-    ToolCallResponse tool_call_response = 3;
-    EndRequest end = 4;
-    CancelRequest cancel = 5;
+    Run run = 1;
+    Heartbeat heartbeat = 2;
+    ToolcallResult toolcall_result = 3;
+    Cancel cancel = 5;
   }
 }
 
 message RunResponse {
-  message ExecuteResponse {
+  message Run {
     string session_id = 1;
   }
 
-  message HeartbeatResponse {
-    string session_id = 1;
-  }
+  message Heartbeat { }
 
-  message ToolCallRequest {
-    string session_id = 1;
-    string tool_call_id = 2;
-    string tool_name = 3;
-    string tool_input = 4;
-    repeated string agent_path = 5;
+  message ToolcallRequest {
+    string tool_call_id = 1;
+    string tool_name = 2;
+    string tool_input = 3;
+    repeated string agent_path = 4;
   }
 
   message OutputChunk {
-    string session_id = 1;
+    string tool_call_id = 1;
     repeated string agent_path = 2;
     string content = 3;
     bool last = 4; // true when this is the final chunk from the agent identified by agent_path
     bool is_thought = 5; // true when the content is model thinking rather than final response
   }
 
-  message ErrorResponse {
-    string session_id = 1;
-    ErrorCode code = 2;
-    string message = 3;
-    bool retryable = 4;
+  message Error {
+    ErrorCode code = 1;
+    string message = 2;
+    bool retryable = 3;
   }
 
-  message EndResponse {
-    string session_id = 1;
-    optional string reason = 2;
-    UsageSummary usage_summary = 3;
-    bool completed = 4; // true if the agent tree finished naturally; false if client-initiated end
+  message End {
+    optional string reason = 1;
+    UsageSummary usage_summary = 2;
+    bool completed = 3; // true if the agent tree finished naturally; false if client-initiated end
   }
 
   message StateUpdate {
-    string session_id = 1;
-    google.protobuf.Struct state_delta = 2;
+    google.protobuf.Struct state_delta = 1;
   }
 
   oneof response {
-    ExecuteResponse execute = 1;
-    HeartbeatResponse heartbeat = 2;
-    ToolCallRequest tool_call = 3;
-    ErrorResponse error = 4;
-    EndResponse end = 5;
+    Run run = 1;
+    Heartbeat heartbeat = 2;
+    ToolcallRequest toolcall_request = 3;
+    Error error = 4;
+    End end = 5;
     OutputChunk output_chunk = 6;
     StateUpdate state_update = 7;
   }

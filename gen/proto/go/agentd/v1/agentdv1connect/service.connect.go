@@ -21,8 +21,8 @@ import (
 const _ = connect.IsAtLeastVersion1_13_0
 
 const (
-	// AgentdName is the fully-qualified name of the Agentd service.
-	AgentdName = "agentd.v1.Agentd"
+	// AgentdServiceName is the fully-qualified name of the AgentdService service.
+	AgentdServiceName = "agentd.v1.AgentdService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -33,76 +33,76 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// AgentdRunProcedure is the fully-qualified name of the Agentd's Run RPC.
-	AgentdRunProcedure = "/agentd.v1.Agentd/Run"
+	// AgentdServiceRunProcedure is the fully-qualified name of the AgentdService's Run RPC.
+	AgentdServiceRunProcedure = "/agentd.v1.AgentdService/Run"
 )
 
-// AgentdClient is a client for the agentd.v1.Agentd service.
-type AgentdClient interface {
+// AgentdServiceClient is a client for the agentd.v1.AgentdService service.
+type AgentdServiceClient interface {
 	Run(context.Context) (*connect.BidiStreamForClientSimple[v1.RunRequest, v1.RunResponse], error)
 }
 
-// NewAgentdClient constructs a client for the agentd.v1.Agentd service. By default, it uses the
-// Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
-// uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
-// connect.WithGRPCWeb() options.
+// NewAgentdServiceClient constructs a client for the agentd.v1.AgentdService service. By default,
+// it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and
+// sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC()
+// or connect.WithGRPCWeb() options.
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
-func NewAgentdClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) AgentdClient {
+func NewAgentdServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) AgentdServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
-	agentdMethods := v1.File_agentd_v1_service_proto.Services().ByName("Agentd").Methods()
-	return &agentdClient{
+	agentdServiceMethods := v1.File_agentd_v1_service_proto.Services().ByName("AgentdService").Methods()
+	return &agentdServiceClient{
 		run: connect.NewClient[v1.RunRequest, v1.RunResponse](
 			httpClient,
-			baseURL+AgentdRunProcedure,
-			connect.WithSchema(agentdMethods.ByName("Run")),
+			baseURL+AgentdServiceRunProcedure,
+			connect.WithSchema(agentdServiceMethods.ByName("Run")),
 			connect.WithClientOptions(opts...),
 		),
 	}
 }
 
-// agentdClient implements AgentdClient.
-type agentdClient struct {
+// agentdServiceClient implements AgentdServiceClient.
+type agentdServiceClient struct {
 	run *connect.Client[v1.RunRequest, v1.RunResponse]
 }
 
-// Run calls agentd.v1.Agentd.Run.
-func (c *agentdClient) Run(ctx context.Context) (*connect.BidiStreamForClientSimple[v1.RunRequest, v1.RunResponse], error) {
+// Run calls agentd.v1.AgentdService.Run.
+func (c *agentdServiceClient) Run(ctx context.Context) (*connect.BidiStreamForClientSimple[v1.RunRequest, v1.RunResponse], error) {
 	return c.run.CallBidiStreamSimple(ctx)
 }
 
-// AgentdHandler is an implementation of the agentd.v1.Agentd service.
-type AgentdHandler interface {
+// AgentdServiceHandler is an implementation of the agentd.v1.AgentdService service.
+type AgentdServiceHandler interface {
 	Run(context.Context, *connect.BidiStream[v1.RunRequest, v1.RunResponse]) error
 }
 
-// NewAgentdHandler builds an HTTP handler from the service implementation. It returns the path on
-// which to mount the handler and the handler itself.
+// NewAgentdServiceHandler builds an HTTP handler from the service implementation. It returns the
+// path on which to mount the handler and the handler itself.
 //
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
-func NewAgentdHandler(svc AgentdHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	agentdMethods := v1.File_agentd_v1_service_proto.Services().ByName("Agentd").Methods()
-	agentdRunHandler := connect.NewBidiStreamHandler(
-		AgentdRunProcedure,
+func NewAgentdServiceHandler(svc AgentdServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	agentdServiceMethods := v1.File_agentd_v1_service_proto.Services().ByName("AgentdService").Methods()
+	agentdServiceRunHandler := connect.NewBidiStreamHandler(
+		AgentdServiceRunProcedure,
 		svc.Run,
-		connect.WithSchema(agentdMethods.ByName("Run")),
+		connect.WithSchema(agentdServiceMethods.ByName("Run")),
 		connect.WithHandlerOptions(opts...),
 	)
-	return "/agentd.v1.Agentd/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return "/agentd.v1.AgentdService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case AgentdRunProcedure:
-			agentdRunHandler.ServeHTTP(w, r)
+		case AgentdServiceRunProcedure:
+			agentdServiceRunHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
 	})
 }
 
-// UnimplementedAgentdHandler returns CodeUnimplemented from all methods.
-type UnimplementedAgentdHandler struct{}
+// UnimplementedAgentdServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedAgentdServiceHandler struct{}
 
-func (UnimplementedAgentdHandler) Run(context.Context, *connect.BidiStream[v1.RunRequest, v1.RunResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("agentd.v1.Agentd.Run is not implemented"))
+func (UnimplementedAgentdServiceHandler) Run(context.Context, *connect.BidiStream[v1.RunRequest, v1.RunResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("agentd.v1.AgentdService.Run is not implemented"))
 }

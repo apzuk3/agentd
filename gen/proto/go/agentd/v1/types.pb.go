@@ -87,12 +87,11 @@ func (ErrorCode) EnumDescriptor() ([]byte, []int) {
 }
 
 type Tool struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Must comply with Gemini function naming: start with a letter or underscore,
-	// only [a-zA-Z0-9_.\-:], max 64 characters.
-	Name          string  `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string  `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	InputSchema   *string `protobuf:"bytes,3,opt,name=input_schema,json=inputSchema,proto3,oneof" json:"input_schema,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	InputSchema   *string                `protobuf:"bytes,3,opt,name=input_schema,json=inputSchema,proto3,oneof" json:"input_schema,omitempty"`
+	OutputSchema  *string                `protobuf:"bytes,4,opt,name=output_schema,json=outputSchema,proto3,oneof" json:"output_schema,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -148,17 +147,22 @@ func (x *Tool) GetInputSchema() string {
 	return ""
 }
 
+func (x *Tool) GetOutputSchema() string {
+	if x != nil && x.OutputSchema != nil {
+		return *x.OutputSchema
+	}
+	return ""
+}
+
 type Agent struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Description string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	// Types that are valid to be assigned to AgentType:
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Type:
 	//
 	//	*Agent_Llm
 	//	*Agent_Sequential
 	//	*Agent_Parallel
 	//	*Agent_Loop
-	AgentType     isAgent_AgentType `protobuf_oneof:"agent_type"`
+	Type          isAgent_Type `protobuf_oneof:"type"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -193,30 +197,16 @@ func (*Agent) Descriptor() ([]byte, []int) {
 	return file_agentd_v1_types_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *Agent) GetName() string {
+func (x *Agent) GetType() isAgent_Type {
 	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *Agent) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *Agent) GetAgentType() isAgent_AgentType {
-	if x != nil {
-		return x.AgentType
+		return x.Type
 	}
 	return nil
 }
 
 func (x *Agent) GetLlm() *LlmAgent {
 	if x != nil {
-		if x, ok := x.AgentType.(*Agent_Llm); ok {
+		if x, ok := x.Type.(*Agent_Llm); ok {
 			return x.Llm
 		}
 	}
@@ -225,7 +215,7 @@ func (x *Agent) GetLlm() *LlmAgent {
 
 func (x *Agent) GetSequential() *SequentialAgent {
 	if x != nil {
-		if x, ok := x.AgentType.(*Agent_Sequential); ok {
+		if x, ok := x.Type.(*Agent_Sequential); ok {
 			return x.Sequential
 		}
 	}
@@ -234,7 +224,7 @@ func (x *Agent) GetSequential() *SequentialAgent {
 
 func (x *Agent) GetParallel() *ParallelAgent {
 	if x != nil {
-		if x, ok := x.AgentType.(*Agent_Parallel); ok {
+		if x, ok := x.Type.(*Agent_Parallel); ok {
 			return x.Parallel
 		}
 	}
@@ -243,15 +233,15 @@ func (x *Agent) GetParallel() *ParallelAgent {
 
 func (x *Agent) GetLoop() *LoopAgent {
 	if x != nil {
-		if x, ok := x.AgentType.(*Agent_Loop); ok {
+		if x, ok := x.Type.(*Agent_Loop); ok {
 			return x.Loop
 		}
 	}
 	return nil
 }
 
-type isAgent_AgentType interface {
-	isAgent_AgentType()
+type isAgent_Type interface {
+	isAgent_Type()
 }
 
 type Agent_Llm struct {
@@ -270,86 +260,28 @@ type Agent_Loop struct {
 	Loop *LoopAgent `protobuf:"bytes,6,opt,name=loop,proto3,oneof"`
 }
 
-func (*Agent_Llm) isAgent_AgentType() {}
+func (*Agent_Llm) isAgent_Type() {}
 
-func (*Agent_Sequential) isAgent_AgentType() {}
+func (*Agent_Sequential) isAgent_Type() {}
 
-func (*Agent_Parallel) isAgent_AgentType() {}
+func (*Agent_Parallel) isAgent_Type() {}
 
-func (*Agent_Loop) isAgent_AgentType() {}
-
-type McpAttachment struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// MCP server name to attach (matches client MCPServerConfig.Name).
-	McpName string `protobuf:"bytes,1,opt,name=mcp_name,json=mcpName,proto3" json:"mcp_name,omitempty"`
-	// Optional subset of discovered MCP tools to attach for this agent.
-	// Empty means attach all discovered tools from mcp_name.
-	IncludeToolNames []string `protobuf:"bytes,2,rep,name=include_tool_names,json=includeToolNames,proto3" json:"include_tool_names,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
-}
-
-func (x *McpAttachment) Reset() {
-	*x = McpAttachment{}
-	mi := &file_agentd_v1_types_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *McpAttachment) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*McpAttachment) ProtoMessage() {}
-
-func (x *McpAttachment) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_types_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use McpAttachment.ProtoReflect.Descriptor instead.
-func (*McpAttachment) Descriptor() ([]byte, []int) {
-	return file_agentd_v1_types_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *McpAttachment) GetMcpName() string {
-	if x != nil {
-		return x.McpName
-	}
-	return ""
-}
-
-func (x *McpAttachment) GetIncludeToolNames() []string {
-	if x != nil {
-		return x.IncludeToolNames
-	}
-	return nil
-}
+func (*Agent_Loop) isAgent_Type() {}
 
 type LlmAgent struct {
-	state        protoimpl.MessageState `protogen:"open.v1"`
-	Model        string                 `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
-	ToolNames    []string               `protobuf:"bytes,2,rep,name=tool_names,json=toolNames,proto3" json:"tool_names,omitempty"`
-	SubAgents    []*Agent               `protobuf:"bytes,3,rep,name=sub_agents,json=subAgents,proto3" json:"sub_agents,omitempty"`
-	Instruction  string                 `protobuf:"bytes,4,opt,name=instruction,proto3" json:"instruction,omitempty"`
-	BuiltinTools []string               `protobuf:"bytes,5,rep,name=builtin_tools,json=builtinTools,proto3" json:"builtin_tools,omitempty"`
-	OutputKey    string                 `protobuf:"bytes,6,opt,name=output_key,json=outputKey,proto3" json:"output_key,omitempty"`
-	// Per-agent MCP attachments with optional include filters.
-	McpAttachments []*McpAttachment `protobuf:"bytes,7,rep,name=mcp_attachments,json=mcpAttachments,proto3" json:"mcp_attachments,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	Instruction   string                 `protobuf:"bytes,4,opt,name=instruction,proto3" json:"instruction,omitempty"`
+	ToolNames     []string               `protobuf:"bytes,5,rep,name=tool_names,json=toolNames,proto3" json:"tool_names,omitempty"`
+	SubAgents     []*Agent               `protobuf:"bytes,6,rep,name=sub_agents,json=subAgents,proto3" json:"sub_agents,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *LlmAgent) Reset() {
 	*x = LlmAgent{}
-	mi := &file_agentd_v1_types_proto_msgTypes[3]
+	mi := &file_agentd_v1_types_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -361,7 +293,7 @@ func (x *LlmAgent) String() string {
 func (*LlmAgent) ProtoMessage() {}
 
 func (x *LlmAgent) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_types_proto_msgTypes[3]
+	mi := &file_agentd_v1_types_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -374,12 +306,26 @@ func (x *LlmAgent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LlmAgent.ProtoReflect.Descriptor instead.
 func (*LlmAgent) Descriptor() ([]byte, []int) {
-	return file_agentd_v1_types_proto_rawDescGZIP(), []int{3}
+	return file_agentd_v1_types_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *LlmAgent) GetModel() string {
+func (x *LlmAgent) GetName() string {
 	if x != nil {
-		return x.Model
+		return x.Name
+	}
+	return ""
+}
+
+func (x *LlmAgent) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *LlmAgent) GetInstruction() string {
+	if x != nil {
+		return x.Instruction
 	}
 	return ""
 }
@@ -398,34 +344,6 @@ func (x *LlmAgent) GetSubAgents() []*Agent {
 	return nil
 }
 
-func (x *LlmAgent) GetInstruction() string {
-	if x != nil {
-		return x.Instruction
-	}
-	return ""
-}
-
-func (x *LlmAgent) GetBuiltinTools() []string {
-	if x != nil {
-		return x.BuiltinTools
-	}
-	return nil
-}
-
-func (x *LlmAgent) GetOutputKey() string {
-	if x != nil {
-		return x.OutputKey
-	}
-	return ""
-}
-
-func (x *LlmAgent) GetMcpAttachments() []*McpAttachment {
-	if x != nil {
-		return x.McpAttachments
-	}
-	return nil
-}
-
 type SequentialAgent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Agents        []*Agent               `protobuf:"bytes,1,rep,name=agents,proto3" json:"agents,omitempty"`
@@ -435,7 +353,7 @@ type SequentialAgent struct {
 
 func (x *SequentialAgent) Reset() {
 	*x = SequentialAgent{}
-	mi := &file_agentd_v1_types_proto_msgTypes[4]
+	mi := &file_agentd_v1_types_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -447,7 +365,7 @@ func (x *SequentialAgent) String() string {
 func (*SequentialAgent) ProtoMessage() {}
 
 func (x *SequentialAgent) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_types_proto_msgTypes[4]
+	mi := &file_agentd_v1_types_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -460,7 +378,7 @@ func (x *SequentialAgent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SequentialAgent.ProtoReflect.Descriptor instead.
 func (*SequentialAgent) Descriptor() ([]byte, []int) {
-	return file_agentd_v1_types_proto_rawDescGZIP(), []int{4}
+	return file_agentd_v1_types_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *SequentialAgent) GetAgents() []*Agent {
@@ -479,7 +397,7 @@ type ParallelAgent struct {
 
 func (x *ParallelAgent) Reset() {
 	*x = ParallelAgent{}
-	mi := &file_agentd_v1_types_proto_msgTypes[5]
+	mi := &file_agentd_v1_types_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -491,7 +409,7 @@ func (x *ParallelAgent) String() string {
 func (*ParallelAgent) ProtoMessage() {}
 
 func (x *ParallelAgent) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_types_proto_msgTypes[5]
+	mi := &file_agentd_v1_types_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -504,7 +422,7 @@ func (x *ParallelAgent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParallelAgent.ProtoReflect.Descriptor instead.
 func (*ParallelAgent) Descriptor() ([]byte, []int) {
-	return file_agentd_v1_types_proto_rawDescGZIP(), []int{5}
+	return file_agentd_v1_types_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ParallelAgent) GetAgents() []*Agent {
@@ -524,7 +442,7 @@ type LoopAgent struct {
 
 func (x *LoopAgent) Reset() {
 	*x = LoopAgent{}
-	mi := &file_agentd_v1_types_proto_msgTypes[6]
+	mi := &file_agentd_v1_types_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -536,7 +454,7 @@ func (x *LoopAgent) String() string {
 func (*LoopAgent) ProtoMessage() {}
 
 func (x *LoopAgent) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_types_proto_msgTypes[6]
+	mi := &file_agentd_v1_types_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -549,7 +467,7 @@ func (x *LoopAgent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoopAgent.ProtoReflect.Descriptor instead.
 func (*LoopAgent) Descriptor() ([]byte, []int) {
-	return file_agentd_v1_types_proto_rawDescGZIP(), []int{6}
+	return file_agentd_v1_types_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *LoopAgent) GetAgents() []*Agent {
@@ -580,7 +498,7 @@ type TokenUsage struct {
 
 func (x *TokenUsage) Reset() {
 	*x = TokenUsage{}
-	mi := &file_agentd_v1_types_proto_msgTypes[7]
+	mi := &file_agentd_v1_types_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -592,7 +510,7 @@ func (x *TokenUsage) String() string {
 func (*TokenUsage) ProtoMessage() {}
 
 func (x *TokenUsage) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_types_proto_msgTypes[7]
+	mi := &file_agentd_v1_types_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -605,7 +523,7 @@ func (x *TokenUsage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TokenUsage.ProtoReflect.Descriptor instead.
 func (*TokenUsage) Descriptor() ([]byte, []int) {
-	return file_agentd_v1_types_proto_rawDescGZIP(), []int{7}
+	return file_agentd_v1_types_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *TokenUsage) GetPromptTokens() int32 {
@@ -655,7 +573,7 @@ type UsageSummary struct {
 
 func (x *UsageSummary) Reset() {
 	*x = UsageSummary{}
-	mi := &file_agentd_v1_types_proto_msgTypes[8]
+	mi := &file_agentd_v1_types_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -667,7 +585,7 @@ func (x *UsageSummary) String() string {
 func (*UsageSummary) ProtoMessage() {}
 
 func (x *UsageSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_types_proto_msgTypes[8]
+	mi := &file_agentd_v1_types_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -680,7 +598,7 @@ func (x *UsageSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UsageSummary.ProtoReflect.Descriptor instead.
 func (*UsageSummary) Descriptor() ([]byte, []int) {
-	return file_agentd_v1_types_proto_rawDescGZIP(), []int{8}
+	return file_agentd_v1_types_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UsageSummary) GetTotalUsage() *TokenUsage {
@@ -708,37 +626,30 @@ var File_agentd_v1_types_proto protoreflect.FileDescriptor
 
 const file_agentd_v1_types_proto_rawDesc = "" +
 	"\n" +
-	"\x15agentd/v1/types.proto\x12\tagentd.v1\x1a\x1bbuf/validate/validate.proto\"\xab\x01\n" +
+	"\x15agentd/v1/types.proto\x12\tagentd.v1\x1a\x1bbuf/validate/validate.proto\"\xe7\x01\n" +
 	"\x04Tool\x12?\n" +
 	"\x04name\x18\x01 \x01(\tB+\xbaH(r&\x10\x01\x18@2 ^[A-Za-z_][A-Za-z0-9_.:-]{0,63}$R\x04name\x12)\n" +
 	"\vdescription\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vdescription\x12&\n" +
-	"\finput_schema\x18\x03 \x01(\tH\x00R\vinputSchema\x88\x01\x01B\x0f\n" +
-	"\r_input_schema\"\x96\x02\n" +
-	"\x05Agent\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\x12'\n" +
+	"\finput_schema\x18\x03 \x01(\tH\x00R\vinputSchema\x88\x01\x01\x12(\n" +
+	"\routput_schema\x18\x04 \x01(\tH\x01R\foutputSchema\x88\x01\x01B\x0f\n" +
+	"\r_input_schemaB\x10\n" +
+	"\x0e_output_schema\"\xda\x01\n" +
+	"\x05Agent\x12'\n" +
 	"\x03llm\x18\x03 \x01(\v2\x13.agentd.v1.LlmAgentH\x00R\x03llm\x12<\n" +
 	"\n" +
 	"sequential\x18\x04 \x01(\v2\x1a.agentd.v1.SequentialAgentH\x00R\n" +
 	"sequential\x126\n" +
 	"\bparallel\x18\x05 \x01(\v2\x18.agentd.v1.ParallelAgentH\x00R\bparallel\x12*\n" +
-	"\x04loop\x18\x06 \x01(\v2\x14.agentd.v1.LoopAgentH\x00R\x04loopB\f\n" +
+	"\x04loop\x18\x06 \x01(\v2\x14.agentd.v1.LoopAgentH\x00R\x04loopB\x06\n" +
+	"\x04type\"\xb2\x01\n" +
+	"\bLlmAgent\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12 \n" +
+	"\vinstruction\x18\x04 \x01(\tR\vinstruction\x12\x1d\n" +
 	"\n" +
-	"agent_type\"X\n" +
-	"\rMcpAttachment\x12\x19\n" +
-	"\bmcp_name\x18\x01 \x01(\tR\amcpName\x12,\n" +
-	"\x12include_tool_names\x18\x02 \x03(\tR\x10includeToolNames\"\x99\x02\n" +
-	"\bLlmAgent\x12\x14\n" +
-	"\x05model\x18\x01 \x01(\tR\x05model\x12\x1d\n" +
+	"tool_names\x18\x05 \x03(\tR\ttoolNames\x12/\n" +
 	"\n" +
-	"tool_names\x18\x02 \x03(\tR\ttoolNames\x12/\n" +
-	"\n" +
-	"sub_agents\x18\x03 \x03(\v2\x10.agentd.v1.AgentR\tsubAgents\x12 \n" +
-	"\vinstruction\x18\x04 \x01(\tR\vinstruction\x12#\n" +
-	"\rbuiltin_tools\x18\x05 \x03(\tR\fbuiltinTools\x12\x1d\n" +
-	"\n" +
-	"output_key\x18\x06 \x01(\tR\toutputKey\x12A\n" +
-	"\x0fmcp_attachments\x18\a \x03(\v2\x18.agentd.v1.McpAttachmentR\x0emcpAttachments\";\n" +
+	"sub_agents\x18\x06 \x03(\v2\x10.agentd.v1.AgentR\tsubAgents\";\n" +
 	"\x0fSequentialAgent\x12(\n" +
 	"\x06agents\x18\x01 \x03(\v2\x10.agentd.v1.AgentR\x06agents\"9\n" +
 	"\rParallelAgent\x12(\n" +
@@ -781,35 +692,33 @@ func file_agentd_v1_types_proto_rawDescGZIP() []byte {
 }
 
 var file_agentd_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agentd_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_agentd_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_agentd_v1_types_proto_goTypes = []any{
 	(ErrorCode)(0),          // 0: agentd.v1.ErrorCode
 	(*Tool)(nil),            // 1: agentd.v1.Tool
 	(*Agent)(nil),           // 2: agentd.v1.Agent
-	(*McpAttachment)(nil),   // 3: agentd.v1.McpAttachment
-	(*LlmAgent)(nil),        // 4: agentd.v1.LlmAgent
-	(*SequentialAgent)(nil), // 5: agentd.v1.SequentialAgent
-	(*ParallelAgent)(nil),   // 6: agentd.v1.ParallelAgent
-	(*LoopAgent)(nil),       // 7: agentd.v1.LoopAgent
-	(*TokenUsage)(nil),      // 8: agentd.v1.TokenUsage
-	(*UsageSummary)(nil),    // 9: agentd.v1.UsageSummary
+	(*LlmAgent)(nil),        // 3: agentd.v1.LlmAgent
+	(*SequentialAgent)(nil), // 4: agentd.v1.SequentialAgent
+	(*ParallelAgent)(nil),   // 5: agentd.v1.ParallelAgent
+	(*LoopAgent)(nil),       // 6: agentd.v1.LoopAgent
+	(*TokenUsage)(nil),      // 7: agentd.v1.TokenUsage
+	(*UsageSummary)(nil),    // 8: agentd.v1.UsageSummary
 }
 var file_agentd_v1_types_proto_depIdxs = []int32{
-	4,  // 0: agentd.v1.Agent.llm:type_name -> agentd.v1.LlmAgent
-	5,  // 1: agentd.v1.Agent.sequential:type_name -> agentd.v1.SequentialAgent
-	6,  // 2: agentd.v1.Agent.parallel:type_name -> agentd.v1.ParallelAgent
-	7,  // 3: agentd.v1.Agent.loop:type_name -> agentd.v1.LoopAgent
-	2,  // 4: agentd.v1.LlmAgent.sub_agents:type_name -> agentd.v1.Agent
-	3,  // 5: agentd.v1.LlmAgent.mcp_attachments:type_name -> agentd.v1.McpAttachment
-	2,  // 6: agentd.v1.SequentialAgent.agents:type_name -> agentd.v1.Agent
-	2,  // 7: agentd.v1.ParallelAgent.agents:type_name -> agentd.v1.Agent
-	2,  // 8: agentd.v1.LoopAgent.agents:type_name -> agentd.v1.Agent
-	8,  // 9: agentd.v1.UsageSummary.total_usage:type_name -> agentd.v1.TokenUsage
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	3, // 0: agentd.v1.Agent.llm:type_name -> agentd.v1.LlmAgent
+	4, // 1: agentd.v1.Agent.sequential:type_name -> agentd.v1.SequentialAgent
+	5, // 2: agentd.v1.Agent.parallel:type_name -> agentd.v1.ParallelAgent
+	6, // 3: agentd.v1.Agent.loop:type_name -> agentd.v1.LoopAgent
+	2, // 4: agentd.v1.LlmAgent.sub_agents:type_name -> agentd.v1.Agent
+	2, // 5: agentd.v1.SequentialAgent.agents:type_name -> agentd.v1.Agent
+	2, // 6: agentd.v1.ParallelAgent.agents:type_name -> agentd.v1.Agent
+	2, // 7: agentd.v1.LoopAgent.agents:type_name -> agentd.v1.Agent
+	7, // 8: agentd.v1.UsageSummary.total_usage:type_name -> agentd.v1.TokenUsage
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_agentd_v1_types_proto_init() }
@@ -830,7 +739,7 @@ func file_agentd_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agentd_v1_types_proto_rawDesc), len(file_agentd_v1_types_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   9,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -7,13 +7,13 @@ import { RunRequest, RunResponse } from "./service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
- * @generated from service agentd.v1.Agentd
+ * @generated from service agentd.v1.AgentdService
  */
-export const Agentd = {
-  typeName: "agentd.v1.Agentd",
+export const AgentdService = {
+  typeName: "agentd.v1.AgentdService",
   methods: {
     /**
-     * @generated from rpc agentd.v1.Agentd.Run
+     * @generated from rpc agentd.v1.AgentdService.Run
      */
     run: {
       name: "Run",

@@ -26,11 +26,10 @@ type RunRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Request:
 	//
-	//	*RunRequest_Execute
-	//	*RunRequest_Heartbeat
-	//	*RunRequest_ToolCallResponse_
-	//	*RunRequest_End
-	//	*RunRequest_Cancel
+	//	*RunRequest_Run_
+	//	*RunRequest_Heartbeat_
+	//	*RunRequest_ToolcallResult_
+	//	*RunRequest_Cancel_
 	Request       isRunRequest_Request `protobuf_oneof:"request"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -73,45 +72,36 @@ func (x *RunRequest) GetRequest() isRunRequest_Request {
 	return nil
 }
 
-func (x *RunRequest) GetExecute() *RunRequest_ExecuteRequest {
+func (x *RunRequest) GetRun() *RunRequest_Run {
 	if x != nil {
-		if x, ok := x.Request.(*RunRequest_Execute); ok {
-			return x.Execute
+		if x, ok := x.Request.(*RunRequest_Run_); ok {
+			return x.Run
 		}
 	}
 	return nil
 }
 
-func (x *RunRequest) GetHeartbeat() *RunRequest_HeartbeatRequest {
+func (x *RunRequest) GetHeartbeat() *RunRequest_Heartbeat {
 	if x != nil {
-		if x, ok := x.Request.(*RunRequest_Heartbeat); ok {
+		if x, ok := x.Request.(*RunRequest_Heartbeat_); ok {
 			return x.Heartbeat
 		}
 	}
 	return nil
 }
 
-func (x *RunRequest) GetToolCallResponse() *RunRequest_ToolCallResponse {
+func (x *RunRequest) GetToolcallResult() *RunRequest_ToolcallResult {
 	if x != nil {
-		if x, ok := x.Request.(*RunRequest_ToolCallResponse_); ok {
-			return x.ToolCallResponse
+		if x, ok := x.Request.(*RunRequest_ToolcallResult_); ok {
+			return x.ToolcallResult
 		}
 	}
 	return nil
 }
 
-func (x *RunRequest) GetEnd() *RunRequest_EndRequest {
+func (x *RunRequest) GetCancel() *RunRequest_Cancel {
 	if x != nil {
-		if x, ok := x.Request.(*RunRequest_End); ok {
-			return x.End
-		}
-	}
-	return nil
-}
-
-func (x *RunRequest) GetCancel() *RunRequest_CancelRequest {
-	if x != nil {
-		if x, ok := x.Request.(*RunRequest_Cancel); ok {
+		if x, ok := x.Request.(*RunRequest_Cancel_); ok {
 			return x.Cancel
 		}
 	}
@@ -122,45 +112,39 @@ type isRunRequest_Request interface {
 	isRunRequest_Request()
 }
 
-type RunRequest_Execute struct {
-	Execute *RunRequest_ExecuteRequest `protobuf:"bytes,1,opt,name=execute,proto3,oneof"`
+type RunRequest_Run_ struct {
+	Run *RunRequest_Run `protobuf:"bytes,1,opt,name=run,proto3,oneof"`
 }
 
-type RunRequest_Heartbeat struct {
-	Heartbeat *RunRequest_HeartbeatRequest `protobuf:"bytes,2,opt,name=heartbeat,proto3,oneof"`
+type RunRequest_Heartbeat_ struct {
+	Heartbeat *RunRequest_Heartbeat `protobuf:"bytes,2,opt,name=heartbeat,proto3,oneof"`
 }
 
-type RunRequest_ToolCallResponse_ struct {
-	ToolCallResponse *RunRequest_ToolCallResponse `protobuf:"bytes,3,opt,name=tool_call_response,json=toolCallResponse,proto3,oneof"`
+type RunRequest_ToolcallResult_ struct {
+	ToolcallResult *RunRequest_ToolcallResult `protobuf:"bytes,3,opt,name=toolcall_result,json=toolcallResult,proto3,oneof"`
 }
 
-type RunRequest_End struct {
-	End *RunRequest_EndRequest `protobuf:"bytes,4,opt,name=end,proto3,oneof"`
+type RunRequest_Cancel_ struct {
+	Cancel *RunRequest_Cancel `protobuf:"bytes,5,opt,name=cancel,proto3,oneof"`
 }
 
-type RunRequest_Cancel struct {
-	Cancel *RunRequest_CancelRequest `protobuf:"bytes,5,opt,name=cancel,proto3,oneof"`
-}
+func (*RunRequest_Run_) isRunRequest_Request() {}
 
-func (*RunRequest_Execute) isRunRequest_Request() {}
+func (*RunRequest_Heartbeat_) isRunRequest_Request() {}
 
-func (*RunRequest_Heartbeat) isRunRequest_Request() {}
+func (*RunRequest_ToolcallResult_) isRunRequest_Request() {}
 
-func (*RunRequest_ToolCallResponse_) isRunRequest_Request() {}
-
-func (*RunRequest_End) isRunRequest_Request() {}
-
-func (*RunRequest_Cancel) isRunRequest_Request() {}
+func (*RunRequest_Cancel_) isRunRequest_Request() {}
 
 type RunResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Response:
 	//
-	//	*RunResponse_Execute
-	//	*RunResponse_Heartbeat
-	//	*RunResponse_ToolCall
-	//	*RunResponse_Error
-	//	*RunResponse_End
+	//	*RunResponse_Run_
+	//	*RunResponse_Heartbeat_
+	//	*RunResponse_ToolcallRequest_
+	//	*RunResponse_Error_
+	//	*RunResponse_End_
 	//	*RunResponse_OutputChunk_
 	//	*RunResponse_StateUpdate_
 	Response      isRunResponse_Response `protobuf_oneof:"response"`
@@ -205,45 +189,45 @@ func (x *RunResponse) GetResponse() isRunResponse_Response {
 	return nil
 }
 
-func (x *RunResponse) GetExecute() *RunResponse_ExecuteResponse {
+func (x *RunResponse) GetRun() *RunResponse_Run {
 	if x != nil {
-		if x, ok := x.Response.(*RunResponse_Execute); ok {
-			return x.Execute
+		if x, ok := x.Response.(*RunResponse_Run_); ok {
+			return x.Run
 		}
 	}
 	return nil
 }
 
-func (x *RunResponse) GetHeartbeat() *RunResponse_HeartbeatResponse {
+func (x *RunResponse) GetHeartbeat() *RunResponse_Heartbeat {
 	if x != nil {
-		if x, ok := x.Response.(*RunResponse_Heartbeat); ok {
+		if x, ok := x.Response.(*RunResponse_Heartbeat_); ok {
 			return x.Heartbeat
 		}
 	}
 	return nil
 }
 
-func (x *RunResponse) GetToolCall() *RunResponse_ToolCallRequest {
+func (x *RunResponse) GetToolcallRequest() *RunResponse_ToolcallRequest {
 	if x != nil {
-		if x, ok := x.Response.(*RunResponse_ToolCall); ok {
-			return x.ToolCall
+		if x, ok := x.Response.(*RunResponse_ToolcallRequest_); ok {
+			return x.ToolcallRequest
 		}
 	}
 	return nil
 }
 
-func (x *RunResponse) GetError() *RunResponse_ErrorResponse {
+func (x *RunResponse) GetError() *RunResponse_Error {
 	if x != nil {
-		if x, ok := x.Response.(*RunResponse_Error); ok {
+		if x, ok := x.Response.(*RunResponse_Error_); ok {
 			return x.Error
 		}
 	}
 	return nil
 }
 
-func (x *RunResponse) GetEnd() *RunResponse_EndResponse {
+func (x *RunResponse) GetEnd() *RunResponse_End {
 	if x != nil {
-		if x, ok := x.Response.(*RunResponse_End); ok {
+		if x, ok := x.Response.(*RunResponse_End_); ok {
 			return x.End
 		}
 	}
@@ -272,24 +256,24 @@ type isRunResponse_Response interface {
 	isRunResponse_Response()
 }
 
-type RunResponse_Execute struct {
-	Execute *RunResponse_ExecuteResponse `protobuf:"bytes,1,opt,name=execute,proto3,oneof"`
+type RunResponse_Run_ struct {
+	Run *RunResponse_Run `protobuf:"bytes,1,opt,name=run,proto3,oneof"`
 }
 
-type RunResponse_Heartbeat struct {
-	Heartbeat *RunResponse_HeartbeatResponse `protobuf:"bytes,2,opt,name=heartbeat,proto3,oneof"`
+type RunResponse_Heartbeat_ struct {
+	Heartbeat *RunResponse_Heartbeat `protobuf:"bytes,2,opt,name=heartbeat,proto3,oneof"`
 }
 
-type RunResponse_ToolCall struct {
-	ToolCall *RunResponse_ToolCallRequest `protobuf:"bytes,3,opt,name=tool_call,json=toolCall,proto3,oneof"`
+type RunResponse_ToolcallRequest_ struct {
+	ToolcallRequest *RunResponse_ToolcallRequest `protobuf:"bytes,3,opt,name=toolcall_request,json=toolcallRequest,proto3,oneof"`
 }
 
-type RunResponse_Error struct {
-	Error *RunResponse_ErrorResponse `protobuf:"bytes,4,opt,name=error,proto3,oneof"`
+type RunResponse_Error_ struct {
+	Error *RunResponse_Error `protobuf:"bytes,4,opt,name=error,proto3,oneof"`
 }
 
-type RunResponse_End struct {
-	End *RunResponse_EndResponse `protobuf:"bytes,5,opt,name=end,proto3,oneof"`
+type RunResponse_End_ struct {
+	End *RunResponse_End `protobuf:"bytes,5,opt,name=end,proto3,oneof"`
 }
 
 type RunResponse_OutputChunk_ struct {
@@ -300,45 +284,46 @@ type RunResponse_StateUpdate_ struct {
 	StateUpdate *RunResponse_StateUpdate `protobuf:"bytes,7,opt,name=state_update,json=stateUpdate,proto3,oneof"`
 }
 
-func (*RunResponse_Execute) isRunResponse_Response() {}
+func (*RunResponse_Run_) isRunResponse_Response() {}
 
-func (*RunResponse_Heartbeat) isRunResponse_Response() {}
+func (*RunResponse_Heartbeat_) isRunResponse_Response() {}
 
-func (*RunResponse_ToolCall) isRunResponse_Response() {}
+func (*RunResponse_ToolcallRequest_) isRunResponse_Response() {}
 
-func (*RunResponse_Error) isRunResponse_Response() {}
+func (*RunResponse_Error_) isRunResponse_Response() {}
 
-func (*RunResponse_End) isRunResponse_Response() {}
+func (*RunResponse_End_) isRunResponse_Response() {}
 
 func (*RunResponse_OutputChunk_) isRunResponse_Response() {}
 
 func (*RunResponse_StateUpdate_) isRunResponse_Response() {}
 
-type RunRequest_ExecuteRequest struct {
+type RunRequest_Run struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Agent         *Agent                 `protobuf:"bytes,1,opt,name=agent,proto3" json:"agent,omitempty"`
-	SessionId     *string                `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`
-	UserPrompt    string                 `protobuf:"bytes,3,opt,name=user_prompt,json=userPrompt,proto3" json:"user_prompt,omitempty"`
-	Tools         []*Tool                `protobuf:"bytes,4,rep,name=tools,proto3" json:"tools,omitempty"`
-	InitialState  *structpb.Struct       `protobuf:"bytes,5,opt,name=initial_state,json=initialState,proto3" json:"initial_state,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	SessionId     *string                `protobuf:"bytes,3,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`
+	UserPrompt    string                 `protobuf:"bytes,4,opt,name=user_prompt,json=userPrompt,proto3" json:"user_prompt,omitempty"`
+	Tools         []*Tool                `protobuf:"bytes,5,rep,name=tools,proto3" json:"tools,omitempty"`
+	InitialState  *structpb.Struct       `protobuf:"bytes,6,opt,name=initial_state,json=initialState,proto3" json:"initial_state,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RunRequest_ExecuteRequest) Reset() {
-	*x = RunRequest_ExecuteRequest{}
+func (x *RunRequest_Run) Reset() {
+	*x = RunRequest_Run{}
 	mi := &file_agentd_v1_service_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RunRequest_ExecuteRequest) String() string {
+func (x *RunRequest_Run) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RunRequest_ExecuteRequest) ProtoMessage() {}
+func (*RunRequest_Run) ProtoMessage() {}
 
-func (x *RunRequest_ExecuteRequest) ProtoReflect() protoreflect.Message {
+func (x *RunRequest_Run) ProtoReflect() protoreflect.Message {
 	mi := &file_agentd_v1_service_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -350,67 +335,73 @@ func (x *RunRequest_ExecuteRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RunRequest_ExecuteRequest.ProtoReflect.Descriptor instead.
-func (*RunRequest_ExecuteRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use RunRequest_Run.ProtoReflect.Descriptor instead.
+func (*RunRequest_Run) Descriptor() ([]byte, []int) {
 	return file_agentd_v1_service_proto_rawDescGZIP(), []int{0, 0}
 }
 
-func (x *RunRequest_ExecuteRequest) GetAgent() *Agent {
+func (x *RunRequest_Run) GetAgent() *Agent {
 	if x != nil {
 		return x.Agent
 	}
 	return nil
 }
 
-func (x *RunRequest_ExecuteRequest) GetSessionId() string {
+func (x *RunRequest_Run) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *RunRequest_Run) GetSessionId() string {
 	if x != nil && x.SessionId != nil {
 		return *x.SessionId
 	}
 	return ""
 }
 
-func (x *RunRequest_ExecuteRequest) GetUserPrompt() string {
+func (x *RunRequest_Run) GetUserPrompt() string {
 	if x != nil {
 		return x.UserPrompt
 	}
 	return ""
 }
 
-func (x *RunRequest_ExecuteRequest) GetTools() []*Tool {
+func (x *RunRequest_Run) GetTools() []*Tool {
 	if x != nil {
 		return x.Tools
 	}
 	return nil
 }
 
-func (x *RunRequest_ExecuteRequest) GetInitialState() *structpb.Struct {
+func (x *RunRequest_Run) GetInitialState() *structpb.Struct {
 	if x != nil {
 		return x.InitialState
 	}
 	return nil
 }
 
-type RunRequest_HeartbeatRequest struct {
+type RunRequest_Heartbeat struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RunRequest_HeartbeatRequest) Reset() {
-	*x = RunRequest_HeartbeatRequest{}
+func (x *RunRequest_Heartbeat) Reset() {
+	*x = RunRequest_Heartbeat{}
 	mi := &file_agentd_v1_service_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RunRequest_HeartbeatRequest) String() string {
+func (x *RunRequest_Heartbeat) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RunRequest_HeartbeatRequest) ProtoMessage() {}
+func (*RunRequest_Heartbeat) ProtoMessage() {}
 
-func (x *RunRequest_HeartbeatRequest) ProtoReflect() protoreflect.Message {
+func (x *RunRequest_Heartbeat) ProtoReflect() protoreflect.Message {
 	mi := &file_agentd_v1_service_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -422,47 +413,36 @@ func (x *RunRequest_HeartbeatRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RunRequest_HeartbeatRequest.ProtoReflect.Descriptor instead.
-func (*RunRequest_HeartbeatRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use RunRequest_Heartbeat.ProtoReflect.Descriptor instead.
+func (*RunRequest_Heartbeat) Descriptor() ([]byte, []int) {
 	return file_agentd_v1_service_proto_rawDescGZIP(), []int{0, 1}
 }
 
-func (x *RunRequest_HeartbeatRequest) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-type RunRequest_ToolCallResponse struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	SessionId  string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	ToolCallId string                 `protobuf:"bytes,2,opt,name=tool_call_id,json=toolCallId,proto3" json:"tool_call_id,omitempty"`
-	ToolName   string                 `protobuf:"bytes,3,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"`
-	// Types that are valid to be assigned to Result:
-	//
-	//	*RunRequest_ToolCallResponse_Output
-	//	*RunRequest_ToolCallResponse_Error
-	Result        isRunRequest_ToolCallResponse_Result `protobuf_oneof:"result"`
-	StateDelta    *structpb.Struct                     `protobuf:"bytes,6,opt,name=state_delta,json=stateDelta,proto3" json:"state_delta,omitempty"`
+type RunRequest_ToolcallResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	ToolCallId    string                 `protobuf:"bytes,2,opt,name=tool_call_id,json=toolCallId,proto3" json:"tool_call_id,omitempty"`
+	ToolName      string                 `protobuf:"bytes,3,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"`
+	Result        *string                `protobuf:"bytes,4,opt,name=result,proto3,oneof" json:"result,omitempty"`
+	Error         *string                `protobuf:"bytes,5,opt,name=error,proto3,oneof" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RunRequest_ToolCallResponse) Reset() {
-	*x = RunRequest_ToolCallResponse{}
+func (x *RunRequest_ToolcallResult) Reset() {
+	*x = RunRequest_ToolcallResult{}
 	mi := &file_agentd_v1_service_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RunRequest_ToolCallResponse) String() string {
+func (x *RunRequest_ToolcallResult) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RunRequest_ToolCallResponse) ProtoMessage() {}
+func (*RunRequest_ToolcallResult) ProtoMessage() {}
 
-func (x *RunRequest_ToolCallResponse) ProtoReflect() protoreflect.Message {
+func (x *RunRequest_ToolcallResult) ProtoReflect() protoreflect.Message {
 	mi := &file_agentd_v1_service_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -474,155 +454,69 @@ func (x *RunRequest_ToolCallResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RunRequest_ToolCallResponse.ProtoReflect.Descriptor instead.
-func (*RunRequest_ToolCallResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use RunRequest_ToolcallResult.ProtoReflect.Descriptor instead.
+func (*RunRequest_ToolcallResult) Descriptor() ([]byte, []int) {
 	return file_agentd_v1_service_proto_rawDescGZIP(), []int{0, 2}
 }
 
-func (x *RunRequest_ToolCallResponse) GetSessionId() string {
+func (x *RunRequest_ToolcallResult) GetSessionId() string {
 	if x != nil {
 		return x.SessionId
 	}
 	return ""
 }
 
-func (x *RunRequest_ToolCallResponse) GetToolCallId() string {
+func (x *RunRequest_ToolcallResult) GetToolCallId() string {
 	if x != nil {
 		return x.ToolCallId
 	}
 	return ""
 }
 
-func (x *RunRequest_ToolCallResponse) GetToolName() string {
+func (x *RunRequest_ToolcallResult) GetToolName() string {
 	if x != nil {
 		return x.ToolName
 	}
 	return ""
 }
 
-func (x *RunRequest_ToolCallResponse) GetResult() isRunRequest_ToolCallResponse_Result {
-	if x != nil {
-		return x.Result
-	}
-	return nil
-}
-
-func (x *RunRequest_ToolCallResponse) GetOutput() string {
-	if x != nil {
-		if x, ok := x.Result.(*RunRequest_ToolCallResponse_Output); ok {
-			return x.Output
-		}
+func (x *RunRequest_ToolcallResult) GetResult() string {
+	if x != nil && x.Result != nil {
+		return *x.Result
 	}
 	return ""
 }
 
-func (x *RunRequest_ToolCallResponse) GetError() string {
-	if x != nil {
-		if x, ok := x.Result.(*RunRequest_ToolCallResponse_Error); ok {
-			return x.Error
-		}
+func (x *RunRequest_ToolcallResult) GetError() string {
+	if x != nil && x.Error != nil {
+		return *x.Error
 	}
 	return ""
 }
 
-func (x *RunRequest_ToolCallResponse) GetStateDelta() *structpb.Struct {
-	if x != nil {
-		return x.StateDelta
-	}
-	return nil
-}
-
-type isRunRequest_ToolCallResponse_Result interface {
-	isRunRequest_ToolCallResponse_Result()
-}
-
-type RunRequest_ToolCallResponse_Output struct {
-	Output string `protobuf:"bytes,4,opt,name=output,proto3,oneof"`
-}
-
-type RunRequest_ToolCallResponse_Error struct {
-	Error string `protobuf:"bytes,5,opt,name=error,proto3,oneof"`
-}
-
-func (*RunRequest_ToolCallResponse_Output) isRunRequest_ToolCallResponse_Result() {}
-
-func (*RunRequest_ToolCallResponse_Error) isRunRequest_ToolCallResponse_Result() {}
-
-type RunRequest_EndRequest struct {
+// either cancel tool call or end session
+type RunRequest_Cancel struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	Reason        *string                `protobuf:"bytes,2,opt,name=reason,proto3,oneof" json:"reason,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RunRequest_EndRequest) Reset() {
-	*x = RunRequest_EndRequest{}
-	mi := &file_agentd_v1_service_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RunRequest_EndRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RunRequest_EndRequest) ProtoMessage() {}
-
-func (x *RunRequest_EndRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_service_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RunRequest_EndRequest.ProtoReflect.Descriptor instead.
-func (*RunRequest_EndRequest) Descriptor() ([]byte, []int) {
-	return file_agentd_v1_service_proto_rawDescGZIP(), []int{0, 3}
-}
-
-func (x *RunRequest_EndRequest) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-func (x *RunRequest_EndRequest) GetReason() string {
-	if x != nil && x.Reason != nil {
-		return *x.Reason
-	}
-	return ""
-}
-
-type RunRequest_CancelRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	ToolCallId    *string                `protobuf:"bytes,2,opt,name=tool_call_id,json=toolCallId,proto3,oneof" json:"tool_call_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RunRequest_CancelRequest) Reset() {
-	*x = RunRequest_CancelRequest{}
-	mi := &file_agentd_v1_service_proto_msgTypes[6]
+func (x *RunRequest_Cancel) Reset() {
+	*x = RunRequest_Cancel{}
+	mi := &file_agentd_v1_service_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RunRequest_CancelRequest) String() string {
+func (x *RunRequest_Cancel) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RunRequest_CancelRequest) ProtoMessage() {}
+func (*RunRequest_Cancel) ProtoMessage() {}
 
-func (x *RunRequest_CancelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_service_proto_msgTypes[6]
+func (x *RunRequest_Cancel) ProtoReflect() protoreflect.Message {
+	mi := &file_agentd_v1_service_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -633,47 +527,40 @@ func (x *RunRequest_CancelRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RunRequest_CancelRequest.ProtoReflect.Descriptor instead.
-func (*RunRequest_CancelRequest) Descriptor() ([]byte, []int) {
-	return file_agentd_v1_service_proto_rawDescGZIP(), []int{0, 4}
+// Deprecated: Use RunRequest_Cancel.ProtoReflect.Descriptor instead.
+func (*RunRequest_Cancel) Descriptor() ([]byte, []int) {
+	return file_agentd_v1_service_proto_rawDescGZIP(), []int{0, 3}
 }
 
-func (x *RunRequest_CancelRequest) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-func (x *RunRequest_CancelRequest) GetToolCallId() string {
+func (x *RunRequest_Cancel) GetToolCallId() string {
 	if x != nil && x.ToolCallId != nil {
 		return *x.ToolCallId
 	}
 	return ""
 }
 
-type RunResponse_ExecuteResponse struct {
+type RunResponse_Run struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RunResponse_ExecuteResponse) Reset() {
-	*x = RunResponse_ExecuteResponse{}
-	mi := &file_agentd_v1_service_proto_msgTypes[7]
+func (x *RunResponse_Run) Reset() {
+	*x = RunResponse_Run{}
+	mi := &file_agentd_v1_service_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RunResponse_ExecuteResponse) String() string {
+func (x *RunResponse_Run) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RunResponse_ExecuteResponse) ProtoMessage() {}
+func (*RunResponse_Run) ProtoMessage() {}
 
-func (x *RunResponse_ExecuteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_service_proto_msgTypes[7]
+func (x *RunResponse_Run) ProtoReflect() protoreflect.Message {
+	mi := &file_agentd_v1_service_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -684,40 +571,39 @@ func (x *RunResponse_ExecuteResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RunResponse_ExecuteResponse.ProtoReflect.Descriptor instead.
-func (*RunResponse_ExecuteResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use RunResponse_Run.ProtoReflect.Descriptor instead.
+func (*RunResponse_Run) Descriptor() ([]byte, []int) {
 	return file_agentd_v1_service_proto_rawDescGZIP(), []int{1, 0}
 }
 
-func (x *RunResponse_ExecuteResponse) GetSessionId() string {
+func (x *RunResponse_Run) GetSessionId() string {
 	if x != nil {
 		return x.SessionId
 	}
 	return ""
 }
 
-type RunResponse_HeartbeatResponse struct {
+type RunResponse_Heartbeat struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RunResponse_HeartbeatResponse) Reset() {
-	*x = RunResponse_HeartbeatResponse{}
-	mi := &file_agentd_v1_service_proto_msgTypes[8]
+func (x *RunResponse_Heartbeat) Reset() {
+	*x = RunResponse_Heartbeat{}
+	mi := &file_agentd_v1_service_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RunResponse_HeartbeatResponse) String() string {
+func (x *RunResponse_Heartbeat) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RunResponse_HeartbeatResponse) ProtoMessage() {}
+func (*RunResponse_Heartbeat) ProtoMessage() {}
 
-func (x *RunResponse_HeartbeatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_service_proto_msgTypes[8]
+func (x *RunResponse_Heartbeat) ProtoReflect() protoreflect.Message {
+	mi := &file_agentd_v1_service_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -728,44 +614,36 @@ func (x *RunResponse_HeartbeatResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RunResponse_HeartbeatResponse.ProtoReflect.Descriptor instead.
-func (*RunResponse_HeartbeatResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use RunResponse_Heartbeat.ProtoReflect.Descriptor instead.
+func (*RunResponse_Heartbeat) Descriptor() ([]byte, []int) {
 	return file_agentd_v1_service_proto_rawDescGZIP(), []int{1, 1}
 }
 
-func (x *RunResponse_HeartbeatResponse) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-type RunResponse_ToolCallRequest struct {
+type RunResponse_ToolcallRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	ToolCallId    string                 `protobuf:"bytes,2,opt,name=tool_call_id,json=toolCallId,proto3" json:"tool_call_id,omitempty"`
-	ToolName      string                 `protobuf:"bytes,3,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"`
-	ToolInput     string                 `protobuf:"bytes,4,opt,name=tool_input,json=toolInput,proto3" json:"tool_input,omitempty"`
-	AgentPath     []string               `protobuf:"bytes,5,rep,name=agent_path,json=agentPath,proto3" json:"agent_path,omitempty"`
+	ToolCallId    string                 `protobuf:"bytes,1,opt,name=tool_call_id,json=toolCallId,proto3" json:"tool_call_id,omitempty"`
+	ToolName      string                 `protobuf:"bytes,2,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"`
+	ToolInput     string                 `protobuf:"bytes,3,opt,name=tool_input,json=toolInput,proto3" json:"tool_input,omitempty"`
+	AgentPath     []string               `protobuf:"bytes,4,rep,name=agent_path,json=agentPath,proto3" json:"agent_path,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RunResponse_ToolCallRequest) Reset() {
-	*x = RunResponse_ToolCallRequest{}
-	mi := &file_agentd_v1_service_proto_msgTypes[9]
+func (x *RunResponse_ToolcallRequest) Reset() {
+	*x = RunResponse_ToolcallRequest{}
+	mi := &file_agentd_v1_service_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RunResponse_ToolCallRequest) String() string {
+func (x *RunResponse_ToolcallRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RunResponse_ToolCallRequest) ProtoMessage() {}
+func (*RunResponse_ToolcallRequest) ProtoMessage() {}
 
-func (x *RunResponse_ToolCallRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_service_proto_msgTypes[9]
+func (x *RunResponse_ToolcallRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agentd_v1_service_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -776,40 +654,33 @@ func (x *RunResponse_ToolCallRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RunResponse_ToolCallRequest.ProtoReflect.Descriptor instead.
-func (*RunResponse_ToolCallRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use RunResponse_ToolcallRequest.ProtoReflect.Descriptor instead.
+func (*RunResponse_ToolcallRequest) Descriptor() ([]byte, []int) {
 	return file_agentd_v1_service_proto_rawDescGZIP(), []int{1, 2}
 }
 
-func (x *RunResponse_ToolCallRequest) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-func (x *RunResponse_ToolCallRequest) GetToolCallId() string {
+func (x *RunResponse_ToolcallRequest) GetToolCallId() string {
 	if x != nil {
 		return x.ToolCallId
 	}
 	return ""
 }
 
-func (x *RunResponse_ToolCallRequest) GetToolName() string {
+func (x *RunResponse_ToolcallRequest) GetToolName() string {
 	if x != nil {
 		return x.ToolName
 	}
 	return ""
 }
 
-func (x *RunResponse_ToolCallRequest) GetToolInput() string {
+func (x *RunResponse_ToolcallRequest) GetToolInput() string {
 	if x != nil {
 		return x.ToolInput
 	}
 	return ""
 }
 
-func (x *RunResponse_ToolCallRequest) GetAgentPath() []string {
+func (x *RunResponse_ToolcallRequest) GetAgentPath() []string {
 	if x != nil {
 		return x.AgentPath
 	}
@@ -818,7 +689,7 @@ func (x *RunResponse_ToolCallRequest) GetAgentPath() []string {
 
 type RunResponse_OutputChunk struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	ToolCallId    string                 `protobuf:"bytes,1,opt,name=tool_call_id,json=toolCallId,proto3" json:"tool_call_id,omitempty"`
 	AgentPath     []string               `protobuf:"bytes,2,rep,name=agent_path,json=agentPath,proto3" json:"agent_path,omitempty"`
 	Content       string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
 	Last          bool                   `protobuf:"varint,4,opt,name=last,proto3" json:"last,omitempty"`                            // true when this is the final chunk from the agent identified by agent_path
@@ -829,7 +700,7 @@ type RunResponse_OutputChunk struct {
 
 func (x *RunResponse_OutputChunk) Reset() {
 	*x = RunResponse_OutputChunk{}
-	mi := &file_agentd_v1_service_proto_msgTypes[10]
+	mi := &file_agentd_v1_service_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -841,7 +712,7 @@ func (x *RunResponse_OutputChunk) String() string {
 func (*RunResponse_OutputChunk) ProtoMessage() {}
 
 func (x *RunResponse_OutputChunk) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_service_proto_msgTypes[10]
+	mi := &file_agentd_v1_service_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -857,9 +728,9 @@ func (*RunResponse_OutputChunk) Descriptor() ([]byte, []int) {
 	return file_agentd_v1_service_proto_rawDescGZIP(), []int{1, 3}
 }
 
-func (x *RunResponse_OutputChunk) GetSessionId() string {
+func (x *RunResponse_OutputChunk) GetToolCallId() string {
 	if x != nil {
-		return x.SessionId
+		return x.ToolCallId
 	}
 	return ""
 }
@@ -892,31 +763,30 @@ func (x *RunResponse_OutputChunk) GetIsThought() bool {
 	return false
 }
 
-type RunResponse_ErrorResponse struct {
+type RunResponse_Error struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	Code          ErrorCode              `protobuf:"varint,2,opt,name=code,proto3,enum=agentd.v1.ErrorCode" json:"code,omitempty"`
-	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
-	Retryable     bool                   `protobuf:"varint,4,opt,name=retryable,proto3" json:"retryable,omitempty"`
+	Code          ErrorCode              `protobuf:"varint,1,opt,name=code,proto3,enum=agentd.v1.ErrorCode" json:"code,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Retryable     bool                   `protobuf:"varint,3,opt,name=retryable,proto3" json:"retryable,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RunResponse_ErrorResponse) Reset() {
-	*x = RunResponse_ErrorResponse{}
-	mi := &file_agentd_v1_service_proto_msgTypes[11]
+func (x *RunResponse_Error) Reset() {
+	*x = RunResponse_Error{}
+	mi := &file_agentd_v1_service_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RunResponse_ErrorResponse) String() string {
+func (x *RunResponse_Error) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RunResponse_ErrorResponse) ProtoMessage() {}
+func (*RunResponse_Error) ProtoMessage() {}
 
-func (x *RunResponse_ErrorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_service_proto_msgTypes[11]
+func (x *RunResponse_Error) ProtoReflect() protoreflect.Message {
+	mi := &file_agentd_v1_service_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -927,64 +797,56 @@ func (x *RunResponse_ErrorResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RunResponse_ErrorResponse.ProtoReflect.Descriptor instead.
-func (*RunResponse_ErrorResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use RunResponse_Error.ProtoReflect.Descriptor instead.
+func (*RunResponse_Error) Descriptor() ([]byte, []int) {
 	return file_agentd_v1_service_proto_rawDescGZIP(), []int{1, 4}
 }
 
-func (x *RunResponse_ErrorResponse) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-func (x *RunResponse_ErrorResponse) GetCode() ErrorCode {
+func (x *RunResponse_Error) GetCode() ErrorCode {
 	if x != nil {
 		return x.Code
 	}
 	return ErrorCode_ERROR_CODE_UNSPECIFIED
 }
 
-func (x *RunResponse_ErrorResponse) GetMessage() string {
+func (x *RunResponse_Error) GetMessage() string {
 	if x != nil {
 		return x.Message
 	}
 	return ""
 }
 
-func (x *RunResponse_ErrorResponse) GetRetryable() bool {
+func (x *RunResponse_Error) GetRetryable() bool {
 	if x != nil {
 		return x.Retryable
 	}
 	return false
 }
 
-type RunResponse_EndResponse struct {
+type RunResponse_End struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	Reason        *string                `protobuf:"bytes,2,opt,name=reason,proto3,oneof" json:"reason,omitempty"`
-	UsageSummary  *UsageSummary          `protobuf:"bytes,3,opt,name=usage_summary,json=usageSummary,proto3" json:"usage_summary,omitempty"`
-	Completed     bool                   `protobuf:"varint,4,opt,name=completed,proto3" json:"completed,omitempty"` // true if the agent tree finished naturally; false if client-initiated end
+	Reason        *string                `protobuf:"bytes,1,opt,name=reason,proto3,oneof" json:"reason,omitempty"`
+	UsageSummary  *UsageSummary          `protobuf:"bytes,2,opt,name=usage_summary,json=usageSummary,proto3" json:"usage_summary,omitempty"`
+	Completed     bool                   `protobuf:"varint,3,opt,name=completed,proto3" json:"completed,omitempty"` // true if the agent tree finished naturally; false if client-initiated end
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RunResponse_EndResponse) Reset() {
-	*x = RunResponse_EndResponse{}
-	mi := &file_agentd_v1_service_proto_msgTypes[12]
+func (x *RunResponse_End) Reset() {
+	*x = RunResponse_End{}
+	mi := &file_agentd_v1_service_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RunResponse_EndResponse) String() string {
+func (x *RunResponse_End) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RunResponse_EndResponse) ProtoMessage() {}
+func (*RunResponse_End) ProtoMessage() {}
 
-func (x *RunResponse_EndResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_service_proto_msgTypes[12]
+func (x *RunResponse_End) ProtoReflect() protoreflect.Message {
+	mi := &file_agentd_v1_service_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -995,33 +857,26 @@ func (x *RunResponse_EndResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RunResponse_EndResponse.ProtoReflect.Descriptor instead.
-func (*RunResponse_EndResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use RunResponse_End.ProtoReflect.Descriptor instead.
+func (*RunResponse_End) Descriptor() ([]byte, []int) {
 	return file_agentd_v1_service_proto_rawDescGZIP(), []int{1, 5}
 }
 
-func (x *RunResponse_EndResponse) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-func (x *RunResponse_EndResponse) GetReason() string {
+func (x *RunResponse_End) GetReason() string {
 	if x != nil && x.Reason != nil {
 		return *x.Reason
 	}
 	return ""
 }
 
-func (x *RunResponse_EndResponse) GetUsageSummary() *UsageSummary {
+func (x *RunResponse_End) GetUsageSummary() *UsageSummary {
 	if x != nil {
 		return x.UsageSummary
 	}
 	return nil
 }
 
-func (x *RunResponse_EndResponse) GetCompleted() bool {
+func (x *RunResponse_End) GetCompleted() bool {
 	if x != nil {
 		return x.Completed
 	}
@@ -1030,15 +885,14 @@ func (x *RunResponse_EndResponse) GetCompleted() bool {
 
 type RunResponse_StateUpdate struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	StateDelta    *structpb.Struct       `protobuf:"bytes,2,opt,name=state_delta,json=stateDelta,proto3" json:"state_delta,omitempty"`
+	StateDelta    *structpb.Struct       `protobuf:"bytes,1,opt,name=state_delta,json=stateDelta,proto3" json:"state_delta,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RunResponse_StateUpdate) Reset() {
 	*x = RunResponse_StateUpdate{}
-	mi := &file_agentd_v1_service_proto_msgTypes[13]
+	mi := &file_agentd_v1_service_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1050,7 +904,7 @@ func (x *RunResponse_StateUpdate) String() string {
 func (*RunResponse_StateUpdate) ProtoMessage() {}
 
 func (x *RunResponse_StateUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_agentd_v1_service_proto_msgTypes[13]
+	mi := &file_agentd_v1_service_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1066,13 +920,6 @@ func (*RunResponse_StateUpdate) Descriptor() ([]byte, []int) {
 	return file_agentd_v1_service_proto_rawDescGZIP(), []int{1, 6}
 }
 
-func (x *RunResponse_StateUpdate) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
 func (x *RunResponse_StateUpdate) GetStateDelta() *structpb.Struct {
 	if x != nil {
 		return x.StateDelta
@@ -1084,105 +931,83 @@ var File_agentd_v1_service_proto protoreflect.FileDescriptor
 
 const file_agentd_v1_service_proto_rawDesc = "" +
 	"\n" +
-	"\x17agentd/v1/service.proto\x12\tagentd.v1\x1a\x15agentd/v1/types.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xbb\b\n" +
+	"\x17agentd/v1/service.proto\x12\tagentd.v1\x1a\x15agentd/v1/types.proto\x1a\x1cgoogle/protobuf/struct.proto\"\x9f\x06\n" +
 	"\n" +
-	"RunRequest\x12@\n" +
-	"\aexecute\x18\x01 \x01(\v2$.agentd.v1.RunRequest.ExecuteRequestH\x00R\aexecute\x12F\n" +
-	"\theartbeat\x18\x02 \x01(\v2&.agentd.v1.RunRequest.HeartbeatRequestH\x00R\theartbeat\x12V\n" +
-	"\x12tool_call_response\x18\x03 \x01(\v2&.agentd.v1.RunRequest.ToolCallResponseH\x00R\x10toolCallResponse\x124\n" +
-	"\x03end\x18\x04 \x01(\v2 .agentd.v1.RunRequest.EndRequestH\x00R\x03end\x12=\n" +
-	"\x06cancel\x18\x05 \x01(\v2#.agentd.v1.RunRequest.CancelRequestH\x00R\x06cancel\x1a\xf1\x01\n" +
-	"\x0eExecuteRequest\x12&\n" +
-	"\x05agent\x18\x01 \x01(\v2\x10.agentd.v1.AgentR\x05agent\x12\"\n" +
+	"RunRequest\x12-\n" +
+	"\x03run\x18\x01 \x01(\v2\x19.agentd.v1.RunRequest.RunH\x00R\x03run\x12?\n" +
+	"\theartbeat\x18\x02 \x01(\v2\x1f.agentd.v1.RunRequest.HeartbeatH\x00R\theartbeat\x12O\n" +
+	"\x0ftoolcall_result\x18\x03 \x01(\v2$.agentd.v1.RunRequest.ToolcallResultH\x00R\x0etoolcallResult\x126\n" +
+	"\x06cancel\x18\x05 \x01(\v2\x1c.agentd.v1.RunRequest.CancelH\x00R\x06cancel\x1a\xff\x01\n" +
+	"\x03Run\x12&\n" +
+	"\x05agent\x18\x01 \x01(\v2\x10.agentd.v1.AgentR\x05agent\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\"\n" +
 	"\n" +
-	"session_id\x18\x02 \x01(\tH\x00R\tsessionId\x88\x01\x01\x12\x1f\n" +
-	"\vuser_prompt\x18\x03 \x01(\tR\n" +
+	"session_id\x18\x03 \x01(\tH\x00R\tsessionId\x88\x01\x01\x12\x1f\n" +
+	"\vuser_prompt\x18\x04 \x01(\tR\n" +
 	"userPrompt\x12%\n" +
-	"\x05tools\x18\x04 \x03(\v2\x0f.agentd.v1.ToolR\x05tools\x12<\n" +
-	"\rinitial_state\x18\x05 \x01(\v2\x17.google.protobuf.StructR\finitialStateB\r\n" +
-	"\v_session_id\x1a1\n" +
-	"\x10HeartbeatRequest\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x1a\xe6\x01\n" +
-	"\x10ToolCallResponse\x12\x1d\n" +
+	"\x05tools\x18\x05 \x03(\v2\x0f.agentd.v1.ToolR\x05tools\x12<\n" +
+	"\rinitial_state\x18\x06 \x01(\v2\x17.google.protobuf.StructR\finitialStateB\r\n" +
+	"\v_session_id\x1a\v\n" +
+	"\tHeartbeat\x1a\xbb\x01\n" +
+	"\x0eToolcallResult\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12 \n" +
 	"\ftool_call_id\x18\x02 \x01(\tR\n" +
 	"toolCallId\x12\x1b\n" +
-	"\ttool_name\x18\x03 \x01(\tR\btoolName\x12\x18\n" +
-	"\x06output\x18\x04 \x01(\tH\x00R\x06output\x12\x16\n" +
-	"\x05error\x18\x05 \x01(\tH\x00R\x05error\x128\n" +
-	"\vstate_delta\x18\x06 \x01(\v2\x17.google.protobuf.StructR\n" +
-	"stateDeltaB\b\n" +
-	"\x06result\x1aS\n" +
-	"\n" +
-	"EndRequest\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1b\n" +
-	"\x06reason\x18\x02 \x01(\tH\x00R\x06reason\x88\x01\x01B\t\n" +
-	"\a_reason\x1af\n" +
-	"\rCancelRequest\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12%\n" +
+	"\ttool_name\x18\x03 \x01(\tR\btoolName\x12\x1b\n" +
+	"\x06result\x18\x04 \x01(\tH\x00R\x06result\x88\x01\x01\x12\x19\n" +
+	"\x05error\x18\x05 \x01(\tH\x01R\x05error\x88\x01\x01B\t\n" +
+	"\a_resultB\b\n" +
+	"\x06_error\x1a@\n" +
+	"\x06Cancel\x12%\n" +
 	"\ftool_call_id\x18\x02 \x01(\tH\x00R\n" +
 	"toolCallId\x88\x01\x01B\x0f\n" +
 	"\r_tool_call_idB\t\n" +
-	"\arequest\"\xd5\n" +
-	"\n" +
-	"\vRunResponse\x12B\n" +
-	"\aexecute\x18\x01 \x01(\v2&.agentd.v1.RunResponse.ExecuteResponseH\x00R\aexecute\x12H\n" +
-	"\theartbeat\x18\x02 \x01(\v2(.agentd.v1.RunResponse.HeartbeatResponseH\x00R\theartbeat\x12E\n" +
-	"\ttool_call\x18\x03 \x01(\v2&.agentd.v1.RunResponse.ToolCallRequestH\x00R\btoolCall\x12<\n" +
-	"\x05error\x18\x04 \x01(\v2$.agentd.v1.RunResponse.ErrorResponseH\x00R\x05error\x126\n" +
-	"\x03end\x18\x05 \x01(\v2\".agentd.v1.RunResponse.EndResponseH\x00R\x03end\x12G\n" +
+	"\arequest\"\xfa\b\n" +
+	"\vRunResponse\x12.\n" +
+	"\x03run\x18\x01 \x01(\v2\x1a.agentd.v1.RunResponse.RunH\x00R\x03run\x12@\n" +
+	"\theartbeat\x18\x02 \x01(\v2 .agentd.v1.RunResponse.HeartbeatH\x00R\theartbeat\x12S\n" +
+	"\x10toolcall_request\x18\x03 \x01(\v2&.agentd.v1.RunResponse.ToolcallRequestH\x00R\x0ftoolcallRequest\x124\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.agentd.v1.RunResponse.ErrorH\x00R\x05error\x12.\n" +
+	"\x03end\x18\x05 \x01(\v2\x1a.agentd.v1.RunResponse.EndH\x00R\x03end\x12G\n" +
 	"\foutput_chunk\x18\x06 \x01(\v2\".agentd.v1.RunResponse.OutputChunkH\x00R\voutputChunk\x12G\n" +
-	"\fstate_update\x18\a \x01(\v2\".agentd.v1.RunResponse.StateUpdateH\x00R\vstateUpdate\x1a0\n" +
-	"\x0fExecuteResponse\x12\x1d\n" +
+	"\fstate_update\x18\a \x01(\v2\".agentd.v1.RunResponse.StateUpdateH\x00R\vstateUpdate\x1a$\n" +
+	"\x03Run\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x1a2\n" +
-	"\x11HeartbeatResponse\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x1a\xad\x01\n" +
-	"\x0fToolCallRequest\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12 \n" +
-	"\ftool_call_id\x18\x02 \x01(\tR\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x1a\v\n" +
+	"\tHeartbeat\x1a\x8e\x01\n" +
+	"\x0fToolcallRequest\x12 \n" +
+	"\ftool_call_id\x18\x01 \x01(\tR\n" +
 	"toolCallId\x12\x1b\n" +
-	"\ttool_name\x18\x03 \x01(\tR\btoolName\x12\x1d\n" +
+	"\ttool_name\x18\x02 \x01(\tR\btoolName\x12\x1d\n" +
 	"\n" +
-	"tool_input\x18\x04 \x01(\tR\ttoolInput\x12\x1d\n" +
+	"tool_input\x18\x03 \x01(\tR\ttoolInput\x12\x1d\n" +
 	"\n" +
-	"agent_path\x18\x05 \x03(\tR\tagentPath\x1a\x98\x01\n" +
-	"\vOutputChunk\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1d\n" +
+	"agent_path\x18\x04 \x03(\tR\tagentPath\x1a\x9b\x01\n" +
+	"\vOutputChunk\x12 \n" +
+	"\ftool_call_id\x18\x01 \x01(\tR\n" +
+	"toolCallId\x12\x1d\n" +
 	"\n" +
 	"agent_path\x18\x02 \x03(\tR\tagentPath\x12\x18\n" +
 	"\acontent\x18\x03 \x01(\tR\acontent\x12\x12\n" +
 	"\x04last\x18\x04 \x01(\bR\x04last\x12\x1d\n" +
 	"\n" +
-	"is_thought\x18\x05 \x01(\bR\tisThought\x1a\x90\x01\n" +
-	"\rErrorResponse\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12(\n" +
-	"\x04code\x18\x02 \x01(\x0e2\x14.agentd.v1.ErrorCodeR\x04code\x12\x18\n" +
-	"\amessage\x18\x03 \x01(\tR\amessage\x12\x1c\n" +
-	"\tretryable\x18\x04 \x01(\bR\tretryable\x1a\xb0\x01\n" +
-	"\vEndResponse\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1b\n" +
-	"\x06reason\x18\x02 \x01(\tH\x00R\x06reason\x88\x01\x01\x12<\n" +
-	"\rusage_summary\x18\x03 \x01(\v2\x17.agentd.v1.UsageSummaryR\fusageSummary\x12\x1c\n" +
-	"\tcompleted\x18\x04 \x01(\bR\tcompletedB\t\n" +
-	"\a_reason\x1af\n" +
-	"\vStateUpdate\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x128\n" +
-	"\vstate_delta\x18\x02 \x01(\v2\x17.google.protobuf.StructR\n" +
+	"is_thought\x18\x05 \x01(\bR\tisThought\x1ai\n" +
+	"\x05Error\x12(\n" +
+	"\x04code\x18\x01 \x01(\x0e2\x14.agentd.v1.ErrorCodeR\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1c\n" +
+	"\tretryable\x18\x03 \x01(\bR\tretryable\x1a\x89\x01\n" +
+	"\x03End\x12\x1b\n" +
+	"\x06reason\x18\x01 \x01(\tH\x00R\x06reason\x88\x01\x01\x12<\n" +
+	"\rusage_summary\x18\x02 \x01(\v2\x17.agentd.v1.UsageSummaryR\fusageSummary\x12\x1c\n" +
+	"\tcompleted\x18\x03 \x01(\bR\tcompletedB\t\n" +
+	"\a_reason\x1aG\n" +
+	"\vStateUpdate\x128\n" +
+	"\vstate_delta\x18\x01 \x01(\v2\x17.google.protobuf.StructR\n" +
 	"stateDeltaB\n" +
 	"\n" +
-	"\bresponse2B\n" +
-	"\x06Agentd\x128\n" +
+	"\bresponse2I\n" +
+	"\rAgentdService\x128\n" +
 	"\x03Run\x12\x15.agentd.v1.RunRequest\x1a\x16.agentd.v1.RunResponse(\x010\x01B:Z8github.com/apzuk3/agentd/gen/proto/go/agentd/v1;agentdv1b\x06proto3"
 
 var (
@@ -1197,55 +1022,52 @@ func file_agentd_v1_service_proto_rawDescGZIP() []byte {
 	return file_agentd_v1_service_proto_rawDescData
 }
 
-var file_agentd_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_agentd_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_agentd_v1_service_proto_goTypes = []any{
-	(*RunRequest)(nil),                    // 0: agentd.v1.RunRequest
-	(*RunResponse)(nil),                   // 1: agentd.v1.RunResponse
-	(*RunRequest_ExecuteRequest)(nil),     // 2: agentd.v1.RunRequest.ExecuteRequest
-	(*RunRequest_HeartbeatRequest)(nil),   // 3: agentd.v1.RunRequest.HeartbeatRequest
-	(*RunRequest_ToolCallResponse)(nil),   // 4: agentd.v1.RunRequest.ToolCallResponse
-	(*RunRequest_EndRequest)(nil),         // 5: agentd.v1.RunRequest.EndRequest
-	(*RunRequest_CancelRequest)(nil),      // 6: agentd.v1.RunRequest.CancelRequest
-	(*RunResponse_ExecuteResponse)(nil),   // 7: agentd.v1.RunResponse.ExecuteResponse
-	(*RunResponse_HeartbeatResponse)(nil), // 8: agentd.v1.RunResponse.HeartbeatResponse
-	(*RunResponse_ToolCallRequest)(nil),   // 9: agentd.v1.RunResponse.ToolCallRequest
-	(*RunResponse_OutputChunk)(nil),       // 10: agentd.v1.RunResponse.OutputChunk
-	(*RunResponse_ErrorResponse)(nil),     // 11: agentd.v1.RunResponse.ErrorResponse
-	(*RunResponse_EndResponse)(nil),       // 12: agentd.v1.RunResponse.EndResponse
-	(*RunResponse_StateUpdate)(nil),       // 13: agentd.v1.RunResponse.StateUpdate
-	(*Agent)(nil),                         // 14: agentd.v1.Agent
-	(*Tool)(nil),                          // 15: agentd.v1.Tool
-	(*structpb.Struct)(nil),               // 16: google.protobuf.Struct
-	(ErrorCode)(0),                        // 17: agentd.v1.ErrorCode
-	(*UsageSummary)(nil),                  // 18: agentd.v1.UsageSummary
+	(*RunRequest)(nil),                  // 0: agentd.v1.RunRequest
+	(*RunResponse)(nil),                 // 1: agentd.v1.RunResponse
+	(*RunRequest_Run)(nil),              // 2: agentd.v1.RunRequest.Run
+	(*RunRequest_Heartbeat)(nil),        // 3: agentd.v1.RunRequest.Heartbeat
+	(*RunRequest_ToolcallResult)(nil),   // 4: agentd.v1.RunRequest.ToolcallResult
+	(*RunRequest_Cancel)(nil),           // 5: agentd.v1.RunRequest.Cancel
+	(*RunResponse_Run)(nil),             // 6: agentd.v1.RunResponse.Run
+	(*RunResponse_Heartbeat)(nil),       // 7: agentd.v1.RunResponse.Heartbeat
+	(*RunResponse_ToolcallRequest)(nil), // 8: agentd.v1.RunResponse.ToolcallRequest
+	(*RunResponse_OutputChunk)(nil),     // 9: agentd.v1.RunResponse.OutputChunk
+	(*RunResponse_Error)(nil),           // 10: agentd.v1.RunResponse.Error
+	(*RunResponse_End)(nil),             // 11: agentd.v1.RunResponse.End
+	(*RunResponse_StateUpdate)(nil),     // 12: agentd.v1.RunResponse.StateUpdate
+	(*Agent)(nil),                       // 13: agentd.v1.Agent
+	(*Tool)(nil),                        // 14: agentd.v1.Tool
+	(*structpb.Struct)(nil),             // 15: google.protobuf.Struct
+	(ErrorCode)(0),                      // 16: agentd.v1.ErrorCode
+	(*UsageSummary)(nil),                // 17: agentd.v1.UsageSummary
 }
 var file_agentd_v1_service_proto_depIdxs = []int32{
-	2,  // 0: agentd.v1.RunRequest.execute:type_name -> agentd.v1.RunRequest.ExecuteRequest
-	3,  // 1: agentd.v1.RunRequest.heartbeat:type_name -> agentd.v1.RunRequest.HeartbeatRequest
-	4,  // 2: agentd.v1.RunRequest.tool_call_response:type_name -> agentd.v1.RunRequest.ToolCallResponse
-	5,  // 3: agentd.v1.RunRequest.end:type_name -> agentd.v1.RunRequest.EndRequest
-	6,  // 4: agentd.v1.RunRequest.cancel:type_name -> agentd.v1.RunRequest.CancelRequest
-	7,  // 5: agentd.v1.RunResponse.execute:type_name -> agentd.v1.RunResponse.ExecuteResponse
-	8,  // 6: agentd.v1.RunResponse.heartbeat:type_name -> agentd.v1.RunResponse.HeartbeatResponse
-	9,  // 7: agentd.v1.RunResponse.tool_call:type_name -> agentd.v1.RunResponse.ToolCallRequest
-	11, // 8: agentd.v1.RunResponse.error:type_name -> agentd.v1.RunResponse.ErrorResponse
-	12, // 9: agentd.v1.RunResponse.end:type_name -> agentd.v1.RunResponse.EndResponse
-	10, // 10: agentd.v1.RunResponse.output_chunk:type_name -> agentd.v1.RunResponse.OutputChunk
-	13, // 11: agentd.v1.RunResponse.state_update:type_name -> agentd.v1.RunResponse.StateUpdate
-	14, // 12: agentd.v1.RunRequest.ExecuteRequest.agent:type_name -> agentd.v1.Agent
-	15, // 13: agentd.v1.RunRequest.ExecuteRequest.tools:type_name -> agentd.v1.Tool
-	16, // 14: agentd.v1.RunRequest.ExecuteRequest.initial_state:type_name -> google.protobuf.Struct
-	16, // 15: agentd.v1.RunRequest.ToolCallResponse.state_delta:type_name -> google.protobuf.Struct
-	17, // 16: agentd.v1.RunResponse.ErrorResponse.code:type_name -> agentd.v1.ErrorCode
-	18, // 17: agentd.v1.RunResponse.EndResponse.usage_summary:type_name -> agentd.v1.UsageSummary
-	16, // 18: agentd.v1.RunResponse.StateUpdate.state_delta:type_name -> google.protobuf.Struct
-	0,  // 19: agentd.v1.Agentd.Run:input_type -> agentd.v1.RunRequest
-	1,  // 20: agentd.v1.Agentd.Run:output_type -> agentd.v1.RunResponse
-	20, // [20:21] is the sub-list for method output_type
-	19, // [19:20] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	2,  // 0: agentd.v1.RunRequest.run:type_name -> agentd.v1.RunRequest.Run
+	3,  // 1: agentd.v1.RunRequest.heartbeat:type_name -> agentd.v1.RunRequest.Heartbeat
+	4,  // 2: agentd.v1.RunRequest.toolcall_result:type_name -> agentd.v1.RunRequest.ToolcallResult
+	5,  // 3: agentd.v1.RunRequest.cancel:type_name -> agentd.v1.RunRequest.Cancel
+	6,  // 4: agentd.v1.RunResponse.run:type_name -> agentd.v1.RunResponse.Run
+	7,  // 5: agentd.v1.RunResponse.heartbeat:type_name -> agentd.v1.RunResponse.Heartbeat
+	8,  // 6: agentd.v1.RunResponse.toolcall_request:type_name -> agentd.v1.RunResponse.ToolcallRequest
+	10, // 7: agentd.v1.RunResponse.error:type_name -> agentd.v1.RunResponse.Error
+	11, // 8: agentd.v1.RunResponse.end:type_name -> agentd.v1.RunResponse.End
+	9,  // 9: agentd.v1.RunResponse.output_chunk:type_name -> agentd.v1.RunResponse.OutputChunk
+	12, // 10: agentd.v1.RunResponse.state_update:type_name -> agentd.v1.RunResponse.StateUpdate
+	13, // 11: agentd.v1.RunRequest.Run.agent:type_name -> agentd.v1.Agent
+	14, // 12: agentd.v1.RunRequest.Run.tools:type_name -> agentd.v1.Tool
+	15, // 13: agentd.v1.RunRequest.Run.initial_state:type_name -> google.protobuf.Struct
+	16, // 14: agentd.v1.RunResponse.Error.code:type_name -> agentd.v1.ErrorCode
+	17, // 15: agentd.v1.RunResponse.End.usage_summary:type_name -> agentd.v1.UsageSummary
+	15, // 16: agentd.v1.RunResponse.StateUpdate.state_delta:type_name -> google.protobuf.Struct
+	0,  // 17: agentd.v1.AgentdService.Run:input_type -> agentd.v1.RunRequest
+	1,  // 18: agentd.v1.AgentdService.Run:output_type -> agentd.v1.RunResponse
+	18, // [18:19] is the sub-list for method output_type
+	17, // [17:18] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_agentd_v1_service_proto_init() }
@@ -1255,36 +1077,31 @@ func file_agentd_v1_service_proto_init() {
 	}
 	file_agentd_v1_types_proto_init()
 	file_agentd_v1_service_proto_msgTypes[0].OneofWrappers = []any{
-		(*RunRequest_Execute)(nil),
-		(*RunRequest_Heartbeat)(nil),
-		(*RunRequest_ToolCallResponse_)(nil),
-		(*RunRequest_End)(nil),
-		(*RunRequest_Cancel)(nil),
+		(*RunRequest_Run_)(nil),
+		(*RunRequest_Heartbeat_)(nil),
+		(*RunRequest_ToolcallResult_)(nil),
+		(*RunRequest_Cancel_)(nil),
 	}
 	file_agentd_v1_service_proto_msgTypes[1].OneofWrappers = []any{
-		(*RunResponse_Execute)(nil),
-		(*RunResponse_Heartbeat)(nil),
-		(*RunResponse_ToolCall)(nil),
-		(*RunResponse_Error)(nil),
-		(*RunResponse_End)(nil),
+		(*RunResponse_Run_)(nil),
+		(*RunResponse_Heartbeat_)(nil),
+		(*RunResponse_ToolcallRequest_)(nil),
+		(*RunResponse_Error_)(nil),
+		(*RunResponse_End_)(nil),
 		(*RunResponse_OutputChunk_)(nil),
 		(*RunResponse_StateUpdate_)(nil),
 	}
 	file_agentd_v1_service_proto_msgTypes[2].OneofWrappers = []any{}
-	file_agentd_v1_service_proto_msgTypes[4].OneofWrappers = []any{
-		(*RunRequest_ToolCallResponse_Output)(nil),
-		(*RunRequest_ToolCallResponse_Error)(nil),
-	}
+	file_agentd_v1_service_proto_msgTypes[4].OneofWrappers = []any{}
 	file_agentd_v1_service_proto_msgTypes[5].OneofWrappers = []any{}
-	file_agentd_v1_service_proto_msgTypes[6].OneofWrappers = []any{}
-	file_agentd_v1_service_proto_msgTypes[12].OneofWrappers = []any{}
+	file_agentd_v1_service_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agentd_v1_service_proto_rawDesc), len(file_agentd_v1_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

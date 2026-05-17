@@ -2,491 +2,416 @@ package agentd
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
-	"strings"
+	"log"
 	"sync"
-	"sync/atomic"
 
 	"connectrpc.com/connect"
+	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/google/uuid"
 	"google.golang.org/adk/agent"
-	"google.golang.org/adk/plugin"
+	"google.golang.org/adk/agent/llmagent"
+	"google.golang.org/adk/agent/workflowagents/loopagent"
+	"google.golang.org/adk/agent/workflowagents/parallelagent"
+	"google.golang.org/adk/agent/workflowagents/sequentialagent"
 	"google.golang.org/adk/runner"
 	adksession "google.golang.org/adk/session"
+	"google.golang.org/adk/tool"
+	"google.golang.org/adk/tool/functiontool"
 	"google.golang.org/genai"
-	"google.golang.org/protobuf/types/known/structpb"
 
 	agentdv1 "github.com/apzuk3/agentd/gen/proto/go/agentd/v1"
 )
 
 type Session struct {
-	id           string
-	providerKeys ProviderKeys
-	stream       *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]
-	plugins      *PluginChain
+	mu       sync.Mutex
+	stream   *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]
+	toolcall map[string]chan *agentdv1.RunRequest_ToolcallResult
 
-	mu           sync.Mutex
-	pendingTools map[string]chan *agentdv1.RunRequest_ToolCallResponse
-
-	cancel     context.CancelFunc
-	agentPaths map[string][]string
-	usage      usageSummary
+	onToolCreated      func(name string)
+	onToolCreatedError func(name string, error error)
+	onToolCall         func(name string, args map[string]any)
+	onToolCallResult   func(name string, result map[string]any)
+	onToolCallError    func(name string, args map[string]any, error error)
 }
 
-func (s *Session) APIKeyForModel(modelName string) string {
-	if strings.HasPrefix(modelName, "claude-") {
-		return s.providerKeys.AnthropicAPIKey
-	}
-	if isOpenAIModel(modelName) {
-		return s.providerKeys.OpenAIAPIKey
-	}
-	return s.providerKeys.GeminiAPIKey
-}
+type SessionOptions func(*Session) error
 
-// currentUsage returns a snapshot of the cumulative token usage.
-func (s *Session) currentUsage() UsageInfo {
-	return UsageInfo{
-		PromptTokens:     s.usage.promptTokens.Load(),
-		CompletionTokens: s.usage.completionTokens.Load(),
-		CachedTokens:     s.usage.cachedTokens.Load(),
-		ThoughtsTokens:   s.usage.thoughtsTokens.Load(),
-		TotalTokens:      s.usage.totalTokens.Load(),
-		LLMCalls:         s.usage.llmCalls.Load(),
+func NewSession(stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]) *Session {
+	return &Session{
+		stream:   stream,
+		toolcall: make(map[string]chan *agentdv1.RunRequest_ToolcallResult),
 	}
 }
 
-type usageSummary struct {
-	promptTokens     atomic.Int32
-	completionTokens atomic.Int32
-	cachedTokens     atomic.Int32
-	thoughtsTokens   atomic.Int32
-	totalTokens      atomic.Int32
-	llmCalls         atomic.Int32
-}
-
-// NewSession handles a single Run bidi stream. It expects the first message to
-// be an ExecuteRequest, then builds the ADK agent tree and runs the agent loop
-// concurrently with the client message read loop.
-func NewSession(ctx context.Context, stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse], opts ...SessionOption) error {
-	req, err := stream.Receive()
-	if err != nil {
-		return err
-	}
-
-	exec := req.GetExecute()
-	if exec == nil {
-		if sendErr := sendError(stream, "", agentdv1.ErrorCode_ERROR_CODE_INTERNAL, "first message must be ExecuteRequest"); sendErr != nil {
-			return sendErr
-		}
-		return errors.New("first message was not ExecuteRequest")
-	}
-
-	runCtx, cancel := context.WithCancel(ctx)
+func (s *Session) HandleSession(stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse]) error {
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	s := &Session{
-		stream:       stream,
-		plugins:      NewPluginChain(),
-		pendingTools: make(map[string]chan *agentdv1.RunRequest_ToolCallResponse),
-		cancel:       cancel,
-		agentPaths:   make(map[string][]string),
-	}
-
-	for _, opt := range opts {
-		opt(s)
-	}
-
-	sessionService := adksession.InMemoryService()
-
-	var initialState map[string]any
-	if s := exec.GetInitialState(); s != nil {
-		initialState = s.AsMap()
-	}
-
-	adkSession, err := sessionService.Create(runCtx, &adksession.CreateRequest{
-		AppName:   "agentd",
-		UserID:    "user",
-		SessionID: exec.GetSessionId(),
-		State:     initialState,
-	})
-	if err != nil {
-		return fmt.Errorf("creating ADK session: %w", err)
-	}
-
-	s.id = adkSession.Session.ID()
-
-	if err := s.plugins.OnSessionStart(ctx, SessionStartInfo{
-		SessionID:  s.id,
-		RootAgent:  exec.GetAgent().GetName(),
-		ToolCount:  len(exec.GetTools()),
-		UserPrompt: exec.GetUserPrompt(),
-	}); err != nil {
-		return fmt.Errorf("plugin rejected session start: %w", err)
-	}
-
-	if err := stream.Send(&agentdv1.RunResponse{
-		Response: &agentdv1.RunResponse_Execute{
-			Execute: &agentdv1.RunResponse_ExecuteResponse{
-				SessionId: s.id,
-			},
-		},
-	}); err != nil {
-		s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to send execute response", Err: err})
-		return err
-	}
-
-	if exec.GetAgent() == nil {
-		s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "agent definition is missing"})
-		if sendErr := sendError(stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INVALID_AGENT_TREE, "agent definition is required"); sendErr != nil {
-			return sendErr
-		}
-		return errors.New("agent definition is required")
-	}
-
-	toolCatalog := make(map[string]*agentdv1.Tool, len(exec.GetTools()))
-	for _, t := range exec.GetTools() {
-		toolCatalog[t.GetName()] = t
-	}
-
-	builtinCfg := &BuiltinToolConfig{
-		TavilyAPIKey: s.providerKeys.TavilyAPIKey,
-	}
-
-	rootAgent, err := createAgent(runCtx, exec.GetAgent(), s, nil, s.agentPaths, toolCatalog, builtinCfg)
-	if err != nil {
-		s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to build agent tree", Err: err})
-		if sendErr := sendError(stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INVALID_AGENT_TREE, err.Error()); sendErr != nil {
-			return sendErr
-		}
-		return fmt.Errorf("building agent tree: %w", err)
-	}
-
-	runnerCfg := runner.Config{
-		AppName:        "agentd",
-		Agent:          rootAgent,
-		SessionService: sessionService,
-	}
-
-	p, pluginErr := newSessionPluginBridge(s.id, s.plugins, s.currentUsage)
-	if pluginErr != nil {
-		s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to create plugin bridge", Err: pluginErr})
-		return fmt.Errorf("creating plugin bridge: %w", pluginErr)
-	}
-	runnerCfg.PluginConfig = runner.PluginConfig{
-		Plugins: []*plugin.Plugin{p},
-	}
-
-	r, err := runner.New(runnerCfg)
-	if err != nil {
-		s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to create runner", Err: err})
-		return fmt.Errorf("creating runner: %w", err)
-	}
-
-	runnerDone := make(chan error, 1)
-	go func() {
-		runnerDone <- s.runAgent(runCtx, r, s.id, exec.GetUserPrompt())
-	}()
-
-	loopErr := s.loop(runCtx)
-
-	cancel()
-	runnerErr := <-runnerDone
-
-	var sessionErr error
-	if loopErr != nil {
-		sessionErr = loopErr
-	} else {
-		sessionErr = runnerErr
-	}
-
-	s.plugins.OnSessionEnd(ctx, SessionEndInfo{
-		SessionID: s.id,
-		Usage:     s.currentUsage(),
-		Err:       sessionErr,
-	})
-
-	return sessionErr
-}
-
-// runAgent drives the ADK runner, iterating over events and streaming
-// OutputChunks back to the client. Sends EndResponse when complete.
-func (s *Session) runAgent(ctx context.Context, r *runner.Runner, adkSessionID, userPrompt string) error {
-	userContent := genai.NewContentFromText(userPrompt, "user")
-
-	cfg := agent.RunConfig{
-		StreamingMode: agent.StreamingModeSSE,
-	}
-
-	var lastErr error
-	for event, err := range r.Run(ctx, "user", adkSessionID, userContent, cfg) {
-		if err != nil {
-			if ctx.Err() != nil {
-				break
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			req, err := stream.Receive()
+			if err != nil {
+				return err
 			}
-			s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "runner event error", Err: err})
-			lastErr = err
-			continue
-		}
-		if event == nil {
-			continue
-		}
 
-		if event.UsageMetadata != nil {
-			s.usage.promptTokens.Add(int32(event.UsageMetadata.PromptTokenCount))
-			s.usage.completionTokens.Add(int32(event.UsageMetadata.CandidatesTokenCount))
-			s.usage.cachedTokens.Add(int32(event.UsageMetadata.CachedContentTokenCount))
-			s.usage.thoughtsTokens.Add(int32(event.UsageMetadata.ThoughtsTokenCount))
-			s.usage.totalTokens.Add(int32(event.UsageMetadata.TotalTokenCount))
-			s.usage.llmCalls.Add(1)
-		}
+			switch x := req.GetRequest().(type) {
+			case *agentdv1.RunRequest_Run_:
+				run := x.Run
 
-		if len(event.Actions.StateDelta) > 0 {
-			if delta, err := structpb.NewStruct(event.Actions.StateDelta); err == nil {
-				if err := s.stream.Send(&agentdv1.RunResponse{
-					Response: &agentdv1.RunResponse_StateUpdate_{
-						StateUpdate: &agentdv1.RunResponse_StateUpdate{
-							SessionId:  s.id,
-							StateDelta: delta,
+				tools := make(map[string]tool.Tool)
+				for _, t := range run.Tools {
+					tool, err := s.CreateTool(ctx, t)
+					if err != nil {
+						return err
+					}
+					tools[t.Name] = tool
+				}
+
+				rootagent, err := s.createAgent(ctx, run.Agent, tools)
+				if err != nil {
+					return err
+				}
+
+				sessionService := adksession.InMemoryService()
+
+				runnerCfg := runner.Config{
+					AppName:        "agentd",
+					Agent:          rootagent,
+					SessionService: sessionService,
+				}
+
+				r, err := runner.New(runnerCfg)
+				if err != nil {
+					return err
+				}
+
+				agentcfg := agent.RunConfig{
+					StreamingMode: agent.StreamingModeSSE,
+				}
+
+				content := &genai.Content{
+					Role: genai.RoleUser,
+					Parts: []*genai.Part{
+						{
+							Text: run.UserPrompt,
+						},
+					},
+				}
+
+				iter := r.Run(ctx, "user_prompt", "session_id", content, agentcfg)
+				for event := range iter {
+
+					isFinal := !event.Partial && event.IsFinalResponse()
+
+					for _, part := range event.Content.Parts {
+						stream.Send(&agentdv1.RunResponse{
+							Response: &agentdv1.RunResponse_OutputChunk_{
+								OutputChunk: &agentdv1.RunResponse_OutputChunk{
+									Content:   part.Text,
+									Last:      isFinal,
+									IsThought: part.Thought,
+								},
+							},
+						})
+					}
+				}
+
+			case *agentdv1.RunRequest_Heartbeat_:
+				stream.Send(&agentdv1.RunResponse{
+					Response: &agentdv1.RunResponse_Heartbeat_{
+						Heartbeat: &agentdv1.RunResponse_Heartbeat{},
+					},
+				})
+
+			case *agentdv1.RunRequest_ToolcallResult_:
+				toolcallResult := x.ToolcallResult
+
+				s.mu.Lock()
+				ch, ok := s.toolcall[toolcallResult.ToolCallId]
+				if ok {
+					delete(s.toolcall, toolcallResult.ToolCallId)
+				}
+				s.mu.Unlock()
+
+				if !ok {
+					continue
+				}
+				select {
+				case ch <- toolcallResult:
+				default:
+				}
+				close(ch)
+			case *agentdv1.RunRequest_Cancel_:
+				cancel()
+
+				s.mu.Lock()
+				pending := s.toolcall
+				s.toolcall = make(map[string]chan *agentdv1.RunRequest_ToolcallResult)
+				s.mu.Unlock()
+
+				for _, ch := range pending {
+					select {
+					case ch <- &agentdv1.RunRequest_ToolcallResult{
+						Error: new("tool call cancelled"),
+					}:
+					default:
+					}
+					close(ch)
+				}
+
+				if err := stream.Send(&agentdv1.RunResponse{
+					Response: &agentdv1.RunResponse_End_{
+						End: &agentdv1.RunResponse_End{
+							Reason:    new("Client cancelled session"),
+							Completed: false,
 						},
 					},
 				}); err != nil {
-					s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to send state update", Err: err})
-					return fmt.Errorf("sending state update: %w", err)
+					return err
 				}
-			}
-		}
-
-		if event.Content == nil || len(event.Content.Parts) == 0 {
-			continue
-		}
-
-		agentPath := s.agentPaths[event.Author]
-		if agentPath == nil {
-			agentPath = []string{event.Author}
-		}
-
-		for _, part := range event.Content.Parts {
-			if part.Text == "" {
-				continue
-			}
-			if part.FunctionCall != nil || part.FunctionResponse != nil {
-				continue
-			}
-
-			isFinal := !event.Partial && event.IsFinalResponse()
-
-			s.plugins.OnOutputChunk(ctx, OutputChunkInfo{
-				SessionID:  s.id,
-				AgentName:  event.Author,
-				AgentPath:  agentPath,
-				IsThought:  part.Thought,
-				IsFinal:    isFinal,
-				ContentLen: len(part.Text),
-			})
-
-			if err := s.stream.Send(&agentdv1.RunResponse{
-				Response: &agentdv1.RunResponse_OutputChunk_{
-					OutputChunk: &agentdv1.RunResponse_OutputChunk{
-						SessionId: s.id,
-						AgentPath: agentPath,
-						Content:   part.Text,
-						Last:      isFinal,
-						IsThought: part.Thought,
-					},
-				},
-			}); err != nil {
-				s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "failed to send output chunk", Err: err})
-				return fmt.Errorf("sending output chunk: %w", err)
+				return nil
 			}
 		}
 	}
-
-	if lastErr != nil {
-		_ = sendError(s.stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INTERNAL, lastErr.Error())
-	}
-
-	return s.stream.Send(&agentdv1.RunResponse{
-		Response: &agentdv1.RunResponse_End{
-			End: &agentdv1.RunResponse_EndResponse{
-				SessionId: s.id,
-				Completed: lastErr == nil,
-				UsageSummary: &agentdv1.UsageSummary{
-					TotalUsage: &agentdv1.TokenUsage{
-						PromptTokens:     s.usage.promptTokens.Load(),
-						CompletionTokens: s.usage.completionTokens.Load(),
-						CachedTokens:     s.usage.cachedTokens.Load(),
-						ThoughtsTokens:   s.usage.thoughtsTokens.Load(),
-						TotalTokens:      s.usage.totalTokens.Load(),
-					},
-					LlmCalls: s.usage.llmCalls.Load(),
-				},
-			},
-		},
-	})
 }
 
-func (s *Session) loop(ctx context.Context) error {
-	defer s.closeAllPending()
+func (s *Session) createAgent(ctx context.Context, agentdAgent *agentdv1.Agent, toolsMap map[string]tool.Tool) (agent.Agent, error) {
+	switch x := agentdAgent.Type.(type) {
+	case *agentdv1.Agent_Llm:
+		return s.createLlmAgent(ctx, x.Llm, toolsMap)
+	case *agentdv1.Agent_Sequential:
+		return s.createSequentialAgent(ctx, x.Sequential)
+	case *agentdv1.Agent_Parallel:
+		return s.createParallelAgent(ctx, x.Parallel)
+	case *agentdv1.Agent_Loop:
+		return s.createLoopAgent(ctx, x.Loop)
+	default:
+		return nil, fmt.Errorf("unknown agent type: %T", x)
+	}
+}
 
-	for {
-		req, err := s.stream.Receive()
+func (s *Session) createLlmAgent(ctx context.Context, agentdLlm *agentdv1.LlmAgent, toolsMap map[string]tool.Tool) (agent.Agent, error) {
+	subagents := make([]agent.Agent, len(agentdLlm.SubAgents))
+	for i, agentdAgent := range agentdLlm.SubAgents {
+		subagent, err := s.createAgent(ctx, agentdAgent, toolsMap)
 		if err != nil {
-			return nil
+			return nil, fmt.Errorf("creating sub-agent %d: %w", i, err)
 		}
-
-		switch r := req.GetRequest().(type) {
-		case *agentdv1.RunRequest_Execute:
-			s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: "received ExecuteRequest after session start"})
-			if err := sendError(s.stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INTERNAL, "ExecuteRequest only valid as first message"); err != nil {
-				return err
-			}
-
-		case *agentdv1.RunRequest_Heartbeat:
-			if err := s.handleHeartbeat(r.Heartbeat); err != nil {
-				return err
-			}
-
-		case *agentdv1.RunRequest_ToolCallResponse_:
-			s.handleToolCallResponse(r.ToolCallResponse)
-
-		case *agentdv1.RunRequest_Cancel:
-			s.handleCancel(r.Cancel)
-
-		case *agentdv1.RunRequest_End:
-			return s.handleEnd(r.End)
-
-		default:
-			s.plugins.OnError(ctx, ErrorInfo{SessionID: s.id, Message: fmt.Sprintf("received unknown request type: %T", r)})
-			if err := sendError(s.stream, s.id, agentdv1.ErrorCode_ERROR_CODE_INTERNAL, fmt.Sprintf("unknown request type: %T", r)); err != nil {
-				return err
-			}
-		}
-	}
-}
-
-func (s *Session) handleHeartbeat(_ *agentdv1.RunRequest_HeartbeatRequest) error {
-	return s.stream.Send(&agentdv1.RunResponse{
-		Response: &agentdv1.RunResponse_Heartbeat{
-			Heartbeat: &agentdv1.RunResponse_HeartbeatResponse{
-				SessionId: s.id,
-			},
-		},
-	})
-}
-
-func (s *Session) handleToolCallResponse(resp *agentdv1.RunRequest_ToolCallResponse) {
-	s.mu.Lock()
-	ch, ok := s.pendingTools[resp.GetToolCallId()]
-	if ok {
-		delete(s.pendingTools, resp.GetToolCallId())
-	}
-	s.mu.Unlock()
-
-	if ok {
-		ch <- resp
-	}
-}
-
-// handleCancel cancels the runner context. The runner goroutine will observe
-// the cancellation and wind down.
-func (s *Session) handleCancel(_ *agentdv1.RunRequest_CancelRequest) {
-	if s.cancel != nil {
-		s.cancel()
-	}
-}
-
-func (s *Session) handleEnd(_ *agentdv1.RunRequest_EndRequest) error {
-	if s.cancel != nil {
-		s.cancel()
-	}
-	return nil
-}
-
-// DispatchToolCall sends a ToolCallRequest to the client and blocks until the
-// matching ToolCallResponse arrives or the context is cancelled.
-func (s *Session) DispatchToolCall(ctx context.Context, toolCallID, toolName, toolInput string, agentPath []string) (*agentdv1.RunRequest_ToolCallResponse, error) {
-	ch := make(chan *agentdv1.RunRequest_ToolCallResponse, 1)
-
-	s.mu.Lock()
-	s.pendingTools[toolCallID] = ch
-	s.mu.Unlock()
-
-	s.plugins.OnToolDispatched(ctx, ToolDispatchInfo{
-		SessionID:  s.id,
-		ToolCallID: toolCallID,
-		ToolName:   toolName,
-		AgentPath:  agentPath,
-		InputLen:   len(toolInput),
-	})
-
-	if err := s.stream.Send(&agentdv1.RunResponse{
-		Response: &agentdv1.RunResponse_ToolCall{
-			ToolCall: &agentdv1.RunResponse_ToolCallRequest{
-				SessionId:  s.id,
-				ToolCallId: toolCallID,
-				ToolName:   toolName,
-				ToolInput:  toolInput,
-				AgentPath:  agentPath,
-			},
-		},
-	}); err != nil {
-		s.mu.Lock()
-		delete(s.pendingTools, toolCallID)
-		s.mu.Unlock()
-		s.plugins.OnError(ctx, ErrorInfo{
-			SessionID: s.id,
-			Message:   "failed to send tool call request",
-			Err:       err,
-		})
-		return nil, fmt.Errorf("sending tool call request: %w", err)
+		subagents[i] = subagent
 	}
 
-	select {
-	case resp, ok := <-ch:
+	tools := make([]tool.Tool, len(agentdLlm.ToolNames))
+	for toolIndex, toolName := range agentdLlm.ToolNames {
+		tool, ok := toolsMap[toolName]
 		if !ok {
-			s.plugins.OnError(ctx, ErrorInfo{
-				SessionID: s.id,
-				Message:   "session closed while waiting for tool call response",
-			})
-			return nil, errors.New("session closed while waiting for tool call response")
+			return nil, fmt.Errorf("tool %q not found", toolName)
 		}
-		s.plugins.OnToolResponse(ctx, ToolResponseInfo{
-			SessionID:  s.id,
-			ToolCallID: toolCallID,
-			ToolName:   toolName,
-		})
-		return resp, nil
-	case <-ctx.Done():
-		s.mu.Lock()
-		delete(s.pendingTools, toolCallID)
-		s.mu.Unlock()
-		s.plugins.OnError(ctx, ErrorInfo{
-			SessionID: s.id,
-			Message:   "tool call cancelled",
-			Err:       ctx.Err(),
-		})
-		return nil, ctx.Err()
+		tools[toolIndex] = tool
 	}
-}
 
-func (s *Session) closeAllPending() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for id, ch := range s.pendingTools {
-		close(ch)
-		delete(s.pendingTools, id)
-	}
-}
-
-func sendError(stream *connect.BidiStream[agentdv1.RunRequest, agentdv1.RunResponse], sessionID string, code agentdv1.ErrorCode, msg string) error {
-	return stream.Send(&agentdv1.RunResponse{
-		Response: &agentdv1.RunResponse_Error{
-			Error: &agentdv1.RunResponse_ErrorResponse{
-				SessionId: sessionID,
-				Code:      code,
-				Message:   msg,
-				Retryable: false,
+	llmAgent, err := llmagent.New(llmagent.Config{
+		Name:        agentdLlm.Name,
+		Description: agentdLlm.Description,
+		Instruction: agentdLlm.Instruction,
+		SubAgents:   subagents,
+		Tools:       tools,
+		BeforeToolCallbacks: []llmagent.BeforeToolCallback{
+			func(ctx tool.Context, tool tool.Tool, args map[string]any) (map[string]any, error) {
+				if s.onToolCall != nil {
+					go s.onToolCall(tool.Name(), args)
+				}
+				return args, nil
 			},
 		},
+		AfterToolCallbacks: []llmagent.AfterToolCallback{
+			func(ctx tool.Context, tool tool.Tool, args map[string]any, result map[string]any, err error) (map[string]any, error) {
+				if err != nil {
+					if s.onToolCallError != nil {
+						go s.onToolCallError(tool.Name(), args, err)
+					}
+					return result, err
+				}
+				if s.onToolCallResult != nil {
+					go s.onToolCallResult(tool.Name(), result)
+				}
+				return result, nil
+			},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create llm agent: %w", err)
+	}
+	return llmAgent, nil
+}
+
+func (s *Session) createSequentialAgent(ctx context.Context, agentdSequential *agentdv1.SequentialAgent) (agent.Agent, error) {
+	subagents := make([]agent.Agent, len(agentdSequential.Agents))
+	for i, agentdAgent := range agentdSequential.Agents {
+		subagent, err := s.createAgent(ctx, agentdAgent, nil)
+		if err != nil {
+			return nil, fmt.Errorf("creating sub-agent %d: %w", i, err)
+		}
+		subagents[i] = subagent
+	}
+
+	sequentialAgent, err := sequentialagent.New(sequentialagent.Config{
+		AgentConfig: agent.Config{
+			Name:        "sequential_agent",
+			Description: "A sequential agent that runs sub-agents",
+			SubAgents:   subagents,
+		},
+	})
+	if err != nil {
+		log.Fatalf("Failed to create agent: %v", err)
+	}
+
+	return sequentialAgent, nil
+}
+
+func (s *Session) createParallelAgent(ctx context.Context, agentdParallel *agentdv1.ParallelAgent) (agent.Agent, error) {
+	subagents := make([]agent.Agent, len(agentdParallel.Agents))
+	for i, agentdAgent := range agentdParallel.Agents {
+		subagent, err := s.createAgent(ctx, agentdAgent, nil)
+		if err != nil {
+			return nil, fmt.Errorf("creating sub-agent %d: %w", i, err)
+		}
+		subagents[i] = subagent
+	}
+
+	parallelAgent, err := parallelagent.New(parallelagent.Config{
+		AgentConfig: agent.Config{
+			Name:        "parallel_agent",
+			Description: "A parallel agent that runs sub-agents",
+			SubAgents:   subagents,
+		},
+	})
+	if err != nil {
+		log.Fatalf("Failed to create agent: %v", err)
+	}
+	return parallelAgent, nil
+}
+
+func (s *Session) createLoopAgent(ctx context.Context, agentdLoop *agentdv1.LoopAgent) (agent.Agent, error) {
+	subagents := make([]agent.Agent, len(agentdLoop.Agents))
+	for i, agentdAgent := range agentdLoop.Agents {
+		subagent, err := s.createAgent(ctx, agentdAgent, nil)
+		if err != nil {
+			return nil, fmt.Errorf("creating sub-agent %d: %w", i, err)
+		}
+		subagents[i] = subagent
+	}
+
+	loopAgent, err := loopagent.New(loopagent.Config{
+		AgentConfig: agent.Config{
+			Name:        "loop_agent",
+			Description: "A loop agent that runs sub-agents",
+			SubAgents:   subagents,
+		},
+		MaxIterations: uint(agentdLoop.MaxIterations),
+	})
+	if err != nil {
+		log.Fatalf("Failed to create agent: %v", err)
+	}
+	return loopAgent, nil
+}
+
+func (s *Session) CreateTool(ctx context.Context, agentdTool *agentdv1.Tool) (tool.Tool, error) {
+	tool, err := s.createTool(ctx, agentdTool)
+	if err != nil {
+		err = fmt.Errorf("creating tool: %w", err)
+
+		if s.onToolCreatedError != nil {
+			go s.onToolCreatedError(agentdTool.Name, err)
+		}
+
+		return nil, err
+	}
+	if s.onToolCreated != nil {
+		go s.onToolCreated(tool.Name())
+	}
+	return tool, nil
+}
+
+func (s *Session) createTool(ctx context.Context, agentdTool *agentdv1.Tool) (tool.Tool, error) {
+	cfg := functiontool.Config{
+		Name:        agentdTool.Name,
+		Description: agentdTool.Description,
+	}
+
+	if agentdTool.InputSchema != nil {
+		var schema jsonschema.Schema
+		if err := json.Unmarshal([]byte(*agentdTool.InputSchema), &schema); err != nil {
+			return nil, fmt.Errorf("parsing input schema for tool %q: %w", cfg.Name, err)
+		}
+		cfg.InputSchema = &schema
+	}
+
+	if agentdTool.OutputSchema != nil {
+		var schema jsonschema.Schema
+		if err := json.Unmarshal([]byte(*agentdTool.OutputSchema), &schema); err != nil {
+			return nil, fmt.Errorf("parsing output schema for tool %q: %w", cfg.Name, err)
+		}
+		cfg.OutputSchema = &schema
+	}
+
+	return functiontool.New(cfg, func(_ tool.Context, args map[string]any) (map[string]any, error) {
+		argsJSON, err := json.Marshal(args)
+		if err != nil {
+			return nil, fmt.Errorf("marshalling tool args: %w", err)
+		}
+
+		callID, err := uuid.NewV7()
+		if err != nil {
+			return nil, fmt.Errorf("generating tool call ID: %w", err)
+		}
+
+		err = s.stream.Send(&agentdv1.RunResponse{
+			Response: &agentdv1.RunResponse_ToolcallRequest_{
+				ToolcallRequest: &agentdv1.RunResponse_ToolcallRequest{
+					ToolName:  agentdTool.Name,
+					ToolInput: string(argsJSON),
+				},
+			},
+		})
+
+		if err != nil {
+			return nil, fmt.Errorf("sending tool call request: %w", err)
+		}
+
+		ch := make(chan *agentdv1.RunRequest_ToolcallResult, 1)
+		s.mu.Lock()
+		s.toolcall[callID.String()] = ch
+		s.mu.Unlock()
+
+		defer func() {
+			s.mu.Lock()
+			delete(s.toolcall, callID.String())
+			s.mu.Unlock()
+		}()
+
+		select {
+		case resp, ok := <-ch:
+			if !ok || resp == nil {
+				return nil, fmt.Errorf("tool call cancelled")
+			}
+			if resp.Error != nil {
+				return nil, fmt.Errorf("tool call error: %s", *resp.Error)
+			}
+			if resp.Result == nil {
+				return map[string]any{}, nil
+			}
+			var out map[string]any
+			if err := json.Unmarshal([]byte(*resp.Result), &out); err != nil {
+				return nil, fmt.Errorf("unmarshalling tool result: %w", err)
+			}
+			return out, nil
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	})
 }

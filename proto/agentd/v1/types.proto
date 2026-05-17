@@ -18,22 +18,14 @@ enum ErrorCode {
 }
 
 message Tool {
-    // Must comply with Gemini function naming: start with a letter or underscore,
-    // only [a-zA-Z0-9_.\-:], max 64 characters.
-    string name = 1 [(buf.validate.field).string = {
-        pattern: "^[A-Za-z_][A-Za-z0-9_.:-]{0,63}$",
-        min_len: 1,
-        max_len: 64
-    }];
+    string name = 1 [(buf.validate.field).string = { pattern: "^[A-Za-z_][A-Za-z0-9_.:-]{0,63}$", min_len: 1, max_len: 64 }];
     string description = 2 [(buf.validate.field).string.min_len = 1];
     optional string input_schema = 3;
+    optional string output_schema = 4;
 }
 
 message Agent {
-    string name = 1;
-    string description = 2;
-
-    oneof agent_type {
+    oneof type {
         LlmAgent llm = 3;
         SequentialAgent sequential = 4;
         ParallelAgent parallel = 5;
@@ -41,23 +33,12 @@ message Agent {
     }
 }
 
-message McpAttachment {
-    // MCP server name to attach (matches client MCPServerConfig.Name).
-    string mcp_name = 1;
-    // Optional subset of discovered MCP tools to attach for this agent.
-    // Empty means attach all discovered tools from mcp_name.
-    repeated string include_tool_names = 2;
-}
-
 message LlmAgent {
-    string model = 1;
-    repeated string tool_names = 2;
-    repeated Agent sub_agents = 3;
+    string name = 1;
+    string description = 2;
     string instruction = 4;
-    repeated string builtin_tools = 5;
-    string output_key = 6;
-    // Per-agent MCP attachments with optional include filters.
-    repeated McpAttachment mcp_attachments = 7;
+    repeated string tool_names = 5;
+    repeated Agent sub_agents = 6;
 }
 
 message SequentialAgent {
