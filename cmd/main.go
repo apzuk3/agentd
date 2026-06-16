@@ -5,12 +5,8 @@ package main
 import (
 	"context"
 	"log"
-	"os"
 
 	"github.com/apzuk3/agentd"
-	"google.golang.org/adk/agent"
-	"google.golang.org/adk/cmd/launcher"
-	"google.golang.org/adk/cmd/launcher/full"
 	"google.golang.org/adk/tool"
 )
 
@@ -39,19 +35,12 @@ func main() {
 		"executor",
 		model,
 		agentd.WithLLMAgentTools("app.deploy"),
-		agentd.WithLLMAgentDescription("Executes approved local actions"),
-		agentd.WithLLMAgentInstruction("Executes approved local actions"),
+		agentd.WithLLMAgentDescription("Agent to answer questions about the time and weather in a city."),
+		agentd.WithLLMAgentInstruction("Your SOLE purpose is to answer questions about the current time and weather in a specific city. You MUST refuse to answer any questions unrelated to time or weather."),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	config := &launcher.Config{
-		AgentLoader: agent.NewSingleLoader(rootAgent),
-	}
-
-	l := full.NewLauncher()
-	if err = l.Execute(context.Background(), config, os.Args[1:]); err != nil {
-		log.Fatalf("Run failed: %v\n\n%s", err, l.CommandLineSyntax())
-	}
+	agentd.CLI(rootAgent)
 }
