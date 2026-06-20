@@ -31,6 +31,7 @@ const (
 type Config struct {
 	Provider      string
 	APIKey        string
+	BaseURL       string
 	MaxTokens     int64
 	ClientOptions []option.RequestOption
 }
@@ -65,6 +66,10 @@ func NewModel(ctx context.Context, modelName string, cfg *Config) (model.LLM, er
 	cfg.applyDefaults()
 
 	opts := append([]option.RequestOption{}, cfg.ClientOptions...)
+
+	if cfg.BaseURL != "" {
+		opts = append(opts, option.WithBaseURL(cfg.BaseURL))
+	}
 
 	switch cfg.Provider {
 	case ProviderAnthropic:

@@ -23,6 +23,7 @@ type modelPlaceholder struct {
 	httpClient *http.Client
 	apiKey     string
 	apiKeyEnvs []string
+	baseURL    string
 }
 
 type ModelOption func(*modelPlaceholder) error
@@ -44,6 +45,13 @@ func WithModelAPIKey(apiKey string) ModelOption {
 func WithModelAPIKeyEnv(apiKeyEnv ...string) ModelOption {
 	return func(m *modelPlaceholder) error {
 		m.apiKeyEnvs = apiKeyEnv
+		return nil
+	}
+}
+
+func WithModelBaseURL(baseURL string) ModelOption {
+	return func(m *modelPlaceholder) error {
+		m.baseURL = baseURL
 		return nil
 	}
 }
@@ -74,7 +82,8 @@ func NewModel(ctx context.Context, m Model, options ...ModelOption) (model.LLM, 
 			return nil, fmt.Errorf("api key not found")
 		}
 		return anthropic.NewModel(ctx, string(m), &anthropic.Config{
-			APIKey: key,
+			APIKey:  key,
+			BaseURL: mp.baseURL,
 		})
 	case ModelOpenAIGPT55, ModelOpenAIGPT55Pro, ModelOpenAIGPT55Mini, ModelOpenAIGPT55Nano, ModelOpenAIGPT54, ModelOpenAIGPT54Mini, ModelOpenAIGPT54Nano:
 		if key == "" {
@@ -82,12 +91,15 @@ func NewModel(ctx context.Context, m Model, options ...ModelOption) (model.LLM, 
 		}
 
 		return openai.NewModel(ctx, string(m), &openai.Config{
-			APIKey: key,
+			APIKey:  key,
+			BaseURL: mp.baseURL,
 		})
 	case ModelGeminiFlash35, ModelGeminiPro31, ModelGeminiFlashLite31, ModelGeminiFlash3, ModelGeminiPro25:
-		return gemini.NewModel(ctx, string(m), &genai.ClientConfig{
-			APIKey: key,
-		})
+		cfg := &genai.ClientConfig{APIKey: key}
+		if mp.baseURL != "" {
+			cfg.HTTPOptions = genai.HTTPOptions{BaseURL: mp.baseURL}
+		}
+		return gemini.NewModel(ctx, string(m), cfg)
 	}
 
 	return nil, fmt.Errorf("model %s not found", m)

@@ -8,7 +8,8 @@ import (
 func ParallelAgent(agents ...agent.Agent) (agent.Agent, error) {
 	return parallelagent.New(parallelagent.Config{
 		AgentConfig: agent.Config{
-			Name: "parallel",
+			Name:      "parallel",
+			SubAgents: agents,
 		},
 	})
 }
