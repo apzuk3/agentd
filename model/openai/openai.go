@@ -13,6 +13,7 @@ import (
 
 type Config struct {
 	APIKey        string
+	BaseURL       string
 	ClientOptions []option.RequestOption
 }
 
@@ -34,6 +35,9 @@ func NewModel(_ context.Context, modelName string, cfg *Config) (model.LLM, erro
 
 	opts := append([]option.RequestOption{}, cfg.ClientOptions...)
 	opts = append(opts, option.WithAPIKey(cfg.APIKey))
+	if cfg.BaseURL != "" {
+		opts = append(opts, option.WithBaseURL(cfg.BaseURL))
+	}
 
 	return &openaiModel{
 		name:   modelName,
