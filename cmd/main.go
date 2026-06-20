@@ -37,7 +37,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	agentd.LaunchCLI(root)
+	parallel, err := agentd.ParallelAgent(root, root, root)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	agentd.LaunchSync(context.Background(), parallel, "I want to start a business selling AI-powered domain name generators.")
 }
 
 type domainLookupArgs struct {

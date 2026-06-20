@@ -8,7 +8,8 @@ import (
 func SequentialAgent(agents ...agent.Agent) (agent.Agent, error) {
 	return sequentialagent.New(sequentialagent.Config{
 		AgentConfig: agent.Config{
-			Name: "sequential",
+			Name:      "sequential",
+			SubAgents: agents,
 		},
 	})
 }

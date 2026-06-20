@@ -14,10 +14,11 @@ func WithLoopAgentMaxIterations(maxIterations uint) LoopAgentOption {
 	}
 }
 
-func LoopAgent(name string, options ...LoopAgentOption) (agent.Agent, error) {
+func LoopAgent(name string, subagents []agent.Agent, options ...LoopAgentOption) (agent.Agent, error) {
 	cfg := loopagent.Config{
 		AgentConfig: agent.Config{
-			Name: name,
+			Name:      name,
+			SubAgents: subagents,
 		},
 		MaxIterations: 3,
 	}
