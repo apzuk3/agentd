@@ -4,43 +4,99 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"net/url"
+	"os"
+	"slices"
+	"strings"
+	"time"
 
 	"github.com/apzuk3/agentd"
-	"google.golang.org/adk/tool"
 )
 
-// DeployInput is the input schema for the example "app.deploy" tool.
-type DeployInput struct {
-	Environment string `json:"environment" jsonschema_description:"Deployment environment"`
-	Ref         string `json:"ref" jsonschema_description:"Git ref to deploy"`
-}
-
-// DeployOutput is the output schema for the example "app.deploy" tool.
-type DeployOutput struct {
-	URL string `json:"url" jsonschema_description:"URL of the deployed application"`
-}
-
 func main() {
-	agentd.AddTool("app.deploy", "Deploys the current app to production", func(_ tool.Context, _ DeployInput) (DeployOutput, error) {
-		return DeployOutput{URL: "https://example.com"}, nil
-	})
+	agentd.AddTool("check_domain_availability", "Check if a domain is available", lookupDomain)
 
 	model, err := agentd.NewModel(context.Background(), agentd.ModelGeminiFlash35)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	rootAgent, err := agentd.LLMAgent(
-		"executor",
-		model,
-		agentd.WithLLMAgentTools("app.deploy"),
-		agentd.WithLLMAgentDescription("Agent to answer questions about the time and weather in a city."),
-		agentd.WithLLMAgentInstruction("Your SOLE purpose is to answer questions about the current time and weather in a specific city. You MUST refuse to answer any questions unrelated to time or weather."),
+	root, err := agentd.LLMAgent("idea_brainstormer", model,
+		agentd.WithLLMAgentTools("check_domain_availability"),
+		agentd.WithLLMAgentDescription("Agent to convert an idea into a domain name"),
+		agentd.WithLLMAgentInstruction("Your sole purpose is to convert an idea into a domain name."),
+		agentd.WithLLMAgentInstruction("You MUST check if the domain is available using the check_domain_availability tool."),
+		agentd.WithLLMAgentInstruction("You MUST return the response as JSON where the key is 'domain' and the value is the domain name, and story the reason you came up with the domain name."),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	agentd.CLI(rootAgent)
+	agentd.LaunchCLI(root)
+}
+
+type domainLookupArgs struct {
+	Domain string `json:"domain"`
+}
+
+// lookupDomain reports whether a domain is available to register, using
+// Fastly's Domain Research status API. It returns true when the domain is
+// available and false when it is taken. The Fastly API token is read from the
+// FASTLY_API_TOKEN environment variable.
+func lookupDomain(_ agentd.ToolContext, args domainLookupArgs) (bool, error) {
+	domain := args.Domain
+
+	token := os.Getenv("FASTLY_API_TOKEN")
+	if token == "" {
+		return false, fmt.Errorf("FASTLY_API_TOKEN environment variable is not set")
+	}
+
+	endpoint := "https://api.fastly.com/domain-management/v1/tools/status"
+	q := url.Values{}
+	q.Set("domain", domain)
+	reqURL := endpoint + "?" + q.Encode()
+
+	req, err := http.NewRequest(http.MethodGet, reqURL, nil)
+	if err != nil {
+		return false, fmt.Errorf("building request: %w", err)
+	}
+	req.Header.Set("Fastly-Key", token)
+	req.Header.Set("Accept", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, fmt.Errorf("calling Fastly domain status API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, fmt.Errorf("reading response body: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return false, fmt.Errorf("Fastly domain status API returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var result struct {
+		Domain string `json:"domain"`
+		Status string `json:"status"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return false, fmt.Errorf("decoding response: %w", err)
+	}
+
+	// status is a space-delimited string of Domainr-style statuses. A domain is
+	// available to register when its status set includes "inactive" or
+	// "undelegated".
+	statuses := strings.Fields(result.Status)
+	available := slices.Contains(statuses, "inactive") || slices.Contains(statuses, "undelegated")
+
+	return available, nil
 }

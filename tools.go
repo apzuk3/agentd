@@ -8,7 +8,9 @@ import (
 	"google.golang.org/adk/tool/functiontool"
 )
 
-type ToolHandler[TArgs, TResults any] func(tool.Context, TArgs) (TResults, error)
+type ToolContext tool.Context
+
+type ToolHandler[TArgs, TResults any] func(ToolContext, TArgs) (TResults, error)
 
 type FnToolOption func(*functiontool.Config)
 

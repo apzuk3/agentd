@@ -73,7 +73,11 @@ func WithLLMAgentModel(model Model) LLMAgentOption {
 
 func WithLLMAgentInstruction(instruction string) LLMAgentOption {
 	return func(cfg *llmagent.Config) error {
-		cfg.Instruction = instruction
+		if cfg.Instruction != "" {
+			cfg.Instruction = cfg.Instruction + "\n\n" + instruction
+		} else {
+			cfg.Instruction = instruction
+		}
 
 		return nil
 	}
