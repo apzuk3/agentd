@@ -29,5 +29,18 @@
 # OS
 .DS_Store
 
+# Local environment
+.env
+.env.*
+!.env.example
+
 # Local planning docs
 /docs/
+
+# Terraform local state and plans
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+*.tfplan
