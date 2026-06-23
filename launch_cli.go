@@ -2,11 +2,13 @@ package agentd
 
 import (
 	"context"
+	"reflect"
 	"sort"
 
 	"github.com/apzuk3/agentd/internal/cli"
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/session"
+	"google.golang.org/adk/tool"
 )
 
 // withSessionService pins a specific session service for the run. It is the
@@ -84,7 +86,7 @@ func LaunchCLI(root agent.Agent, opts ...RunOption) error {
 	return cli.Run(cli.Config{
 		AgentName: root.Name(),
 		AgentDesc: root.Description(),
-		Tools:     registeredToolNames(),
+		Tools:     agentToolNames(root),
 		SubAgents: flattenSubAgents(root, 0),
 		SessionID: cfg.sessionID,
 		Turn:      turn,
@@ -130,13 +132,86 @@ func flattenSubAgents(root agent.Agent, depth int) []cli.AgentInfo {
 	return out
 }
 
-// registeredToolNames returns the sorted names of every tool in the default
-// registry, for display in the CLI sidebar.
-func registeredToolNames() []string {
-	tools := make([]string, 0, len(defaultToolRegistry.tools))
-	for name := range defaultToolRegistry.tools {
-		tools = append(tools, name)
+// agentToolNames walks the full agent tree (root and all sub-agents) and
+// returns the sorted unique names of tools statically attached to any LLMAgent
+// inside it. This is used for the CAPABILITIES list in the CLI sidebar so that
+// only tools actually given to the agent (via WithLLMAgentTools etc.) are shown,
+// not every tool present in the global registry.
+//
+// It uses reflection to reach the (exported) tool list fields on the concrete
+// ADK agent implementations without depending on unexported ADK internal packages.
+func agentToolNames(root agent.Agent) []string {
+	seen := map[string]struct{}{}
+	var walk func(agent.Agent)
+	walk = func(a agent.Agent) {
+		if a == nil {
+			return
+		}
+		collectToolNames(reflect.ValueOf(a), seen)
+		for _, sa := range a.SubAgents() {
+			walk(sa)
+		}
 	}
-	sort.Strings(tools)
-	return tools
+	walk(root)
+
+	names := make([]string, 0, len(seen))
+	for n := range seen {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// collectToolNames scans a reflect.Value (following pointers/interfaces and
+// descending into exported struct fields) looking for slices that contain
+// tool.Tool values and records their .Name()s.
+func collectToolNames(v reflect.Value, seen map[string]struct{}) {
+	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
+		if v.IsNil() {
+			return
+		}
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Struct {
+		return
+	}
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		sf := t.Field(i)
+		fv := v.Field(i)
+		if !sf.IsExported() || !fv.CanInterface() {
+			continue
+		}
+		if fv.Kind() == reflect.Slice {
+			for j := 0; j < fv.Len(); j++ {
+				item := fv.Index(j)
+				if !item.CanInterface() {
+					continue
+				}
+				if item.IsNil() {
+					// could be typed nil for interface slice
+					// still try Interface
+				}
+				if tt, ok := item.Interface().(tool.Tool); ok && tt != nil {
+					if name := tt.Name(); name != "" {
+						seen[name] = struct{}{}
+					}
+				}
+				if ts, ok := item.Interface().(tool.Toolset); ok && ts != nil {
+					if name := ts.Name(); name != "" {
+						seen[name] = struct{}{}
+					}
+				}
+			}
+		}
+		// Recurse into struct fields (covers the exported "State" field holding Tools,
+		// embedded bases, and future wrappers).
+		ft := sf.Type
+		for ft.Kind() == reflect.Ptr {
+			ft = ft.Elem()
+		}
+		if ft.Kind() == reflect.Struct {
+			collectToolNames(fv, seen)
+		}
+	}
 }

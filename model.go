@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
-	"github.com/apzuk3/agentd/model/anthropic"
-	"github.com/apzuk3/agentd/model/openai"
 	"google.golang.org/adk/model"
 	"google.golang.org/adk/model/gemini"
 	"google.golang.org/genai"
+
+	"github.com/apzuk3/agentd/model/anthropic"
+	"github.com/apzuk3/agentd/model/openai"
 )
 
 var defaultEnvVars = map[string][]string{
@@ -56,7 +58,19 @@ func WithModelBaseURL(baseURL string) ModelOption {
 	}
 }
 
-func NewModel(ctx context.Context, m Model, options ...ModelOption) (model.LLM, error) {
+func providerForModel(name string) string {
+	switch {
+	case strings.HasPrefix(name, "claude-"):
+		return "anthropic"
+	case strings.HasPrefix(name, "gpt-"):
+		return "openai"
+	case strings.HasPrefix(name, "gemini-"):
+		return "gemini"
+	}
+	return ""
+}
+
+func NewModel(ctx context.Context, modelName string, options ...ModelOption) (model.LLM, error) {
 	mp := &modelPlaceholder{}
 	for _, option := range options {
 		if err := option(mp); err != nil {
@@ -64,7 +78,8 @@ func NewModel(ctx context.Context, m Model, options ...ModelOption) (model.LLM, 
 		}
 	}
 
-	apiKeyEnvs := append(mp.apiKeyEnvs, defaultEnvVars[string(m.Provider())]...)
+	prov := providerForModel(modelName)
+	apiKeyEnvs := append(mp.apiKeyEnvs, defaultEnvVars[prov]...)
 
 	key := mp.apiKey
 	if key == "" {
@@ -76,12 +91,12 @@ func NewModel(ctx context.Context, m Model, options ...ModelOption) (model.LLM, 
 		}
 	}
 
-	switch m {
+	switch modelName {
 	case ModelClaudeOpus48, ModelClaudeOpus47, ModelClaudeSonnet46, ModelClaudeSonnet45, ModelClaudeHaiku45:
 		if key == "" {
 			return nil, fmt.Errorf("api key not found")
 		}
-		return anthropic.NewModel(ctx, string(m), &anthropic.Config{
+		return anthropic.NewModel(ctx, modelName, &anthropic.Config{
 			APIKey:  key,
 			BaseURL: mp.baseURL,
 		})
@@ -90,7 +105,7 @@ func NewModel(ctx context.Context, m Model, options ...ModelOption) (model.LLM, 
 			return nil, fmt.Errorf("api key not found")
 		}
 
-		return openai.NewModel(ctx, string(m), &openai.Config{
+		return openai.NewModel(ctx, modelName, &openai.Config{
 			APIKey:  key,
 			BaseURL: mp.baseURL,
 		})
@@ -99,8 +114,8 @@ func NewModel(ctx context.Context, m Model, options ...ModelOption) (model.LLM, 
 		if mp.baseURL != "" {
 			cfg.HTTPOptions = genai.HTTPOptions{BaseURL: mp.baseURL}
 		}
-		return gemini.NewModel(ctx, string(m), cfg)
+		return gemini.NewModel(ctx, modelName, cfg)
 	}
 
-	return nil, fmt.Errorf("model %s not found", m)
+	return nil, fmt.Errorf("model %s not found", modelName)
 }

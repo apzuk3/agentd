@@ -28,7 +28,8 @@ type Config struct {
 	// sidebar.
 	AgentName string
 	AgentDesc string
-	// Tools lists the registered tool names shown under CAPABILITIES.
+	// Tools lists the tool names attached to the agent (and its sub-agents)
+	// that are shown under CAPABILITIES in the sidebar.
 	Tools []string
 	// SubAgents is the flattened agent tree shown under SUB-AGENTS.
 	SubAgents []AgentInfo

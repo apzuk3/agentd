@@ -92,6 +92,34 @@ tests or multi-tenant servers, use `agentd.NewToolRegistry()` and (future)
 constructors that accept a registry explicitly. The global registry stays the
 default to keep the simple case one-liner.
 
+### Built-in tools
+
+Some tools are provided by `agentd` itself and registered automatically on
+import (no `AddTool` call required). Reference them the same way as your own
+tools:
+
+```go
+agentd.LLMAgent("researcher", model,
+    agentd.WithLLMAgentTools(agentd.BuiltinTavily),
+)
+```
+
+Currently provided:
+
+- `BuiltinTavily` (string value `"builtin:tavily"`) — web / real-time search
+  backed by the Tavily API.
+
+Configure built-in tools (most importantly their credentials) with the
+corresponding `Configure*` function **before** you build agents that use them:
+
+```go
+agentd.ConfigureBuiltinTavily(
+    agentd.WithTavilyAPIKey("tvly-..."), // or rely on TAVILY_API_KEY env
+)
+```
+
+See the godoc on `BuiltinTavily` and `ConfigureBuiltinTavily` for details.
+
 ## Agents
 
 Four agent kinds, each with its own constructor. All return

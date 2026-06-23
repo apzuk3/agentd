@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/apzuk3/agentd"
+	"google.golang.org/adk/agent"
 )
 
 func main() {
@@ -26,23 +27,60 @@ func main() {
 		log.Fatal(err)
 	}
 
-	root, err := agentd.LLMAgent("idea_brainstormer", model,
-		agentd.WithLLMAgentTools("check_domain_availability"),
-		agentd.WithLLMAgentDescription("Agent to convert an idea into a domain name"),
-		agentd.WithLLMAgentInstruction("Your sole purpose is to convert an idea into a domain name."),
-		agentd.WithLLMAgentInstruction("You MUST check if the domain is available using the check_domain_availability tool."),
-		agentd.WithLLMAgentInstruction("You MUST return the response as JSON where the key is 'domain' and the value is the domain name, and story the reason you came up with the domain name."),
+	const numAgents = 10
+
+	agents := []agent.Agent{}
+	outputKeys := make([]string, 0, numAgents)
+
+	for i := range numAgents {
+		// Each agent writes its answer to a distinct state key so the
+		// synthesizer below can read them all back and combine them.
+		outputKey := fmt.Sprintf("domain_%d", i)
+		outputKeys = append(outputKeys, outputKey)
+
+		brainstormer, err := agentd.LLMAgent(fmt.Sprintf("idea_brainstormer_%d", i), model,
+			agentd.WithLLMAgentTools("check_domain_availability"),
+			agentd.WithLLMAgentDescription("Agent to convert an idea into a domain name"),
+			agentd.WithLLMAgentInstruction("Your sole purpose is to convert an idea into a domain name."),
+			agentd.WithLLMAgentInstruction("You MUST check if the domain is available using the check_domain_availability tool."),
+			agentd.WithLLMAgentInstruction("You MUST return the response as JSON where the key is 'domain' and the value is the domain name, and 'reason' is the reason you came up with the domain name."),
+			agentd.WithLLMAgentOutputKey(outputKey),
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+		agents = append(agents, brainstormer)
+	}
+
+	parallel, err := agentd.ParallelAgent(agents...)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Build a list of {domain_0} ... {domain_9} placeholders. ADK resolves
+	// these from session state, injecting each brainstormer's reply.
+	placeholders := make([]string, 0, len(outputKeys))
+	for _, key := range outputKeys {
+		placeholders = append(placeholders, fmt.Sprintf("{%s}", key))
+	}
+
+	synthesizer, err := agentd.LLMAgent("domain_synthesizer", model,
+		agentd.WithLLMAgentDescription("Combines the domain suggestions from all brainstormers into one result"),
+		agentd.WithLLMAgentInstruction("You are given the JSON domain suggestions produced by several brainstorming agents."),
+		agentd.WithLLMAgentInstruction("Combine them into a single JSON array under the key 'domains', where each item has 'domain' and 'reason'. Remove duplicates and keep only available domains."),
+		agentd.WithLLMAgentInstruction("Here are the suggestions:\n"+strings.Join(placeholders, "\n")),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	parallel, err := agentd.ParallelAgent(root, root, root)
+	// Run the fan-out first, then the synthesizer that merges every result.
+	pipeline, err := agentd.SequentialAgent(parallel, synthesizer)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	agentd.LaunchSync(context.Background(), parallel, "I want to start a business selling AI-powered domain name generators.")
+	agentd.LaunchCLI(pipeline)
 }
 
 type domainLookupArgs struct {

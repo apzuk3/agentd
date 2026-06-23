@@ -8,52 +8,55 @@ import (
 	"google.golang.org/adk/model"
 )
 
-type Model string
-
-type ModelProvider string
-
-const (
-	ModelProviderAnthropic ModelProvider = "anthropic"
-	ModelProviderOpenAI    ModelProvider = "openai"
-	ModelProviderGemini    ModelProvider = "gemini"
-)
+type Agent agent.Agent
 
 const (
 	// Anthropic Claude
-	ModelClaudeOpus48   Model = "claude-opus-4-8"
-	ModelClaudeOpus47   Model = "claude-opus-4-7"
-	ModelClaudeSonnet46 Model = "claude-sonnet-4-6"
-	ModelClaudeSonnet45 Model = "claude-sonnet-4-5"
-	ModelClaudeHaiku45  Model = "claude-haiku-4-5"
+	ModelClaudeOpus48   = "claude-opus-4-8"
+	ModelClaudeOpus47   = "claude-opus-4-7"
+	ModelClaudeSonnet46 = "claude-sonnet-4-6"
+	ModelClaudeSonnet45 = "claude-sonnet-4-5"
+	ModelClaudeHaiku45  = "claude-haiku-4-5"
 
 	// OpenAI GPT
-	ModelOpenAIGPT55     Model = "gpt-5.5"
-	ModelOpenAIGPT55Pro  Model = "gpt-5.5-pro"
-	ModelOpenAIGPT55Mini Model = "gpt-5.5-mini"
-	ModelOpenAIGPT55Nano Model = "gpt-5.5-nano"
-	ModelOpenAIGPT54     Model = "gpt-5.4"
-	ModelOpenAIGPT54Mini Model = "gpt-5.4-mini"
-	ModelOpenAIGPT54Nano Model = "gpt-5.4-nano"
+	ModelOpenAIGPT55     = "gpt-5.5"
+	ModelOpenAIGPT55Pro  = "gpt-5.5-pro"
+	ModelOpenAIGPT55Mini = "gpt-5.5-mini"
+	ModelOpenAIGPT55Nano = "gpt-5.5-nano"
+	ModelOpenAIGPT54     = "gpt-5.4"
+	ModelOpenAIGPT54Mini = "gpt-5.4-mini"
+	ModelOpenAIGPT54Nano = "gpt-5.4-nano"
 
 	// Google Gemini
-	ModelGeminiFlash35     Model = "gemini-3.5-flash"
-	ModelGeminiPro31       Model = "gemini-3.1-pro-preview"
-	ModelGeminiFlashLite31 Model = "gemini-3.1-flash-lite"
-	ModelGeminiFlash3      Model = "gemini-3-flash-preview"
-	ModelGeminiPro25       Model = "gemini-2.5-pro"
-)
+	ModelGeminiFlash35     = "gemini-3.5-flash"
+	ModelGeminiPro31       = "gemini-3.1-pro-preview"
+	ModelGeminiFlashLite31 = "gemini-3.1-flash-lite"
+	ModelGeminiFlash3      = "gemini-3-flash-preview"
+	ModelGeminiPro25       = "gemini-2.5-pro"
 
-func (m Model) Provider() ModelProvider {
-	switch m {
-	case ModelClaudeOpus48, ModelClaudeOpus47, ModelClaudeSonnet46, ModelClaudeSonnet45, ModelClaudeHaiku45:
-		return ModelProviderAnthropic
-	case ModelOpenAIGPT55, ModelOpenAIGPT55Pro, ModelOpenAIGPT55Mini, ModelOpenAIGPT55Nano, ModelOpenAIGPT54, ModelOpenAIGPT54Mini, ModelOpenAIGPT54Nano:
-		return ModelProviderOpenAI
-	case ModelGeminiFlash35, ModelGeminiPro31, ModelGeminiFlashLite31, ModelGeminiFlash3, ModelGeminiPro25:
-		return ModelProviderGemini
-	}
-	return ""
-}
+	// Built-in tools. These are automatically registered on package import.
+	// Configure them (e.g. API credentials) using ConfigureBuiltin* functions.
+
+	// BuiltinTavily is the registered name of the built-in Tavily tool.
+	//
+	// It is registered by default into the global tool registry.
+	// Reference it when creating agents:
+	//
+	//	root, _ := agentd.LLMAgent("researcher", model,
+	//	    agentd.WithLLMAgentTools(agentd.BuiltinTavily),
+	//	)
+	//
+	// Before creating agents (or at least before the tool is called),
+	// configure credentials:
+	//
+	//	agentd.ConfigureBuiltinTavily(
+	//	    agentd.WithTavilyAPIKey(os.Getenv("TAVILY_API_KEY")),
+	//	)
+	//
+	// The tool will also read TAVILY_API_KEY (and a few common aliases)
+	// from the environment automatically if no explicit key was configured.
+	BuiltinTavily = "builtin:tavily"
+)
 
 type LLMAgentOption func(*llmagent.Config) error
 
@@ -65,7 +68,7 @@ func WithLLMAgentDescription(description string) LLMAgentOption {
 	}
 }
 
-func WithLLMAgentModel(model Model) LLMAgentOption {
+func WithLLMAgentModel(model string) LLMAgentOption {
 	return func(cfg *llmagent.Config) error {
 		return nil
 	}
@@ -79,6 +82,27 @@ func WithLLMAgentInstruction(instruction string) LLMAgentOption {
 			cfg.Instruction = instruction
 		}
 
+		return nil
+	}
+}
+
+// WithLLMAgentOutputKey stores the agent's final reply in session state under
+// the given key.
+//
+// This sets llmagent.Config.OutputKey. It is the building block for combining
+// the results of several agents: give each agent a unique output key, then have
+// a downstream agent read those keys via {key} placeholders in its instruction
+// (ADK resolves them from session state). This is the standard way to merge the
+// outputs of a ParallelAgent fan-out into a single combined answer.
+//
+// Example:
+//
+//	agentd.LLMAgent("brainstormer_0", model,
+//	    agentd.WithLLMAgentOutputKey("domain_0"),
+//	)
+func WithLLMAgentOutputKey(key string) LLMAgentOption {
+	return func(cfg *llmagent.Config) error {
+		cfg.OutputKey = key
 		return nil
 	}
 }
