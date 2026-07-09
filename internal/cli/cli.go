@@ -21,13 +21,17 @@ type AgentInfo struct {
 	Depth       int
 }
 
-// Config configures a CLI session. Turn is required; everything else is
-// presentational.
-type Config struct {
-	// AgentName and AgentDesc identify the root agent in the transcript and
-	// sidebar.
+// TabConfig configures a single agent tab. Each tab has its own transcript and
+// runs its own turn; the presentational fields drive the tab label and sidebar
+// when the tab is active. Turn is required.
+type TabConfig struct {
+	// AgentName and AgentDesc identify the agent in the tab label, transcript,
+	// and sidebar.
 	AgentName string
 	AgentDesc string
+	// ModelName is the underlying model (e.g. "gemini-3.5-flash"), shown in the
+	// tab label and sidebar. Empty when it could not be determined.
+	ModelName string
 	// Tools lists the tool names attached to the agent (and its sub-agents)
 	// that are shown under CAPABILITIES in the sidebar.
 	Tools []string
@@ -35,10 +39,17 @@ type Config struct {
 	SubAgents []AgentInfo
 	// SessionID is shown under SESSION.
 	SessionID string
-	// Welcome overrides the initial system greeting.
-	Welcome string
-	// Turn runs a single user turn, streaming events back to the UI.
+	// Turn runs a single user turn for this tab, streaming events back to the UI.
 	Turn TurnFunc
+}
+
+// Config configures a CLI session. At least one tab is required; a submitted
+// message is broadcast to every tab.
+type Config struct {
+	// Tabs are the agent tabs, rendered left-to-right in order.
+	Tabs []TabConfig
+	// Welcome overrides the initial system greeting (shown on the first tab).
+	Welcome string
 }
 
 const defaultWelcome = "👋 Welcome to the Agentd CLI! Type your message and press Enter."
@@ -58,20 +69,29 @@ func Run(cfg Config) error {
 		welcome = defaultWelcome
 	}
 
+	tabs := make([]tab, len(cfg.Tabs))
+	for i, tc := range cfg.Tabs {
+		tabs[i] = tab{cfg: tc, status: statusIdle}
+	}
+	// Seed the greeting on the first tab only, so it isn't repeated per agent.
+	if len(tabs) > 0 {
+		tabs[0].messages = []message{{sender: "system", text: welcome}}
+	}
+
 	m := Model{
 		cfg:       cfg,
+		tabs:      tabs,
+		active:    0,
 		textInput: ti,
 		spinner:   sp,
-		status:    statusIdle,
 		// Detect the terminal background now, before the program starts reading
 		// input, so glamour never issues an OSC query mid-session (which would
 		// leak the terminal's reply into the text field).
 		mdStyle: detectMarkdownStyle(),
-		messages: []message{
-			{sender: "system", text: welcome},
-		},
 	}
 
+	// Mouse capture is deliberately left off so the terminal's native
+	// drag-to-select / copy keeps working. Tabs are switched with tab / shift+tab.
 	_, err := tea.NewProgram(m, tea.WithAltScreen()).Run()
 	return err
 }

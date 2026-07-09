@@ -134,6 +134,11 @@ func (builder *RequestBuilder) appendConfigOptions(params *responses.ResponseNew
 			effort = shared.ReasoningEffortHigh
 		}
 		params.Reasoning = shared.ReasoningParam{Effort: effort}
+		// Request reasoning summaries so thought parts are surfaced to callers
+		// that opted in via ThinkingConfig.IncludeThoughts.
+		if cfg.ThinkingConfig.IncludeThoughts {
+			params.Reasoning.Summary = shared.ReasoningSummaryAuto
+		}
 	}
 
 	if cfg.SystemInstruction != nil {

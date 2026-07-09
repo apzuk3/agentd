@@ -24,6 +24,9 @@ const (
 	EventToolResult
 	// EventFinal carries the full, aggregated reply text for a turn.
 	EventFinal
+	// EventUsage reports token usage for one model response; PromptTokens and
+	// OutputTokens are set and accumulate into the tab's running totals.
+	EventUsage
 	// EventError carries a non-fatal error encountered during the turn; Err is
 	// set.
 	EventError
@@ -32,12 +35,23 @@ const (
 // Event is a single thing that happened during a turn, delivered from a
 // [TurnFunc] to the TUI.
 type Event struct {
-	Kind     EventKind
-	Text     string
+	Kind EventKind
+	Text string
+	// ToolName / ToolID identify the tool for EventToolCall and EventToolResult.
+	// ToolID (when the model populates it) is used to match a result back to its
+	// originating call.
 	ToolName string
-	Partial  bool
-	Author   string
-	Err      error
+	ToolID   string
+	// ToolArgs carries the decoded call arguments (EventToolCall).
+	ToolArgs map[string]any
+	// ToolResult carries the decoded tool response (EventToolResult).
+	ToolResult map[string]any
+	// PromptTokens / OutputTokens carry token usage for EventUsage.
+	PromptTokens int
+	OutputTokens int
+	Partial      bool
+	Author       string
+	Err          error
 }
 
 // TurnFunc runs a single user turn. It sends [Event]s on out as they happen and
@@ -46,11 +60,16 @@ type Event struct {
 // surfaced to the user as an [EventError].
 type TurnFunc func(ctx context.Context, input string, out chan<- Event) error
 
-// eventMsg wraps a single streamed [Event] for the bubbletea update loop.
-type eventMsg struct{ ev Event }
+// eventMsg wraps a single streamed [Event] for the bubbletea update loop. tab
+// identifies which tab's turn produced it, so a broadcast to N agents can route
+// each event back to the right transcript.
+type eventMsg struct {
+	tab int
+	ev  Event
+}
 
-// doneMsg signals that the current turn's event channel has been closed.
-type doneMsg struct{}
+// doneMsg signals that the tab's turn event channel has been closed.
+type doneMsg struct{ tab int }
 
 // runTurn starts the turn in a goroutine, funnelling its events into out and
 // closing out when the turn finishes (or errors). Returning a nil message keeps
@@ -67,14 +86,16 @@ func runTurn(ctx context.Context, turn TurnFunc, input string, out chan Event) t
 	}
 }
 
-// listen blocks for the next event on out and turns it into a message. When out
-// is closed it yields a doneMsg, ending the per-turn read loop.
-func listen(out chan Event) tea.Cmd {
+// listen blocks for the next event on the given tab's channel and tags it with
+// the tab index. When out is closed it yields a doneMsg for that tab, ending
+// that tab's read loop. Each tab reschedules only its own listen, so the N
+// broadcast loops stay independent.
+func listen(tab int, out chan Event) tea.Cmd {
 	return func() tea.Msg {
 		ev, ok := <-out
 		if !ok {
-			return doneMsg{}
+			return doneMsg{tab: tab}
 		}
-		return eventMsg{ev: ev}
+		return eventMsg{tab: tab, ev: ev}
 	}
 }
