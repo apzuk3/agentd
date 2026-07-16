@@ -15,7 +15,10 @@ import (
 
 	"github.com/apzuk3/agentd/provider"
 	"github.com/apzuk3/agentd/terminal"
+	"google.golang.org/adk/agent"
 	"google.golang.org/adk/agent/llmagent"
+	"google.golang.org/adk/agent/workflowagents/sequentialagent"
+	"google.golang.org/adk/model"
 	"google.golang.org/adk/tool"
 	"google.golang.org/adk/tool/functiontool"
 )
@@ -61,11 +64,53 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ui := terminal.NewUI(agent1, agent2)
+	pipeline, err := newSuggesterPipeline(modelGemini35Flash, domainTool)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ui := terminal.NewUI(agent1, agent2, pipeline)
 	err = ui.StartChat(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// newSuggesterPipeline builds a two-stage sequential agent: a "brainstormer"
+// proposes names, then a "verifier" checks their availability. Because the
+// sequential agent delegates to named sub-agents, each stage renders as its own
+// sub-agent run block in the terminal UI.
+func newSuggesterPipeline(model model.LLM, domainTool tool.Tool) (agent.Agent, error) {
+	brainstormer, err := llmagent.New(llmagent.Config{
+		Name:        "brainstormer",
+		Model:       model,
+		Description: "Brainstorms short, brandable domain names",
+		Instruction: "Suggest 5 short, brandable .com domain name ideas for the user's idea. " +
+			"Output only the domain names, one per line. Do not check availability.",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	verifier, err := llmagent.New(llmagent.Config{
+		Name:        "verifier",
+		Model:       model,
+		Description: "Verifies domain availability",
+		Instruction: "For each .com domain proposed earlier in the conversation, call " +
+			"check_domain_availability and report which ones are available to register.",
+		Tools: []tool.Tool{domainTool},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return sequentialagent.New(sequentialagent.Config{
+		AgentConfig: agent.Config{
+			Name:        "pipeline",
+			Description: "Brainstorm domain names, then verify their availability",
+			SubAgents:   []agent.Agent{brainstormer, verifier},
+		},
+	})
 }
 
 // checkDomainArgs is the input the model supplies when invoking the domain

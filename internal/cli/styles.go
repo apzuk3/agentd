@@ -65,4 +65,9 @@ var (
 	toolDoneStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
 	toolRunningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("213"))
 	toolErrorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("203"))
+
+	// Sub-agent run blocks: a distinct bordered panel per delegated run.
+	subAgentBoxStyle  = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("140")).Padding(0, 1)
+	subAgentNameStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("141")).Bold(true)
+	subAgentMetaStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 )

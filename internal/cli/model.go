@@ -45,10 +45,16 @@ type toolCall struct {
 
 // message is one entry in the transcript.
 type message struct {
-	sender    string // "user", "agent", "system", or "tool"
+	sender    string // "user", "agent", "system", "tool", or "subagent"
 	text      string
 	isThought bool
 	calls     []toolCall // populated when sender == "tool"
+
+	// Sub-agent run fields (sender == "subagent"). text holds the run's output.
+	agentName string
+	inTokens  int
+	outTokens int
+	running   bool
 }
 
 // tab is one agent's transcript plus the lifecycle of its in-flight turn. A
@@ -92,6 +98,8 @@ func (t *tab) reset() {
 	t.out = nil
 	t.status = statusIdle
 	t.statusDetail = ""
+	// A sub-agent that emitted no final text would otherwise spin forever.
+	t.closeSubRuns()
 }
 
 // Model is the bubbletea model for the agentd CLI. It owns the set of agent
@@ -270,6 +278,10 @@ func (m Model) handleEvent(msg eventMsg) (tea.Model, tea.Cmd) {
 	t := &m.tabs[msg.tab]
 	ev := msg.ev
 
+	// Events authored by anything other than the tab's own agent (and not the
+	// user) come from a delegated sub-agent and render as their own run block.
+	sub := ev.Author != "" && ev.Author != "user" && ev.Author != t.cfg.AgentName
+
 	switch ev.Kind {
 	case EventError:
 		t.messages = append(t.messages, message{sender: "system", text: fmt.Sprintf("Error: %v", ev.Err)})
@@ -277,22 +289,42 @@ func (m Model) handleEvent(msg eventMsg) (tea.Model, tea.Cmd) {
 	case EventToolCall:
 		t.status = statusToolRunning
 		t.statusDetail = ev.ToolName
-		t.appendToolCall(ev)
+		// A sub-agent's tool calls are hidden; only its output + tokens show.
+		if !sub {
+			t.appendToolCall(ev)
+		}
 	case EventToolResult:
 		t.status = statusThinking
 		t.statusDetail = ""
-		t.completeToolCall(ev)
+		if !sub {
+			t.completeToolCall(ev)
+		}
 	case EventThought:
-		t.appendAgentText(ev.Text, true, ev.Partial)
+		// Only the root agent's thinking is shown; sub-agent thoughts are hidden.
+		if !sub {
+			t.appendAgentText(ev.Text, true, ev.Partial)
+		}
 	case EventText:
-		t.appendAgentText(ev.Text, false, ev.Partial)
+		if sub {
+			t.appendSubAgentText(ev.Author, ev.Text, ev.Partial)
+		} else {
+			t.appendAgentText(ev.Text, false, ev.Partial)
+		}
 	case EventFinal:
 		// The aggregated final text mirrors the last non-partial chunk, so the
 		// same merge logic keeps the transcript in sync without duplicating.
-		t.appendAgentText(ev.Text, false, false)
+		if sub {
+			t.finishSubAgentText(ev.Author, ev.Text)
+		} else {
+			t.appendAgentText(ev.Text, false, false)
+		}
 	case EventUsage:
+		// Tab totals count every model call (root + sub-agents).
 		t.promptTokens += ev.PromptTokens
 		t.outputTokens += ev.OutputTokens
+		if sub {
+			t.addSubAgentUsage(ev.Author, ev.PromptTokens, ev.OutputTokens)
+		}
 	}
 
 	if msg.tab == m.active {
@@ -325,6 +357,76 @@ func (t *tab) appendAgentText(text string, isThought, partial bool) {
 	}
 	if text != "" {
 		t.messages = append(t.messages, message{sender: "agent", text: text, isThought: isThought})
+	}
+}
+
+// lastSub returns the index of the most recent "subagent" message for name, or
+// -1. When onlyRunning is true, closed runs are skipped — this is how a new run
+// of the same sub-agent (e.g. a loop iteration) starts a fresh block once the
+// previous one has been closed by its final event.
+func (t *tab) lastSub(name string, onlyRunning bool) int {
+	for i := len(t.messages) - 1; i >= 0; i-- {
+		if t.messages[i].sender != "subagent" || t.messages[i].agentName != name {
+			continue
+		}
+		if onlyRunning && !t.messages[i].running {
+			return -1
+		}
+		return i
+	}
+	return -1
+}
+
+// appendSubAgentText streams a sub-agent's output into its current run block,
+// starting a new one if none is open. Grouping by the most recent *running*
+// block (not just the trailing message) keeps parallel sub-agents' interleaved
+// chunks in their own blocks.
+func (t *tab) appendSubAgentText(name, text string, partial bool) {
+	if idx := t.lastSub(name, true); idx >= 0 {
+		if partial {
+			t.messages[idx].text += text
+		} else if text != "" {
+			t.messages[idx].text = text
+		}
+		return
+	}
+	t.messages = append(t.messages, message{sender: "subagent", agentName: name, text: text, running: true})
+}
+
+// finishSubAgentText closes a sub-agent's run block, replacing its text with the
+// aggregated final. A final with no open block still records a closed block.
+func (t *tab) finishSubAgentText(name, text string) {
+	if idx := t.lastSub(name, true); idx >= 0 {
+		if text != "" {
+			t.messages[idx].text = text
+		}
+		t.messages[idx].running = false
+		return
+	}
+	t.messages = append(t.messages, message{sender: "subagent", agentName: name, text: text, running: false})
+}
+
+// addSubAgentUsage attributes token usage to a sub-agent's run block. Usage
+// arrives just after the final (which already closed the block), so it targets
+// the most recent block for name whether running or not.
+func (t *tab) addSubAgentUsage(name string, in, out int) {
+	idx := t.lastSub(name, false)
+	if idx < 0 {
+		t.messages = append(t.messages, message{sender: "subagent", agentName: name, running: true})
+		idx = len(t.messages) - 1
+	}
+	t.messages[idx].inTokens += in
+	t.messages[idx].outTokens += out
+}
+
+// closeSubRuns marks every open sub-agent run as finished. Used as a safety net
+// when a turn ends, since a sub-agent that emits no final text never closes on
+// its own.
+func (t *tab) closeSubRuns() {
+	for i := range t.messages {
+		if t.messages[i].sender == "subagent" {
+			t.messages[i].running = false
+		}
 	}
 }
 

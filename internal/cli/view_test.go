@@ -91,6 +91,25 @@ func TestRenderSidebarShowsTokens(t *testing.T) {
 	}
 }
 
+func TestRenderSubAgentBlock(t *testing.T) {
+	m := Model{tabs: []tab{{
+		cfg: TabConfig{AgentName: "root"},
+		messages: []message{{
+			sender:    "subagent",
+			agentName: "researcher",
+			text:      "found three options",
+			inTokens:  1200,
+			outTokens: 340,
+		}},
+	}}, active: 0}
+	out := m.renderMessages(80)
+	for _, want := range []string{"researcher", "found three options", "1,200", "340", "in", "out"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("sub-agent block missing %q:\n%s", want, out)
+		}
+	}
+}
+
 func TestRenderTabBar(t *testing.T) {
 	m := Model{tabs: []tab{
 		{cfg: TabConfig{AgentName: "alpha"}},

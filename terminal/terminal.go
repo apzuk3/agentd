@@ -95,6 +95,12 @@ func mapEvent(ev *session.Event) []cli.Event {
 	if ev == nil || ev.Content == nil {
 		return nil
 	}
+	// The runner may echo the user's own message back as an event; skip it so it
+	// is neither duplicated in the transcript nor misread as sub-agent output
+	// (its Author is "user", not the tab's agent name).
+	if ev.Content.Role == genai.RoleUser {
+		return nil
+	}
 
 	var out []cli.Event
 	var turnText string

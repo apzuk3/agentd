@@ -208,6 +208,71 @@ func TestHandleEventAccumulatesTokens(t *testing.T) {
 	}
 }
 
+func TestSubAgentRunGroupsAndCloses(t *testing.T) {
+	tr := &tab{}
+	// Streamed partial chunks accumulate into one running block.
+	tr.appendSubAgentText("researcher", "Hel", true)
+	tr.appendSubAgentText("researcher", "lo", true)
+	if len(tr.messages) != 1 {
+		t.Fatalf("got %d messages, want 1: %+v", len(tr.messages), tr.messages)
+	}
+	m := tr.messages[0]
+	if m.sender != "subagent" || m.agentName != "researcher" || !m.running || m.text != "Hello" {
+		t.Fatalf("unexpected block: %+v", m)
+	}
+	// The final replaces text and closes the block.
+	tr.finishSubAgentText("researcher", "Hello there")
+	if tr.messages[0].running || tr.messages[0].text != "Hello there" {
+		t.Errorf("block should be closed with final text: %+v", tr.messages[0])
+	}
+}
+
+func TestSubAgentUsageAfterFinalAttaches(t *testing.T) {
+	tr := &tab{}
+	tr.appendSubAgentText("researcher", "hi", false)
+	tr.finishSubAgentText("researcher", "hi")
+	// Usage arrives after the final (block already closed) and must still attach.
+	tr.addSubAgentUsage("researcher", 100, 20)
+	if got := tr.messages[0]; got.inTokens != 100 || got.outTokens != 20 {
+		t.Errorf("tokens = in %d/out %d, want 100/20", got.inTokens, got.outTokens)
+	}
+}
+
+func TestSubAgentLoopIterationStartsNewBlock(t *testing.T) {
+	tr := &tab{}
+	tr.appendSubAgentText("worker", "run1", false)
+	tr.finishSubAgentText("worker", "run1")
+	// After the first run closes, the same author starts a fresh block.
+	tr.appendSubAgentText("worker", "run2", false)
+	if len(tr.messages) != 2 {
+		t.Fatalf("expected 2 blocks for 2 runs, got %d", len(tr.messages))
+	}
+	if tr.messages[1].text != "run2" || !tr.messages[1].running {
+		t.Errorf("second run block = %+v, want running 'run2'", tr.messages[1])
+	}
+}
+
+func TestHandleEventRoutesSubAgentByAuthor(t *testing.T) {
+	m := Model{tabs: []tab{{cfg: TabConfig{AgentName: "root"}, out: make(chan Event, 1)}}, active: 0}
+	// Author == root → normal agent reply.
+	m2, _ := m.handleEvent(eventMsg{tab: 0, ev: Event{Kind: EventText, Text: "root reply", Author: "root", Partial: true}})
+	m = m2.(Model)
+	// Author != root → sub-agent block.
+	m3, _ := m.handleEvent(eventMsg{tab: 0, ev: Event{Kind: EventText, Text: "sub reply", Author: "child", Partial: true}})
+	m = m3.(Model)
+
+	msgs := m.tabs[0].messages
+	if len(msgs) != 2 {
+		t.Fatalf("got %d messages, want 2: %+v", len(msgs), msgs)
+	}
+	if msgs[0].sender != "agent" || msgs[0].text != "root reply" {
+		t.Errorf("first message = %+v, want agent 'root reply'", msgs[0])
+	}
+	if msgs[1].sender != "subagent" || msgs[1].agentName != "child" || msgs[1].text != "sub reply" {
+		t.Errorf("second message = %+v, want subagent 'child'/'sub reply'", msgs[1])
+	}
+}
+
 func TestHandleEventRoutesToTab(t *testing.T) {
 	m := Model{tabs: []tab{
 		{out: make(chan Event, 1)},

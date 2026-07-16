@@ -91,6 +91,8 @@ func (m Model) renderMessages(width int) string {
 			sb.WriteString(m.renderAgentBody(msg, width))
 		case "tool":
 			sb.WriteString(m.renderToolBlock(msg, width))
+		case "subagent":
+			sb.WriteString(m.renderSubAgentBlock(msg, width))
 		case "system":
 			sb.WriteString(systemStyle.PaddingLeft(2).Width(width-4).Render(msg.text) + "\n\n")
 		}
@@ -181,6 +183,37 @@ func (m Model) renderToolCall(c toolCall) string {
 		line += style.Render("  → " + c.result)
 	}
 	return line
+}
+
+// renderSubAgentBlock renders one sub-agent run as a bordered panel: a header
+// with a status icon, the sub-agent's name, and its input/output token usage,
+// followed by the sub-agent's output text (markdown-rendered when possible).
+func (m Model) renderSubAgentBlock(msg message, width int) string {
+	icon := toolDoneStyle.Render("✓")
+	if msg.running {
+		icon = m.spinner.View()
+	}
+	header := icon + " " + subAgentNameStyle.Render("▷ "+msg.agentName)
+	header += "  " + subAgentMetaStyle.Render(fmt.Sprintf("· in %s · out %s", formatInt(msg.inTokens), formatInt(msg.outTokens)))
+
+	boxWidth := width - 6
+	if boxWidth < 20 {
+		boxWidth = 20
+	}
+
+	body := strings.TrimSpace(msg.text)
+	if body != "" && m.mdRenderer != nil {
+		if out, err := m.mdRenderer.Render(body); err == nil {
+			body = strings.TrimRight(out, "\n")
+		}
+	}
+
+	inner := header
+	if body != "" {
+		inner += "\n" + body
+	}
+	box := subAgentBoxStyle.Width(boxWidth).Render(inner)
+	return lipgloss.NewStyle().PaddingLeft(2).Render(box) + "\n\n"
 }
 
 // renderSidebar renders the right-hand info panel for the active tab.
